@@ -14,12 +14,7 @@ def available_downsamples(slide_path: str, return_dict: bool = False) -> dict:
     reader = OpenSlide(slide_path)
     downsamples = [round(x) for x in reader.level_downsamples]
     dims = [x for x in reader.level_dimensions]
-    print('Downsample'.ljust(15), 'Dimensions'.ljust(15))
-    for i in range(len(dims)):
-        print(str(downsamples[i]).ljust(15), str(dims[i]).ljust(15))
-    if return_dict:
-        return dict(zip(downsamples, dims))
-
+    return dict(zip(downsamples, dims))
 
 def get_thumbnail(
         slide_path: str,

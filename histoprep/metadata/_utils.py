@@ -36,7 +36,6 @@ def combine_metadata(
         raise IOError(f'{parent_dir} does not exist.')
     if os.path.exists(csv_path) and not overwrite:
         raise IOError(f'{csv_path} exists and overwrite=False.')
-    if os.
     dataframes = []
     directories = [x.path for x in os.scandir(parent_dir)]
     for directory in tqdm(

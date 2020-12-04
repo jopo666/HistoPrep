@@ -60,9 +60,8 @@ if __name__ == '__main__':
                 quality=args.quality,
             )
         print(f'All {TOTAL} slides processed.')
-        combine_metadata(args.parent_dir, save_csv=True)
 
-    elif args.step == 'tma':
+    elif args.step == 'dearray':
         raise NotImplementedError()
 
     elif args.step == 'label':

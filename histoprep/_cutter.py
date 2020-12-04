@@ -31,7 +31,7 @@ class Cutter(object):
         overlap: 
             Proportion of overlap between neighboring tiles
         sat_thresh: 
-            Saturation threshold for background detection. Can be left 
+            Saturation threshold for tissue detection. Can be left 
             undefined, in which case Otsu's binarization is used. This is not
             recommended! Values can easily be searched with 
             Cutter.try_thresholds() function.
@@ -81,7 +81,7 @@ class Cutter(object):
         )
         self.sat_thresh, self._tissue_mask = tissue_mask(
             image=self._thumbnail,
-            threshold=self.sat_thresh,
+            sat_thresh=self.sat_thresh,
             return_threshold=True
         )
         self.filtered_coordinates = self._filter_coordinates()

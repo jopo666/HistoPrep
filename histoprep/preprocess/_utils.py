@@ -1,4 +1,4 @@
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Tuple
 
 import numpy as np
 import cv2
@@ -17,7 +17,8 @@ __all__ = [
 def tissue_mask(
         image: Union[np.ndarray, Image.Image],
         sat_thresh: int = None,
-        blur: bool = True,
+        blur_kernel: Tuple[int, int] = (5, 5),
+        blur_iterations: int = 1,
         return_threshold: bool = False
 ) -> np.ndarray:
     """ Generate a tissue mask for image.
@@ -26,7 +27,8 @@ def tissue_mask(
         image: Input image.
         sat_thresh: Saturation threshold for tissue detection (see the method
             explanation below).
-        blur: Whether to blur the image before thresholding (recommended).
+        blur_kernel: Kernel to be used in Gaussian Blur. Set to None to disable.
+        blur_iterations: How many iterations to blur with kernel.
         return_threshold: Whether to return the used sat_thresh in the case of
             Otsu's method.
 
@@ -61,8 +63,8 @@ def tissue_mask(
     # HSV stands for hue, SATURATION, value.
     saturation = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)[:, :, 1]
     # Blur if asked.
-    if blur:
-        saturation = cv2.GaussianBlur(saturation, (5, 5), 1)
+    if blur_kernel is not None:
+        saturation = cv2.GaussianBlur(saturation, blur_kernel, blur_iterations)
     # Then do thresholding.
     if sat_thresh is None:
         thresh, mask = cv2.threshold(
@@ -161,7 +163,7 @@ def sharpness(
         image: Union[np.ndarray, Image.Image],
         divider: int = 2,
         reduction: Union[str, List[str]] = 'max'
-) -> Dict[float]:
+) -> dict:
     """Sharpness detection with Laplacian variance.
 
     Arguments:
@@ -264,7 +266,7 @@ def preprocess(
         quantiles: List[float] = [.01, .05, 0.1,
                                   0.25, 0.5, 0.75, 0.9, 0.95, 0.99],
         reduction: Union[str, List[str]] = ['max', 'median', 'mean', 'min']
-) -> Dict[float, float]:
+) -> dict:
     """Preprocessing metrics for a histological image.
 
     Arguments:
@@ -287,7 +289,7 @@ def preprocess(
     # Initialize results.
     results = {}
     # Background percentage.
-    mask = tissue_mask(image, threshold=sat_thresh)
+    mask = tissue_mask(image, sat_thresh=sat_thresh)
     results['background'] = (mask == 0).sum()/mask.size
     # Sharpness.
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
