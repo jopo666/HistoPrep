@@ -1,5 +1,5 @@
 import os
-from os.path import dirname,join,exists
+from os.path import dirname, join, exists
 
 import openslide
 
@@ -16,14 +16,14 @@ if __name__ == '__main__':
         # Collect all slide paths
         SLIDES = []
         for f in os.scandir(args.input_dir):
-            if any(f.path.endswith(x) for x in ['tiff','tif','mrxs']):
+            if any(f.path.endswith(x) for x in ['tiff', 'tif', 'mrxs']):
                 SLIDES.append(f)
         if not args.overwrite:
             # See which slides have been cut before.
             NOT_CUT = []
             for f in SLIDES:
                 name = remove_extension(f.name)
-                if not exists(join(args.output_dir,name,'metadata.csv')):
+                if not exists(join(args.output_dir, name, 'metadata.csv')):
                     NOT_CUT.append(f)
             if len(NOT_CUT) == 0:
                 print('All slides have been cut!')
@@ -35,8 +35,8 @@ if __name__ == '__main__':
         # Loop through each slide and cut.
         TOTAL = str(len(SLIDES))
         print(f'HistoPrep will process {TOTAL} slides.')
-        for i,f in enumerate(SLIDES):
-            print(f'[{str(i).rjust(len(TOTAL))}/{TOTAL}] - {f.name}',end=' - ')
+        for i, f in enumerate(SLIDES):
+            print(f'[{str(i).rjust(len(TOTAL))}/{TOTAL}] - {f.name}', end=' - ')
             # Test if file is okay.
             try:
                 openslide.OpenSlide(f.path)
@@ -58,7 +58,7 @@ if __name__ == '__main__':
                 overwrite=args.overwrite,
                 image_format=args.image_format,
                 quality=args.quality,
-                )
+            )
         print(f'All {TOTAL} slides processed.')
         combine_metadata(args.parent_dir, save_csv=True)
 

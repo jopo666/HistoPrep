@@ -16,7 +16,8 @@ def PIL_to_array(image: Image.Image) -> np.ndarray:
             image = image.convert('RGB')
         return np.array(image)
     else:
-        raise TypeError('Excpected {} not {}.'.format(Image.Image, type(image)))
+        raise TypeError('Excpected {} not {}.'.format(
+            Image.Image, type(image)))
 
 
 def array_to_PIL(image: np.ndarray) -> Image.Image:

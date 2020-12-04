@@ -2,7 +2,7 @@ import os
 from typing import Union
 import warnings
 
-from PIL import Image,ImageDraw
+from PIL import Image, ImageDraw
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -16,12 +16,12 @@ __all__ = [
 
 
 def combine_metadata(
-        parent_dir: str, 
+        parent_dir: str,
         csv_path: str = None,
         overwrite: bool = False,
-        ) -> pd.DataFrame:
+) -> pd.DataFrame:
     """Combine all metadata into a single csv-file.
-    
+
     Arguments:
         parent_dir: Directory with all the slides.
         csv_path: Path for the combined metadata.csv. Doesn't have to be defined
@@ -44,14 +44,14 @@ def combine_metadata(
             total=len(directories),
             desc='Combining metadata',
             bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-            ):
-        metadata_path = os.path.join(directory,'metadata.csv')
+    ):
+        metadata_path = os.path.join(directory, 'metadata.csv')
         # There might be slides that haven't been finished.
         if not os.path.exists(metadata_path):
             warnings.warn(
                 f'{metadata_path} path not found! If you are still cutting '
                 ' tiles this warning can be ignored.'
-                )
+            )
         # There might be empty files.
         elif os.path.getsize(metadata_path) > 5:
             dataframes.append(pd.read_csv(f.path))
@@ -68,7 +68,7 @@ def plot_on_thumbnail(
         dataframe: pd.DataFrame,
         thumbnail: Image.Image,
         downsample: int
-        ) -> Image.Image:
+) -> Image.Image:
     """Plot all tiles in a dataframe to a thumbnail.
 
     Arguments:
@@ -80,20 +80,20 @@ def plot_on_thumbnail(
     Return:
         PIL.Image.Image: Thumbnail with the tiles of the dataframe drawn on it.
     """
-    if not isinstance(dataframe,pd.DataFrame):
+    if not isinstance(dataframe, pd.DataFrame):
         raise ValueError('Expected {} not {}'.format(
             pd.DataFrame, type(dataframe)
-            ))
-    if not isinstance(thumbnail,Image.Image):
+        ))
+    if not isinstance(thumbnail, Image.Image):
         raise ValueError('Expected {} not {}'.format(
             Image.Image, type(thumbnail)
-            ))
+        ))
     try:
         downsample = int(downsample)
     except:
         raise ValueError('Expected {} not {}'.format(
-            int,type(downsample)
-            ))
+            int, type(downsample)
+        ))
     # Draw tiles to the thumbnail.
     annotated_thumbnail = thumbnail.copy()
     annotated = ImageDraw.Draw(annotated_thumbnail)
@@ -105,19 +105,20 @@ def plot_on_thumbnail(
     else:
         width = int(width)
     w = h = int(width/downsample)
-    for (x,y) in list(zip(x,y)):
+    for (x, y) in list(zip(x, y)):
         x_d = round(x/downsample)
         y_d = round(y/downsample)
-        annotated.rectangle([x_d,y_d,x_d+w,y_d+h],outline='blue',width=4)
+        annotated.rectangle([x_d, y_d, x_d+w, y_d+h], outline='blue', width=4)
     return annotated_thumbnail
+
 
 def plot_tiles(
         dataframe: pd.DataFrame,
-        rows: int = 3, 
+        rows: int = 3,
         cols: int = 3,
-        max_pixels = 1_000_000,
-        title_column = None,
-        ) -> Image.Image:
+        max_pixels: int = 1_000_000,
+        title_column: str = None,
+) -> Image.Image:
     """Return a random collection of tiles from given DataFrame.
 
     Arguments:
@@ -131,11 +132,11 @@ def plot_tiles(
     Return:
         PIL.Image.Image: Collection of random tiles from the dataframe.
     """
-    if not isinstance(dataframe,pd.DataFrame):
+    if not isinstance(dataframe, pd.DataFrame):
         raise ValueError('Expected {} not {}'.format(
             pd.DataFrame, type(dataframe)
-            ))
-    dataframe.sample(frac = 1)
+        ))
+    dataframe.sample(frac=1)
     paths = list(dataframe.get('path', None))[:rows*cols]
     if title_column is not None:
         titles = list(dataframe.get(title_column, None))[:rows*cols]
@@ -149,8 +150,8 @@ def plot_tiles(
             raise FileNotFoundError(
                 f'For some reason the file {row.path} was not found. Try '
                 'cutting the slide again.'
-                )
-    if len(images)==0:
+            )
+    if len(images) == 0:
         print('No images.')
         return
     else:
@@ -159,25 +160,26 @@ def plot_tiles(
     images = [images[i:i + cols] for i in range(0, len(images), cols)]
     rows = []
     for row in images:
-        while len(row)!=cols:
-            row.append(np.ones(shape,dtype=np.uint8)*255)
+        while len(row) != cols:
+            row.append(np.ones(shape, dtype=np.uint8)*255)
         rows.append(np.hstack(row))
     summary = Image.fromarray(np.vstack(rows))
     if title_column is not None:
         print(f'{title_column.upper()}:')
         for row in [titles[i:i + cols] for i in range(0, len(titles), cols)]:
-            row = [np.round(x,3) for x in row]
+            row = [np.round(x, 3) for x in row]
             [print(str(x).center(8), end='') for x in row]
             print()
-    return resize(summary,max_pixels)
+    return resize(summary, max_pixels)
 
-def resize(image,MAX_PIXELS=5_000_000):
+
+def resize(image, MAX_PIXELS=5_000_000):
     dimensions = np.array(image).shape[:2]
-    width,height = dimensions
+    width, height = dimensions
     factor = 0
     while width*height > MAX_PIXELS:
         factor += 1
         width = int(dimensions[0]/2**factor)
         height = int(dimensions[1]/2**factor)
     image = Image.fromarray(np.array(image).astype('uint8'))
-    return image.resize((height,width))
+    return image.resize((height, width))

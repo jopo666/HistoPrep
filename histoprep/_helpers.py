@@ -9,13 +9,13 @@ from tqdm import tqdm
 from shapely.geometry import Polygon, MultiPolygon
 
 
-def remove_extension(path:str) -> str:
+def remove_extension(path: str) -> str:
     """Return filename with the extension removed."""
     if '.' in path:
         return '.'.join(path.split('.')[:-1])
     else:
         return path
-        
+
 
 def remove_images(image_dir: str) -> None:
     """Remove all images in the image folder"""
@@ -27,8 +27,9 @@ def remove_images(image_dir: str) -> None:
                 total=len(paths),
                 desc='Removing images',
                 bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-            ): continue
-            
+            ):
+                continue
+
 
 def remove(path: str) -> None:
     if os.path.exists(path):
@@ -53,7 +54,7 @@ def mask_from_xml(xml_path: str) -> Polygon:
             polygon.append((
                 round(float(point.get('X'))),
                 round(float(point.get('Y'))))
-                )
+            )
         polygons.append(Polygon(np.array(polygon)))
     mask = MultiPolygon(polygons).buffer(0)
     return mask
