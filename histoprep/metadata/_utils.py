@@ -1,21 +1,65 @@
+import os
 from typing import Union
 import warnings
 
 from PIL import Image,ImageDraw
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
+
 
 __all__ = [
+    'combine_metadata',
+    'plot_on_thumbnail',
     'plot_tiles',
-    'plot_on_thumbnail'
 ]
+
+
+def combine_metadata(parent_dir: str, out_path: str = None) -> pd.DataFrame:
+    """Combine all metadata into a single csv-file.
+    
+    Arguments:
+        parent_dir: Directory with all the slides.
+        save_csv: Path for the combined metadata.csv. Doesn't have to be defined
+            if you just want to return the pandas dataframe.
+
+    Return:
+        pandas.DataFrame: The combined metadata.
+    """
+    dataframes = []
+    directories = len([x.path for x in os.scandir(parent_dir)])
+    for directory in tqdm(
+            directories,
+            total=len(directories),
+            desc='Combining metadata',
+            bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
+            ):
+        metadata_path = os.path.join(directory,'metadata.csv')
+        # There might be empty files.
+        if os.path.getsize(metadata_path) > 5:
+            dataframes.append(pd.read_csv(f.path))
+    metadata = pd.concat(dataframes)
+    if save_csv:
+        metadata.to_csv(os.path.join(parent_dir,'metadata.csv'), index=False)
+    return metadata
+
 
 def plot_on_thumbnail(
         dataframe: pd.DataFrame,
         thumbnail: Image.Image,
         downsample: int
         ) -> Image.Image:
-    """Plot all tiles in a dataframe to a thumbnail."""
+    """Plot all tiles in a dataframe to a thumbnail.
+
+    Arguments:
+        dataframe: Dataframe that contains the metadata of ONE SLIDE. The
+            function obviously doesn't work with combined metadata.
+        thumbnail: Thumbnail where the tiles should be drawn.
+        downsample: Downsample of the thumbnail.
+
+    Return:
+        PIL.Image.Image: Thumbnail with the tiles of the dataframe drawn on it.
+    """
     if not isinstance(dataframe,pd.DataFrame):
         raise ValueError('Expected {} not {}'.format(
             pd.DataFrame, type(dataframe)
@@ -54,7 +98,19 @@ def plot_tiles(
         max_pixels = 1_000_000,
         title_column = None,
         ) -> Image.Image:
-    """Return a RANDOM collection of tiles from given DataFrame."""
+    """Return a random collection of tiles from given DataFrame.
+
+    Arguments:
+        dataframe: Dataframe that contains the metadata (from one or more 
+            slides).
+        rows: Maximum number of rows.
+        cols: Maximum number of columns.
+        max_pixels: Maximum number of pixels of the returned image.
+        title_column: Dataframe column where to draw a values for the title.
+
+    Return:
+        PIL.Image.Image: Collection of random tiles from the dataframe.
+    """
     if not isinstance(dataframe,pd.DataFrame):
         raise ValueError('Expected {} not {}'.format(
             pd.DataFrame, type(dataframe)

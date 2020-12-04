@@ -6,9 +6,6 @@ import cv2
 from PIL import Image
 
 __all__ = [
-    'PIL_to_array',
-    'array_to_PIL',
-    'mask_to_PIL',
     'tissue_mask',
     'artifact',
     'data_loss',
@@ -16,60 +13,48 @@ __all__ = [
     'preprocess'
 ]
 
-
-def PIL_to_array(image: Image.Image) -> np.ndarray:
-    """Convert Pillow image to numpy array."""
-    if isinstance(image, Image.Image):
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        return np.array(image)
-    else:
-        raise TypeError('Excpected {} not {}.'.format(Image.Image, type(image)))
-
-
-def array_to_PIL(image: np.ndarray) -> Image.Image:
-    """Convert numpy array to Pillow Image."""
-    if isinstance(image, np.ndarray):
-        return Image.fromarray(image.astype(np.uint8))
-    else:
-        raise TypeError('Excpected {} not {}.'.format(np.ndarray, type(image)))
-
-
-def mask_to_PIL(mask: np.ndarray) -> Image.Image:
-    """Normalize a numpy mask between 0 and 255 and convert to PIL image."""
-    if isinstance(mask, np.ndarray):
-        # Normalize between 0-255.
-        mask = (mask/mask.max()) * 255
-        return Image.fromarray(mask.astype(np.uint8))
-    else:
-        raise TypeError('Excpected {} not {}.'.format(np.ndarray, type(mask)))
-
-
 def tissue_mask(
         image: Union[np.ndarray,Image.Image], 
-        threshold: int = None, 
+        sat_thresh: int = None, 
         blur: bool = True,
-        mean_saturation_threshold: int = None,
         return_threshold: bool = False
         ) -> np.ndarray:
     """ Generate a tissue mask for image.
 
-    Two methods are implemented. 
+    Arguments:
+        image: Input image.
+        sat_thresh: Saturation threshold for tissue detection (see the method
+            explanation below).
+        blur: Whether to blur the image before thresholding (recommended).
+        return_threshold: Whether to return the used sat_thresh in the case of
+            Otsu's method.
+        
+    Return:
+        np.ndarray: A tissue mask with 1 incidating tissue.
+
+    
+    Two methods are implemented.
     
     Otsu's binarization:
-        Otsu's binarization finds an optimal threshold by minimizing the 
-        weighted within-class variance. Due to this, a relatively high threshold
-        for tissue detection is often found and binarization is forced even for
-        images full of background. This means that tissue is found on background
-        only images and actual tissue is misclassified as background.
+        Otsu's method is used to find an optimal saturation threshold by
+        minimizing the weighted within-class variance. Due to this, a relatively
+        high threshold for tissue detection is often selected and actual tissue
+        is misclassified as background. Binarization is also forced even for 
+        tiles with only background, causing the detection of non-existent 
+        tissue.
 
     Adaptive gaussian thresholding:
-        Requires a threshold to be given but performs better than otsu. This
-        is automatically implemented if threshold is given.
+        Requires a saturation threshold to be given but performs better than 
+        Otsu's method. This is automatically implemented if a saturation 
+        threshold is given.
     """
     if isinstance(image, Image.Image):
-        image = PIL_to_array(image)
-    elif not isinstance(image, np.ndarray):
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = np.array(image, dtype=np.uint8)
+    elif isinstance(image, np.ndarray):
+        image = image.astype(np.uint8)
+    else:
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
             ))
@@ -79,23 +64,25 @@ def tissue_mask(
     if blur:
         saturation = cv2.GaussianBlur(saturation,(5,5),1)
     # Then do thresholding.
-    if threshold is None:
+    if sat_thresh is None:
         thresh, mask = cv2.threshold(
             src=saturation,
             thresh=None,
             maxval=1,
             type=cv2.THRESH_BINARY+cv2.THRESH_OTSU
             )
-    elif isinstance(threshold,int):
+    else:
+        try:
+            sat_thresh = int(sat_thresh)
+        except:
+            raise TypeError(f'Excpected {int} not {type(sat_thresh)}.')
         thresh, mask = cv2.threshold(
             src=saturation,
-            thresh=threshold,
+            thresh=sat_thresh,
             maxval=1,
             type=cv2.ADAPTIVE_THRESH_GAUSSIAN_C
             )
-        mask = 1-mask
-    else:
-        raise TypeError(f'Excpected {int} not {type(threshold)}.')
+        mask = 1 - mask
     if return_threshold:
         return int(thresh), mask
     else:
@@ -104,17 +91,27 @@ def tissue_mask(
 
 def artifact(
         image: Union[np.ndarray,Image.Image],
-        mask: np.ndarray = None,
-        quantiles: List[float] = [.01,.05,0.1,0.25,0.5,0.75,0.9,0.95,0.99]
+        quantiles: List[float] = [.01,.05,0.1,0.25,0.5,0.75,0.9,0.95,0.99],
+        mask: np.ndarray = None
         ) -> Dict[int,int]:
     """Detect artifacts with HSV color transformation.
 
-    Returns selected quantile values for HUE and VALUE for tissue, which are 
-    useful in the detection of artifacts.
+    Arguments:
+        image: Input image.
+        mask: Tissue mask for the input image. Will be generated if not defined.
+        quantiles: The quantiles of hue and value to be reported for tissue
+            areas.
+    
+    Return:
+        dict: A dictionary of the quantiles of hue and value for tissue areas.
     """
     if isinstance(image, Image.Image):
-        image = PIL_to_array(image)
-    elif not isinstance(image, np.ndarray):
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = np.array(image, dtype=np.uint8)
+    elif isinstance(image, np.ndarray):
+        image = image.astype(np.uint8)
+    else:
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
             ))
@@ -132,12 +129,21 @@ def artifact(
 
 def data_loss(image: Union[np.ndarray,Image.Image]) -> Dict[float,float]:
     """Detect data_loss.
+
+    Arguments:
+        image: Input image.
     
-    Returns the percentages of completely black and white pixels.
+    Return:
+        dict: with the percentage of completely black (0) and white (255)
+            pixels.
     """
     if isinstance(image, Image.Image):
-        image = PIL_to_array(image)
-    elif not isinstance(image, np.ndarray):
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = np.array(image, dtype=np.uint8)
+    elif isinstance(image, np.ndarray):
+        image = image.astype(np.uint8)
+    else:
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
             ))
@@ -156,18 +162,27 @@ def sharpness(
         downsample: int = 2,
         reduce: str = 'max'
         ) -> float:
-    """
-    Sharpness detection with Laplacian variance.
-
-    Applies sliding window to the image and calculates the laplacian variance of
-    each window. The returned value is reduced with the reduce method given.
-    Sliding window can be disabled wtih downsample 0.
-    Reduce methods:
-        max: Unlikely to be affected by
+    """Sharpness detection with Laplacian variance.
+    
+    Arguments:
+        image: Input image.
+        downsample: Downsample value for the sliding window function with 50%
+            overlap.
+                1: Disable sliding window:
+                2: 3*3 = 9 windows
+                3: 
+    
+    Return:
+        dict: with the percentage of completely black (0) and white (255)
+            pixels.
     """
     if isinstance(image, Image.Image):
-        image = PIL_to_array(image)
-    elif not isinstance(image, np.ndarray):
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = np.array(image, dtype=np.uint8)
+    elif isinstance(image, np.ndarray):
+        image = image.astype(np.uint8)
+    else:
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
             ))
@@ -194,19 +209,20 @@ def sharpness(
             ))
 
 
-def sliding_window(
-        image: Union[np.ndarray,Image.Image], 
-        downsample: int = 2
-        ) -> List[np.ndarray]:
-    """Sliding window with 0.5 overlap."""
+def sliding_window(image: Union[np.ndarray,Image.Image]) -> List[np.ndarray]:
+    """Sliding window producing 9 windows with 50% overlap"""
     if isinstance(image, Image.Image):
-        image = PIL_to_array(image)
-    elif not isinstance(image, np.ndarray):
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = np.array(image, dtype=np.uint8)
+    elif isinstance(image, np.ndarray):
+        image = image.astype(np.uint8)
+    else:
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
             ))
-    w = int(min(x/downsample for x in image.shape))
-    rows,cols = [int(x/(w/2)-1) for x in image.shape]
+    w = int(min(x/downsample for x in image.shape[:2]))
+    rows,cols = [int(x/(w/2)-1) for x in image.shape[:2]]
     windows = []
     for row in range(rows):
         for col in range(cols):
@@ -232,8 +248,12 @@ def preprocess(
         reduce: For sharpness() function.
     """
     if isinstance(image, Image.Image):
-        image = PIL_to_array(image)
-    elif not isinstance(image, np.ndarray):
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = np.array(image, dtype=np.uint8)
+    elif isinstance(image, np.ndarray):
+        image = image.astype(np.uint8)
+    else:
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
             ))
