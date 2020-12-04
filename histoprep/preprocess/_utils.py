@@ -10,7 +10,8 @@ __all__ = [
     'artifact',
     'data_loss',
     'sharpness',
-    'preprocess'
+    'preprocess',
+    'sliding_window'
 ]
 
 def tissue_mask(
@@ -134,8 +135,7 @@ def data_loss(image: Union[np.ndarray,Image.Image]) -> Dict[float,float]:
         image: Input image.
     
     Return:
-        dict: with the percentage of completely black (0) and white (255)
-            pixels.
+        dict: Percentage of completely black (0) and white (255) pixels.
     """
     if isinstance(image, Image.Image):
         if image.mode != 'RGB':
@@ -159,22 +159,20 @@ def data_loss(image: Union[np.ndarray,Image.Image]) -> Dict[float,float]:
 
 def sharpness(
         image: Union[np.ndarray,Image.Image],
-        downsample: int = 2,
-        reduce: str = 'max'
-        ) -> float:
+        divider: int = 2,
+        reduction: Union[str,List[str]] = 'max'
+        ) -> Dict[float]:
     """Sharpness detection with Laplacian variance.
     
     Arguments:
         image: Input image.
-        downsample: Downsample value for the sliding window function with 50%
-            overlap.
-                1: Disable sliding window:
-                2: 3*3 = 9 windows
-                3: 
+        divider: Divider argument for the sliding_window() function. Window size
+            is defined as min(heigh,width)/divider
+        reduction: Reduction method(s) for the Laplacian variance values for each
+            window.
     
     Return:
-        dict: with the percentage of completely black (0) and white (255)
-            pixels.
+        dict: Sharpness values for each defined reduction method.
     """
     if isinstance(image, Image.Image):
         if image.mode != 'RGB':
@@ -194,26 +192,52 @@ def sharpness(
     values = [] 
     for window in sliding_window(image):
         values.append(cv2.Laplacian(window, cv2.CV_32F).var())
-    # Then reduce
-    if reduce == 'max':
-        return np.max(values)
-    elif reduce == 'median':
-        return np.median(values)
-    elif reduce == 'mean':
-        return np.mean(values)
-    elif reduce == 'min':
-        return np.min(values)
-    else:
-        raise ValueError('Reduce {} not recognised. Select from {}.'.format(
-            reduce,['max','median','mean','min']
+    # Then reduction(s).
+    if isinstance(reduction,str):
+        reduction = [reduction]
+    results = dict(zip(
+        ['sharpness_'+method for method in reduction],
+        [reduce_values(values,method) for method in reduction]
+    ))
+    return results
+
+
+def reduce_values(values: list, method: str):
+    """Reduce values of values with given method."""
+    allowed_methods = ['max','median','mean','min']
+    if method not in allowed_methods:
+        raise ValueError('Reduction {} not recognised. Select from {}.'.format(
+            reduction,allowed_methods
             ))
+    if method == 'max':
+        return np.max(values)
+    elif method == 'median':
+        return np.median(values)
+    elif method == 'mean':
+        return np.mean(values)
+    elif method == 'min':
+        return np.min(values)
 
 
-def sliding_window(image: Union[np.ndarray,Image.Image]) -> List[np.ndarray]:
-    """Sliding window producing 9 windows with 50% overlap"""
+def sliding_window(
+        image: Union[np.ndarray,Image.Image], 
+        divider: int = 2,
+        ) -> List[np.ndarray]:
+    """Sliding window with 0.5 overlap.
+    
+    Arguments:
+        image: Input image.
+        divider: Window size is defined as min(height,width)/divider.
+            For square images, divider values will produce:
+                1: original image
+                2: 3x3=9 windows
+                3: 5x5=25 windows
+                4: 7x7=49 windows
+                ...
+    Return:
+        list: List of window images as numpy arrays.
+    """
     if isinstance(image, Image.Image):
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
         image = np.array(image, dtype=np.uint8)
     elif isinstance(image, np.ndarray):
         image = image.astype(np.uint8)
@@ -221,13 +245,15 @@ def sliding_window(image: Union[np.ndarray,Image.Image]) -> List[np.ndarray]:
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
             ))
-    w = int(min(x/downsample for x in image.shape[:2]))
+    if divider < 2:
+        return [image]
+    w = int(min(x/divider for x in image.shape[:2]))
     rows,cols = [int(x/(w/2)-1) for x in image.shape[:2]]
     windows = []
     for row in range(rows):
         for col in range(cols):
-            r = int(row*w/2)
-            c = int(col*w/2)
+            r = int(row*w/divider)
+            c = int(col*w/divider)
             windows.append(image[r:r+w,c:c+w])
     return windows
 
@@ -236,7 +262,7 @@ def preprocess(
         image: Union[np.ndarray,Image.Image],
         sat_thresh: int = None,
         quantiles: List[float] = [.01,.05,0.1,0.25,0.5,0.75,0.9,0.95,0.99],
-        reduce: str = 'max'
+        reduction: Union[str,List[str]] = ['max','median','mean','min']
         ) -> Dict[float,float]:
     """Preprocessing metrics for a histological image.
 
@@ -245,7 +271,7 @@ def preprocess(
         sat_thresh: If not defined Otsu's binarization will be used (which) may
             fail for images with data loss or only background.
         quantiles: For artifact() function.
-        reduce: For sharpness() function.
+        reduction: For sharpness() function.
     """
     if isinstance(image, Image.Image):
         if image.mode != 'RGB':
@@ -264,7 +290,7 @@ def preprocess(
     results['background'] = (mask==0).sum()/mask.size
     # Sharpness.
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    results['sharpness'] = sharpness(gray,reduce=reduce)
+    results['sharpness'] = sharpness(gray,reduction=reduction)
     # Data loss.
     results.update(data_loss(gray))
     # Artifacts.
