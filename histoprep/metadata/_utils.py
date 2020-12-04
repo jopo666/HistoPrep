@@ -52,11 +52,10 @@ def combine_metadata(
                 f'{metadata_path} path not found! If you are still cutting '
                 ' tiles this warning can be ignored.'
                 )
-            continue
         # There might be empty files.
-        if os.path.getsize(metadata_path) > 5:
+        elif os.path.getsize(metadata_path) > 5:
             dataframes.append(pd.read_csv(f.path))
-    if len(metadata) == 0:
+    if len(dataframes) == 0:
         print('No metadata.csv files found!')
         return
     metadata = pd.concat(dataframes)
