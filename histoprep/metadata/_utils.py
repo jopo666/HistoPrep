@@ -15,19 +15,30 @@ __all__ = [
 ]
 
 
-def combine_metadata(parent_dir: str, out_path: str = None) -> pd.DataFrame:
+def combine_metadata(
+        parent_dir: str, 
+        csv_path: str = None,
+        overwrite: bool = False,
+        ) -> pd.DataFrame:
     """Combine all metadata into a single csv-file.
     
     Arguments:
         parent_dir: Directory with all the slides.
-        save_csv: Path for the combined metadata.csv. Doesn't have to be defined
-            if you just want to return the pandas dataframe.
+        csv_path: Path for the combined metadata.csv. Doesn't have to be defined
+            if you just want to return the pandas dataframe and for example 
+            save it in another format.
+        overwrite: Whether to overwrite if csv_path exists.
 
     Return:
         pandas.DataFrame: The combined metadata.
     """
+    if not os.path.exists(parent_dir):
+        raise IOError(f'{parent_dir} does not exist.')
+    if os.path.exists(csv_path) and not overwrite:
+        raise IOError(f'{csv_path} exists and overwrite=False.')
+    if os.
     dataframes = []
-    directories = len([x.path for x in os.scandir(parent_dir)])
+    directories = [x.path for x in os.scandir(parent_dir)]
     for directory in tqdm(
             directories,
             total=len(directories),
@@ -35,12 +46,22 @@ def combine_metadata(parent_dir: str, out_path: str = None) -> pd.DataFrame:
             bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
             ):
         metadata_path = os.path.join(directory,'metadata.csv')
+        # There might be slides that haven't been finished.
+        if not os.path.exists(metadata_path):
+            warnings.warn(
+                f'{metadata_path} path not found! If you are still cutting '
+                ' tiles this warning can be ignored.'
+                )
+            continue
         # There might be empty files.
         if os.path.getsize(metadata_path) > 5:
             dataframes.append(pd.read_csv(f.path))
+    if len(metadata) == 0:
+        print('No metadata.csv files found!')
+        return
     metadata = pd.concat(dataframes)
-    if save_csv:
-        metadata.to_csv(os.path.join(parent_dir,'metadata.csv'), index=False)
+    if csv_path is not None:
+        metadata.to_csv(csv_path, index=False)
     return metadata
 
 
