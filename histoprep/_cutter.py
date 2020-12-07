@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw
 from openslide import OpenSlide
 
 from ._thumbnail import get_thumbnail
-from .preprocess import preprocess, tissue_mask
+from .preprocess.functional import preprocess, tissue_mask
 from ._helpers import remove_extension, remove_images
 
 
