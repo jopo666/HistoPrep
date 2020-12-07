@@ -6,7 +6,8 @@ from PIL import Image
 
 __all__ = [
     'tissue_mask',
-    'artifact',
+    'HSV_quantiles',
+    'RGB_quantiles',
     'data_loss',
     'sharpness',
     'preprocess',
@@ -21,7 +22,7 @@ def tissue_mask(
         blur_iterations: int = 1,
         return_threshold: bool = False
 ) -> np.ndarray:
-    """ Generate a tissue mask for image.
+    """Generate a tissue mask for image.
 
     Arguments:
         image: Input image.
@@ -91,7 +92,61 @@ def tissue_mask(
         return mask
 
 
-def artifact(
+def RGB_quantiles(
+        image: Union[np.ndarray, Image.Image],
+        gray: np.ndarray = None,
+        quantiles: List[float] = [.01, .05, 0.1,
+                                  0.25, 0.5, 0.75, 0.9, 0.95, 0.99],
+        mask: np.ndarray = None
+) -> Dict[int, int]:
+    """Color channel quantiles including grayscale.
+
+    Arguments:
+        image: Input image.
+        gray: Grayscale of the input image. Will be created if None.
+        mask: Tissue mask for the input image. Will be generated if not defined.
+        quantiles: The quantiles  of color channel values for tissue areas.
+
+    Return:
+        dict: A dictionary of the quantiles of color channel values for tissue 
+            areas.
+
+    Useful in the detection of misclassified tissue and artifacts.
+    """
+    if isinstance(image, Image.Image):
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = np.array(image, dtype=np.uint8)
+    elif isinstance(image, np.ndarray):
+        image = image.astype(np.uint8)
+    else:
+        raise TypeError('Excpected {} or {} not {}.'.format(
+            np.ndarray, Image.Image, type(image)
+        ))
+    if gray is None:
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    elif not isinstance(gray, np.ndarray):
+        raise TypeError('Excpected grayscale to be {} not {}.'.format(
+            np.ndarray, type(gray)
+        ))
+    if mask is None:
+        mask = tissue_mask(image)
+    # Collect quantiles.
+    red = [np.quantile(image[mask == 1, 0], q) for q in quantiles]
+    green = [np.quantile(image[mask == 1, 1], q) for q in quantiles]
+    blue = [np.quantile(image[mask == 1, 2], q) for q in quantiles]
+    gray = [np.quantile(gray[mask == 1], q) for q in quantiles]
+    keys = (
+        [f'red_{x}' for x in quantiles] +
+        [f'green_{x}' for x in quantiles] +
+        [f'blue_{x}' for x in quantiles] +
+        [f'gray_{x}' for x in quantiles]
+    )
+    results = dict(zip(keys, red + green + blue + gray))
+    return results
+
+
+def HSV_quantiles(
         image: Union[np.ndarray, Image.Image],
         quantiles: List[float] = [.01, .05, 0.1,
                                   0.25, 0.5, 0.75, 0.9, 0.95, 0.99],
@@ -102,11 +157,14 @@ def artifact(
     Arguments:
         image: Input image.
         mask: Tissue mask for the input image. Will be generated if not defined.
-        quantiles: The quantiles of hue and value to be reported for tissue
+        quantiles: The quantiles of hue, sat and value values for tissue
             areas.
 
     Return:
-        dict: A dictionary of the quantiles of hue and value for tissue areas.
+        dict: A dictionary of the quantiles of hue, sat and value values for 
+            tissue areas.
+
+    Useful in the detection of artifacts.
     """
     if isinstance(image, Image.Image):
         if image.mode != 'RGB':
@@ -122,11 +180,14 @@ def artifact(
         mask = tissue_mask(image)
     HSV = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     hue = [np.quantile(HSV[mask == 1, 0], q) for q in quantiles]
+    sat = [np.quantile(HSV[mask == 1, 1], q) for q in quantiles]
     val = [np.quantile(HSV[mask == 1, 2], q) for q in quantiles]
-    results = dict(zip(
-        [f'hue_{x}' for x in quantiles] + [f'val_{x}' for x in quantiles],
-        hue + val
-    ))
+    keys = (
+        [f'hue_{x}' for x in quantiles] +
+        [f'sat_{x}' for x in quantiles] +
+        [f'val_{x}' for x in quantiles]
+    )
+    results = dict(zip(keys, hue + sat + val))
     return results
 
 
@@ -286,16 +347,18 @@ def preprocess(
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
         ))
-    # Initialize results.
+    # Initialize results and other shit.
     results = {}
-    # Background percentage.
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     mask = tissue_mask(image, sat_thresh=sat_thresh)
+    # Background percentage.
     results['background'] = (mask == 0).sum()/mask.size
     # Sharpness.
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     results.update(sharpness(gray, reduction=reduction))
     # Data loss.
     results.update(data_loss(gray))
     # Artifacts.
-    results.update(artifact(image, mask=mask, quantiles=quantiles))
+    results.update(HSV_quantiles(image, mask=mask, quantiles=quantiles))
+    results.update(RGB_quantiles(image, gray=gray,
+                                 mask=mask, quantiles=quantiles))
     return results

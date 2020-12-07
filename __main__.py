@@ -6,7 +6,6 @@ import openslide
 from args import get_arguments
 import histoprep as hp
 from histoprep._helpers import remove_extension
-from histoprep.metadata import combine_metadata
 
 
 if __name__ == '__main__':
