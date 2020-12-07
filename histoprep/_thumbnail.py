@@ -10,7 +10,7 @@ from PIL import Image
 from tqdm import tqdm
 
 
-def available_downsamples(slide_path: str, return_dict: bool = False) -> dict:
+def get_downsamples(slide_path: str) -> dict:
     reader = OpenSlide(slide_path)
     downsamples = [round(x) for x in reader.level_downsamples]
     dims = [x for x in reader.level_dimensions]
@@ -19,11 +19,9 @@ def available_downsamples(slide_path: str, return_dict: bool = False) -> dict:
 def get_thumbnail(
         slide_path: str,
         downsample: int = None,
-        generate: bool = False
+        create_thumbnail: bool = False
 ) -> Image.Image:
     """Return thumbnail by using openslide or by creating a new one."""
-    if generate:
-        thumbnail = generate_thumbnail(slide_path, downsample)
     reader = OpenSlide(slide_path)
     level_downsamples = [round(x) for x in reader.level_downsamples]
     if downsample is None:
@@ -32,8 +30,10 @@ def get_thumbnail(
         level = level_downsamples.index(downsample)
         dims = reader.level_dimensions[level]
         thumbnail = reader.get_thumbnail(dims)
-    else:
+    elif create_thumbnail:
         thumbnail = generate_thumbnail(slide_path, downsample)
+    else:
+        thumbnail = None
     return thumbnail
 
 

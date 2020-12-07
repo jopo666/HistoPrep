@@ -14,7 +14,7 @@ from tqdm import tqdm
 from PIL import Image, ImageDraw
 from openslide import OpenSlide
 
-from ._thumbnail import get_thumbnail
+from ._thumbnail import get_thumbnail, get_downsamples
 from .preprocess.functional import preprocess, tissue_mask
 from ._helpers import remove_extension, remove_images
 
@@ -44,8 +44,7 @@ class Cutter(object):
             thumbnail-based background detection, tiles with higher background
             percentage may pass through but rarely the other way.
         generate_thumbnail:
-            Force thumbnail generation. This is sometimes required if the
-            thumbnails are shitty.
+            Generate thumbnail if downsample is not available.
     """
 
     def __init__(
@@ -56,7 +55,7 @@ class Cutter(object):
         sat_thresh: int = None,
         downsample: int = 16,
         max_background: float = 0.999,
-        generate_thumbnail: bool = False
+        create_thumbnail: bool = False
     ):
         super().__init__()
         # Define openslide reader.
@@ -77,8 +76,15 @@ class Cutter(object):
         self._thumbnail = get_thumbnail(
             slide_path=self.slide_path,
             downsample=self.downsample,
-            generate=generate_thumbnail
+            create_thumbnail=create_thumbnail
         )
+        if self._thumbnail is None:
+            # Downsample not available.
+            raise  ValueError(
+                f'Thumbnail not available for downsample {self.downsample}. '
+                'Please set create_thumbnail=True or select downsample from\n\n'
+                f'{self._downsamples()}'
+            )
         self.sat_thresh, self._tissue_mask = tissue_mask(
             image=self._thumbnail,
             sat_thresh=self.sat_thresh,
@@ -90,6 +96,16 @@ class Cutter(object):
 
     def __repr__(self):
         return self.__class__.__name__ + '()'
+
+    def available_downsamples(self):
+        print(self._downsamples)
+
+    def _downsamples(self):
+        string = 'Downsample  Dimensions'
+        d = get_downsamples(self.slide_path)
+        for item,val in d.items():
+            string += f'\n{str(item).ljust(12)}{val}'
+        return string
 
     def summary(self):
         print(self._summary())
