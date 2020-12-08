@@ -97,7 +97,9 @@ def RGB_quantiles(
         gray: np.ndarray = None,
         quantiles: List[float] = [.01, .05, 0.1,
                                   0.25, 0.5, 0.75, 0.9, 0.95, 0.99],
-        mask: np.ndarray = None
+        mask: np.ndarray = None,
+        resize: int = None,
+        sat_thresh: int = None
 ) -> Dict[int, int]:
     """Color channel quantiles including grayscale.
 
@@ -106,6 +108,10 @@ def RGB_quantiles(
         gray: Grayscale of the input image. Will be created if None.
         mask: Tissue mask for the input image. Will be generated if not defined.
         quantiles: The quantiles  of color channel values for tissue areas.
+        resize: Resize the image to resize x resize. The function can become 
+            really slow with large images, in these situations just use this
+            option.
+        sat_thresh: For tissue_mask() function. Ignored if mask is defined.
 
     Return:
         dict: A dictionary of the quantiles of color channel values for tissue 
@@ -129,8 +135,13 @@ def RGB_quantiles(
         raise TypeError('Excpected grayscale to be {} not {}.'.format(
             np.ndarray, type(gray)
         ))
+    if resize is not None:
+        image = cv2.resize(image, (resize, resize), cv2.INTER_LANCZOS4)
+        gray = cv2.resize(gray, (resize, resize), cv2.INTER_LANCZOS4)
     if mask is None:
-        mask = tissue_mask(image)
+        mask = tissue_mask(image, sat_thresh=sat_thresh)
+    elif mask.shape != image.shape[:2]:
+        mask = cv2.resize(mask, (resize, resize), cv2.INTER_LANCZOS4)
     # Collect quantiles.
     red = [np.quantile(image[mask == 1, 0], q) for q in quantiles]
     green = [np.quantile(image[mask == 1, 1], q) for q in quantiles]
@@ -150,7 +161,9 @@ def HSV_quantiles(
         image: Union[np.ndarray, Image.Image],
         quantiles: List[float] = [.01, .05, 0.1,
                                   0.25, 0.5, 0.75, 0.9, 0.95, 0.99],
-        mask: np.ndarray = None
+        mask: np.ndarray = None,
+        resize: int = None,
+        sat_thresh: int = None,
 ) -> Dict[int, int]:
     """Detect artifacts with HSV color transformation.
 
@@ -159,6 +172,10 @@ def HSV_quantiles(
         mask: Tissue mask for the input image. Will be generated if not defined.
         quantiles: The quantiles of hue, sat and value values for tissue
             areas.
+        resize: Resize the image to resize x resize. The function can become 
+            really slow with large images, in these situations just use this
+            option.
+        sat_thresh: For tissue_mask() function. Ignored if mask is defined.
 
     Return:
         dict: A dictionary of the quantiles of hue, sat and value values for 
@@ -176,8 +193,12 @@ def HSV_quantiles(
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
         ))
+    if resize is not None:
+        image = cv2.resize(image, (resize, resize), cv2.INTER_LANCZOS4)
     if mask is None:
-        mask = tissue_mask(image)
+        mask = tissue_mask(image, sat_thresh=sat_thresh)
+    elif mask.shape != image.shape[:2]:
+        mask = cv2.resize(mask, (resize, resize), cv2.INTER_LANCZOS4)
     HSV = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     hue = [np.quantile(HSV[mask == 1, 0], q) for q in quantiles]
     sat = [np.quantile(HSV[mask == 1, 1], q) for q in quantiles]
@@ -324,6 +345,7 @@ def sliding_window(
 def preprocess(
         image: Union[np.ndarray, Image.Image],
         sat_thresh: int = None,
+        resize: int = 64,
         quantiles: List[float] = [.01, .05, 0.1,
                                   0.25, 0.5, 0.75, 0.9, 0.95, 0.99],
         reduction: Union[str, List[str]] = ['max', 'median', 'mean', 'min']
@@ -334,6 +356,8 @@ def preprocess(
         image: Image to be preprocessed
         sat_thresh: If not defined Otsu's binarization will be used (which) may
             fail for images with data loss or only background.
+        resize: For artifact() function (it's slow as fuck if tiles are not
+            resized to 64x64).
         quantiles: For artifact() function.
         reduction: For sharpness() function.
     """
@@ -355,10 +379,16 @@ def preprocess(
     results['background'] = (mask == 0).sum()/mask.size
     # Sharpness.
     results.update(sharpness(gray, reduction=reduction))
+    # Resize
+    small_img = cv2.resize(image, (resize, resize), cv2.INTER_LANCZOS4) 
+    small_gray = cv2.resize(image, (resize, resize), cv2.INTER_LANCZOS4)
+    small_mask = cv2.resize(mask, (resize, resize), cv2.INTER_LANCZOS4)
     # Data loss.
-    results.update(data_loss(gray))
+    results.update(data_loss(small_gray))
     # Artifacts.
-    results.update(HSV_quantiles(image, mask=mask, quantiles=quantiles))
-    results.update(RGB_quantiles(image, gray=gray,
-                                 mask=mask, quantiles=quantiles))
+    results.update(HSV_quantiles(
+        small_img, mask=small_mask, quantiles=quantiles))
+    results.update(RGB_quantiles(
+        small_img, mask=small_mask, quantiles=quantiles, gray=small_gray))
+    
     return results

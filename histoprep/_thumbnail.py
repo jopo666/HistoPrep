@@ -91,5 +91,5 @@ def load_tile(
     i, (x, y) = coords
     out_shape = (int(width/downscale), int(width/downscale))
     tile = reader.read_region((x, y), 0, (width, width)).convert('RGB')
-    tile = cv2.resize(np.array(tile),out_shape,cv2.INTER_NEAREST)
+    tile = cv2.resize(np.array(tile),out_shape,cv2.INTER_LANCZOS4)
     return i, tile
