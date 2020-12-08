@@ -211,7 +211,7 @@ def data_loss(image: Union[np.ndarray, Image.Image]) -> Dict[float, float]:
             np.ndarray, Image.Image, type(image)
         ))
     if len(image.shape) > 2:
-        gray = cv2.cvtColor(gray, cv2.COLOR_RGB2GRAY)
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     else:
         gray = image
     return {
@@ -249,7 +249,7 @@ def sharpness(
         ))
     # Laplacian variance is defined for greyscale images.
     if len(image.shape) > 2:
-        gray = cv2.cvtColor(gray, cv2.COLOR_RGB2GRAY)
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     else:
         gray = image
     values = []

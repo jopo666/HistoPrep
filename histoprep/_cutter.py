@@ -62,6 +62,9 @@ class Cutter(object):
         if not exists(slide_path):
             raise IOError(f'{slide_path} not found.')
         self._reader = OpenSlide(slide_path)
+        # Make it global so cutting is faster.
+        global __READER__
+        __READER__ = self._reader
         # Assing basic stuff that user can see/check.
         self.slide_path = slide_path
         self.slide_name = remove_extension(basename(slide_path))
@@ -98,7 +101,7 @@ class Cutter(object):
         return self.__class__.__name__ + '()'
 
     def available_downsamples(self):
-        print(self._downsamples)
+        print(self._downsamples())
 
     def _downsamples(self):
         string = 'Downsample  Dimensions'
@@ -321,8 +324,8 @@ def save_tile(
         custom_preprocess: Callable[[Image.Image], dict] = None
 ) -> dict:
     """Saves tile and returns metadata (parallizable)."""
-    # Load slide.
-    reader = OpenSlide(slide_path)
+    # Load slide from global.
+    reader = __READER__
     (x, y), bg_estimate = coords
     # Prepare filename.
     filepath = join(image_dir, f'{slide_name}_x-{x}_y-{y}')

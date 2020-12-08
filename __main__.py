@@ -50,6 +50,7 @@ if __name__ == '__main__':
                 sat_thresh=args.sat_thresh,
                 downsample=args.downsample,
                 max_background=args.max_bg,
+                create_thumbnail=True,
             )
             # Cut cut cut away!
             cutter.cut(
