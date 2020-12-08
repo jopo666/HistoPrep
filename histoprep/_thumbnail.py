@@ -4,6 +4,7 @@ import multiprocessing as mp
 from functools import partial
 from typing import Tuple, List
 
+import cv2
 from openslide import OpenSlide
 import numpy as np
 from PIL import Image
@@ -43,8 +44,10 @@ def generate_thumbnail(
         width: int = 4096
 ) -> Image.Image:
     """Generate thumbnail for a slide."""
-    with OpenSlide(slide_path) as r:
-        dims = r.dimensions
+    # Save reader as global for multiprocessing
+    global __READER__
+    __READER__ = OpenSlide(slide_path)
+    dims = __READER__.dimensions
     blocks = (
         int(dims[0]/width) + 1,
         int(dims[1]/width) + 1
@@ -83,9 +86,10 @@ def load_tile(
         downscale: int,
         coords: Tuple[int, Tuple[int, int]]
 ):
+    # Load slide from global.
+    reader = __READER__
     i, (x, y) = coords
     out_shape = (int(width/downscale), int(width/downscale))
-    with OpenSlide(slide_path) as r:
-        tile = r.read_region((x, y), 0, (width, width))
-        tile = tile.resize(out_shape).convert('RGB')
+    tile = reader.read_region((x, y), 0, (width, width)).convert('RGB')
+    tile = cv2.resize(np.array(tile),out_shape,cv2.INTER_NEAREST)
     return i, tile
