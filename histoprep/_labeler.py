@@ -151,29 +151,41 @@ class TileLabeler():
             ))
         # Drop previous labels if found.
         self.metadata = self._drop_labels(prefix)
-        # Collect labels.
-        coords = np.vstack((
-            self.metadata.x.to_numpy(),
-            self.metadata.y.to_numpy(),
-            self.metadata.width.to_numpy()
-        )).T
-        # Shapely uses (minx, miny, maxx, maxy).
-        rows = []
-        for coord in coords:
-            x, y, width = coord
-            tile = Polygon([
-                (x, y), (x, y+width),  # lower corners
-                (x+width, y+width), (x+width, y)  # upper corners
-            ])
-            percentage = tile.intersection(mask).area/tile.area
-            rows.append({
-                f'{prefix}_perc': percentage,
-                f'{prefix}_label': int(percentage > threshold)
-            })
+        if len(mask.bounds)==0:
+            # "Draw thumbnail"
+            self._annotated_thumbnail = self._thumbnail
+            # Empty mask so all are 0.
+            rows = []
+            for x in range(self.metadata.shape[0]):
+                rows.append({
+                    f'{prefix}_perc': 0.0,
+                    f'{prefix}_label': 0,
+                })
+        else: 
+            # Draw thumbnail.
+            self._annotate(mask)
+            # Collect labels.
+            coords = np.vstack((
+                self.metadata.x.to_numpy(),
+                self.metadata.y.to_numpy(),
+                self.metadata.width.to_numpy()
+            )).T
+            # Shapely uses (minx, miny, maxx, maxy).
+            rows = []
+            for coord in coords:
+                x, y, width = coord
+                tile = Polygon([
+                    (x, y), (x, y+width),  # lower corners
+                    (x+width, y+width), (x+width, y)  # upper corners
+                ])
+                percentage = tile.intersection(mask).area/tile.area
+                rows.append({
+                    f'{prefix}_perc': percentage,
+                    f'{prefix}_label': int(percentage > threshold)
+                })
         # Concatenate to metadata.
         self.metadata = pd.concat([self.metadata, pd.DataFrame(rows)], axis=1)
-        # Draw thumbnail and save to self.data_dir.
-        self._annotate(mask)
+        # Save thumbnail.
         path = join(self.data_dir, f'{prefix}_mask.jpeg')
         self._annotated_thumbnail.save(path)
 
