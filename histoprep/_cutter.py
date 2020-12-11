@@ -14,9 +14,18 @@ from tqdm import tqdm
 from PIL import Image, ImageDraw
 from openslide import OpenSlide
 
-from ._thumbnail import get_thumbnail, get_downsamples
+from ._functional import (
+    get_thumbnail,
+    get_downsamples,
+    try_thresholds,
+    resize
+)
 from .preprocess.functional import preprocess, tissue_mask
-from ._helpers import remove_extension, remove_images
+from ._helpers import (
+    remove_extension,
+    remove_images,
+    save_data
+)
 
 
 class Cutter(object):
@@ -43,8 +52,8 @@ class Cutter(object):
             Maximum amount of background allowed for a tile. Due to the 
             thumbnail-based background detection, tiles with higher background
             percentage may pass through but rarely the other way.
-        generate_thumbnail:
-            Generate thumbnail if downsample is not available.
+        create_thumbnail:
+            Create a thumbnail if downsample is not available.
     """
 
     def __init__(
@@ -83,7 +92,7 @@ class Cutter(object):
         )
         if self._thumbnail is None:
             # Downsample not available.
-            raise  ValueError(
+            raise ValueError(
                 f'Thumbnail not available for downsample {self.downsample}. '
                 'Please set create_thumbnail=True or select downsample from\n\n'
                 f'{self._downsamples()}'
@@ -100,13 +109,16 @@ class Cutter(object):
     def __repr__(self):
         return self.__class__.__name__ + '()'
 
+    def __len__(self):
+        return len(self.filtered_coordinates)
+
     def available_downsamples(self):
         print(self._downsamples())
 
     def _downsamples(self):
         string = 'Downsample  Dimensions'
         d = get_downsamples(self.slide_path)
-        for item,val in d.items():
+        for item, val in d.items():
             string += f'\n{str(item).ljust(12)}{val}'
         return string
 
@@ -120,15 +132,29 @@ class Cutter(object):
             f"\n  Tile overlap: {self.overlap}"
             f"\n  Saturation threshold: {self.sat_thresh}"
             f"\n  Max background: {self.max_background}"
+            f"\n  Thumbnail downsample: {self.downsample}"
             f"\n  Total number of tiles: {len(self.all_coordinates)}"
             f"\n  After background filtering: {len(self.filtered_coordinates)}"
         )
 
+    def _save_parameters(self):
+        save_data(
+            data={
+                'slide_path': self.slide_path,
+                'width': self.width,
+                'overlap': self.overlap,
+                'downsample': self.downsample,
+                'sat_thresh': self.sat_thresh,
+                'max_background': self.max_background
+            },
+            path=self._param_path
+        )
+
     def plot_tiles(self, max_pixels=1_000_000) -> Image.Image:
-        return self._resize(self._annotated_thumbnail, max_pixels)
+        return resize(self._annotated_thumbnail, max_pixels)
 
     def plot_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
-        return self._resize(self._thumbnail, max_pixels)
+        return resize(self._thumbnail, max_pixels)
 
     def plot_tissue_mask(self, max_pixels=1_000_000) -> Image.Image:
         mask = self._tissue_mask
@@ -136,21 +162,20 @@ class Cutter(object):
         mask = 1 - mask
         mask = mask/mask.max()*255
         mask = Image.fromarray(mask.astype(np.uint8))
-        return self._resize(mask, max_pixels)
+        return resize(mask, max_pixels)
 
     def _prepare_directories(self, parent_dir: str) -> None:
         out_dir = join(parent_dir, self.slide_name)
         # Save paths.
         self._meta_path = join(out_dir, 'metadata.csv')
         self._thumb_path = join(out_dir, 'thumbnail.jpeg')
+        self._param_path = join(out_dir, 'parameters.p')
+        self._summary_path = join(out_dir, 'summary.txt')
         self._image_dir = join(out_dir, 'images')
         # Make dirs.
         os.makedirs(dirname(self._meta_path), exist_ok=True)
         os.makedirs(dirname(self._thumb_path), exist_ok=True)
         os.makedirs(self._image_dir, exist_ok=True)
-        # Save summary.
-        with open(join(out_dir, 'summary.txt'), "w") as f:
-            f.write(self._summary())
 
     def _annotate(self) -> None:
         # Draw tiles to the thumbnail.
@@ -164,33 +189,13 @@ class Cutter(object):
                                 outline='red', width=4)
 
     def try_thresholds(
-            self,
-            thresholds: List[int] = [5, 10, 15,
-                                     20, 30, 40, 50, 60, 80, 100, 120]
+        self,
+        thresholds: List[int] = [5, 10, 15,
+                                 20, 30, 40, 50, 60, 80, 100, 120],
+        max_pixels=1_000_000
     ) -> Image.Image:
         """Returns a summary image of different thresholds."""
-        thumbnail = self._resize(self._thumbnail)
-        gray = cv2.cvtColor(np.array(thumbnail), cv2.COLOR_RGB2GRAY)
-        images = [gray]
-        for t in thresholds:
-            mask = tissue_mask(thumbnail, t)
-            # Flip for a nicer image
-            mask = 1 - mask
-            mask = mask/mask.max()*255
-            images.append(mask.astype(np.uint8))
-        images = [images[i:i + 4] for i in range(0, len(images), 4)]
-        rows = []
-        for row in images:
-            while len(row) != 4:
-                row.append(np.ones(row[0].shape)*255)
-            rows.append(np.hstack(row))
-        summary = Image.fromarray(np.vstack(rows).astype('uint8'))
-        l = ['original'] + thresholds
-        print('Saturation thresholds:\n')
-        for row in [l[i:i + 4] for i in range(0, len(l), 4)]:
-            [print(str(x).center(8), end='') for x in row]
-            print()
-        return self._resize(summary)
+        return try_thresholds(thumbnail=self._thumbnail, thresholds=thresholds)
 
     def cut(
             self,
@@ -236,8 +241,13 @@ class Cutter(object):
                 "check for a good value with Cutter.try_thresholds() "
                 "function...)"
             )
-        # Save annotated thumbnail
+        # Save annotated thumbnail.
         self._annotated_thumbnail.save(self._thumb_path, quality=95)
+        # Save used parameters.
+        self._save_parameters()
+        # Save text summary.
+        with open(self._summary_path , "w") as f:
+            f.write(self._summary())
         # Wrap the saving function so it can be parallized.
         func = partial(save_tile, **{
             'slide_path': self.slide_path,
@@ -296,20 +306,6 @@ class Cutter(object):
             if bg_perc < self.max_background:
                 filtered.append(((x, y), bg_perc))
         return filtered
-
-    def _resize(self, image, MAX_PIXELS=5_000_000):
-        dimensions = np.array(image).shape[:2]
-        width, height = dimensions
-        factor = 0
-        while width*height > MAX_PIXELS:
-            factor += 1
-            width = int(dimensions[0]/2**factor)
-            height = int(dimensions[1]/2**factor)
-        image = Image.fromarray(np.array(image).astype('uint8'))
-        return image.resize((height, width))
-
-    def __len__(self):
-        return len(self.filtered_coordinates)
 
 
 def save_tile(

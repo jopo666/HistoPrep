@@ -1,87 +1,154 @@
 import os
-from typing import List
+import warnings
+from os.path import join, exists
+from typing import List, Union
 
+import cv2
 import numpy as np
 import pandas as pd
-from shapely.geometry import Polygon
-from openslide import OpenSlide
+import openslide
+from PIL import Image, ImageDraw
+from shapely.geometry import Polygon, MultiPolygon
 
 
-class Labeler():
-    """Class for labeling tiles."""
+from ._functional import get_downsamples, resize, get_thumbnail
+from ._helpers import load_data
 
-    def __init__(self, metadata_path: str):
+
+class TileLabeler():
+    """Class for labeling tiles.
+
+    Arguments:
+        data_dir: 
+            Directory that contains the output of Cutter.cut(data_dir) function.
+        create_thumbnail:
+            Create a thumbnail if downsample is not available.
+    """
+
+    def __init__(
+        self,
+        data_dir: str,
+        create_thumbnail: bool = False,
+    ):
         super().__init__()
-        self.metadata_path = metadata_path
-        self.metadata = pd.read_csv(metadata_path)
+        self.data_dir = data_dir
+        # Check paths.
+        meta_path = join(data_dir, 'metadata.csv')
+        param_path = join(data_dir, 'parameters.p')
+        if not exists(meta_path):
+            raise IOError('{meta_path} does not exist!')
+        if not exists(param_path):
+            raise IOError('{param_path} does not exist!')
+        # Get metadata and params.
+        self.metadata = pd.read_csv(meta_path)
+        self._params = load_data(param_path)
+        self.slide_path = self._params['slide_path']
+        self.downsample = self._params['downsample']
+        self.width = self._params['width']
+        self._thumbnail = get_thumbnail(
+            slide_path=self.slide_path,
+            downsample=self.downsample,
+            create_thumbnail=create_thumbnail
+        )
+        if self._thumbnail is None:
+            # Downsample not available.
+            raise ValueError(
+                f'Thumbnail not available for downsample {self.downsample}. '
+                'Please set create_thumbnail=True or select downsample from\n\n'
+                f'{self._downsamples()}'
+            )
+        self._annotated_thumbnail = False
 
     def _drop_labels(self, prefix):
         cols = self.metadata.columns.tolist()
         drop = [x for x in cols if prefix in x]
         return self.metadata.drop(columns=drop)
 
-    def label_from_mask(
-            self,
-            mask_path: str,
-            values: List[int],
-            prefix: str,
-            threshold: int,
-            save_to_csv: bool = False
-    ) -> pd.DataFrame:
-        """
-        Add labels and intersection percentages to metadata.
+    def _downsamples(self):
+        string = 'Downsample  Dimensions'
+        d = get_downsamples(self.slide_path)
+        for item, val in d.items():
+            string += f'\n{str(item).ljust(12)}{val}'
+        return string
 
-        Args:
-            mask_path: Path to openslide-image mask.
-            values: Values that equal label in mask.
-            prefix: Name for the label.
-            threshold: How much overlap with mask is required to turn the
-                       label to 1.
+    def plot_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
+        return resize(self._thumbnail, max_pixels)
+
+    def plot_labels(self, max_pixels=1_000_000) -> Image.Image:
+        if not self._annotated_thumbnail:
+            print(
+                "You haven't created any labels yet! Use the "
+                "Labeler.label_from_shapely function to create these.")
+        else:
+            return resize(self._annotated_thumbnail, max_pixels)
+
+    def _annotate(self, mask: Union[Polygon, MultiPolygon]):
+        """Draw the shapely mask to the thumbnail."""
+        # Init mask image.
+        overlay = Image.new('RGBA', self._thumbnail.size, (255, 255, 255, 0))
+        draw = ImageDraw.Draw(overlay)
+        if isinstance(mask, Polygon):
+            mask = [mask]
+        for polygon in mask:
+            coords = []
+            for x, y in polygon.exterior.coords:
+                x = int(x/self.downsample)
+                y = int(y/self.downsample)
+                coords.append((x, y))
+            draw.polygon(coords, fill=(255, 0, 0, 150), outline="blue")
+        self._annotated_thumbnail = Image.alpha_composite(
+            self._thumbnail.convert('RGBA'),
+            overlay.convert('RGBA')
+        ).convert('RGB')
+
+    def numpy_to_shapely(
+            self, 
+            mask: np.ndarray,
+            downsample: int = None
+        ) -> MultiPolygon:
+        """Convert a numpy mask to a shapely mask.
+        
+        Arguments:
+            mask:
+                Mask of the desired labels in a 2-dimensional numpy.ndarray.
+            downsample:
+                If the mask is a downsample of the real mask then give this to
+                multiply the shapely mask coordinates.
         """
-        r = OpenSlide(mask_path)
-        # Drop previous labels if found.
-        self.metadata = self._drop_labels(prefix)
-        # Collect labels.
-        rows = []
-        coords = np.vstack((
-            self.metadata.x.to_numpy(),
-            self.metadata.y.to_numpy(),
-            self.metadata.width.to_numpy()
-        )).T
-        for coord in coords:
-            x, y, width = coord
-            label_pixels = 0
-            mask = np.array((r.read_region((x, y), 0, (width, width))))
-            for val in values:
-                label_pixels += mask[mask == val].size
-            percentage = label_pixels/mask.size
-            rows.append({
-                f'{prefix}_perc': percentage,
-                f'{prefix}_label': int(percentage > threshold)
-            })
-        # Concatenate to metadata.
-        metadata = pd.concat([self.metadata, pd.DataFrame(rows)], axis=1)
-        if save_to_csv:
-            # Save to csv
-            metadata.to_csv(self.metadata_path, index=False)
-        return metadata
+        if len(mask.shape) != 2:
+            raise ValueError('Expected a 2-dimensional numpy mask.')
+        contours, __ = cv2.findContours(
+            mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        polygons = []
+        for cnt in contours:
+            coordinates = np.squeeze(cnt)
+            if downsample is not None:
+                coordinates = coordinates * downsample
+            polygons.append(Polygon(np.squeeze(cnt)))
+        return MultiPolygon(polygons)
 
     def label_from_shapely(
             self,
-            shapely_mask: Polygon,
+            mask: Union[Polygon, MultiPolygon],
             prefix: str,
             threshold: int,
-            save_to_csv: bool = False
-    ):
+    ) -> None:
         """
-        Add labels and intersection percentages to metadata.
+        Add labels and intersection percentages to metadata from a shapely mask.
 
         Args:
-            shapely_mask: Mask of the annotations in shapely format.
-            prefix: Name for the label.
-            threshold: How much overlap with mask is required to turn the
-                       label to 1.
+            mask:
+                Shapely.Polygon mask of the annotations.
+            prefix: 
+                Name for the label.
+            threshold: 
+                How much overlap with mask is required to turn the 
+                label to 1.
         """
+        if not isinstance(mask, Polygon) and not isinstance(mask, MultiPolygon):
+            raise ValueError('Excpected {} or {} not {}.'.format(
+                Polygon, MultiPolygon, type(mask)
+            ))
         # Drop previous labels if found.
         self.metadata = self._drop_labels(prefix)
         # Collect labels.
@@ -90,25 +157,25 @@ class Labeler():
             self.metadata.y.to_numpy(),
             self.metadata.width.to_numpy()
         )).T
+        # Shapely uses (minx, miny, maxx, maxy).
         rows = []
         for coord in coords:
             x, y, width = coord
             tile = Polygon([
                 (x, y), (x, y+width),  # lower corners
-                        (x+width, y+width), (x+width, y)  # upper corners
+                (x+width, y+width), (x+width, y)  # upper corners
             ])
             percentage = tile.intersection(mask).area/tile.area
             rows.append({
                 f'{prefix}_perc': percentage,
                 f'{prefix}_label': int(percentage > threshold)
             })
-         # Concatenate to metadata.
-        metadata = pd.concat([self.metadata, pd.DataFrame(rows)], axis=1)
-        if save_to_csv:
-            # Save to csv
-            metadata.to_csv(self.metadata_path, index=False)
-        return metadata
-        return self.metadata
+        # Concatenate to metadata.
+        self.metadata = pd.concat([self.metadata, pd.DataFrame(rows)], axis=1)
+        # Draw thumbnail and save to self.data_dir.
+        self._annotate(mask)
+        path = join(self.data_dir, f'{prefix}_mask.jpeg')
+        self._annotated_thumbnail.save(path)
 
     def __repr__(self):
         return self.__class__.__name__ + '()'

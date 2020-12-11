@@ -1,17 +1,20 @@
 import os
-from typing import Union
+from typing import Union, List, Tuple
 import warnings
 
 from PIL import Image, ImageDraw
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 
 __all__ = [
     'combine_metadata',
     'plot_on_thumbnail',
     'plot_tiles',
+    'plot_histograms',
+    'plot_ranges'
 ]
 
 
@@ -48,8 +51,9 @@ def combine_metadata(
         # There might be slides that haven't been finished.
         if not os.path.exists(metadata_path):
             warnings.warn(
-                f'{metadata_path} path not found! If you are still cutting '
-                ' tiles this warning can be ignored.'
+                f'{metadata_path} path not found! Might arise if you are still '
+                'cutting slides, some of the slides were broken or no '
+                'tissue was found on the slide.'
             )
         # There might be empty files.
         elif os.path.getsize(metadata_path) > 5:
@@ -111,6 +115,29 @@ def plot_on_thumbnail(
     return annotated_thumbnail
 
 
+def resize(image: Union[np.ndarray, Image.Image], max_pixels: int = 1_000_000):
+    """Donwsaple image until it has less than max_pixels pixels."""
+    if isinstance(image, Image.Image):
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = np.array(image, dtype=np.uint8)
+    elif isinstance(image, np.ndarray):
+        image = image.astype(np.uint8)
+    else:
+        raise TypeError('Excpected {} or {} not {}.'.format(
+            np.ndarray, Image.Image, type(image)
+        ))
+    dimensions = image.shape[:2]
+    width, height = dimensions
+    factor = 0
+    while width*height > max_pixels:
+        factor += 1
+        width = int(dimensions[0]/2**factor)
+        height = int(dimensions[1]/2**factor)
+    image = Image.fromarray(image)
+    return image.resize((height, width))
+
+
 def plot_tiles(
         dataframe: pd.DataFrame,
         rows: int = 3,
@@ -135,7 +162,10 @@ def plot_tiles(
         raise ValueError('Expected {} not {}'.format(
             pd.DataFrame, type(dataframe)
         ))
-    dataframe.sample(frac=1)
+    if len(dataframe) == 0:
+        print('No images.')
+        return
+    dataframe = dataframe.sample(n=min(len(dataframe),rows*cols))
     paths = list(dataframe.get('path', None))[:rows*cols]
     if title_column is not None:
         titles = list(dataframe.get(title_column, None))[:rows*cols]
@@ -172,13 +202,118 @@ def plot_tiles(
     return resize(summary, max_pixels)
 
 
-def resize(image, MAX_PIXELS=5_000_000):
-    dimensions = np.array(image).shape[:2]
-    width, height = dimensions
-    factor = 0
-    while width*height > MAX_PIXELS:
-        factor += 1
-        width = int(dimensions[0]/2**factor)
-        height = int(dimensions[1]/2**factor)
-    image = Image.fromarray(np.array(image).astype('uint8'))
-    return image.resize((height, width))
+def plot_histograms(
+    dataframe: pd.DataFrame,
+    prefix: str,
+    cols: int = 3,
+    bins: int = 20,
+    figsize: tuple = (20, 20),
+    share_x: bool = False,
+    log_y: bool = False,
+    fontsize=20
+) -> None:
+    """Plot histograms for different columns named prefix_*.
+
+    Arguments:
+        dataframe: Your metadata.
+        prefix: Name of the value you want to plot (ie. hue).
+        cols: Number of columns in the figure, rows are set automatically.
+        bins: Bins for histogram.
+        figsize: Figure size in inches.
+        sharex: Whether to share x axis between subplots.
+        log_y: Log scale for y-axis.
+        fontsize: Font size for labels etc.
+
+    """
+    if not isinstance(dataframe, pd.DataFrame):
+        raise ValueError('Expected {} not {}'.format(
+            pd.DataFrame, type(dataframe)
+        ))
+    # Collect columns
+    qs = [x.split('_')[-1] for x in dataframe.columns if prefix in x]
+    if len(qs) <= cols and cols > 1:
+        fig, axes = plt.subplots(1, cols, figsize=figsize, sharex=share_x)
+        # Plot histograms.
+        for i, q in enumerate(qs):
+            col_name = prefix+'_'+str(q)
+            ax = dataframe.plot.hist(ax=axes[i], y=col_name, bins=bins)
+            apply_fontsize(ax, size=fontsize, name=prefix)
+            if log_y:
+                ax.set_yscale("log")
+        plt.tight_layout()
+    elif cols == 1:
+        fig, axes = plt.subplots(len(qs), cols, figsize=figsize, sharex=share_x)
+        # Plot histograms.
+        for i, q in enumerate(qs):
+            col_name = prefix+'_'+str(q)
+            ax = dataframe.plot.hist(ax=axes[i], y=col_name, bins=bins)
+            apply_fontsize(ax, size=fontsize, name=prefix)
+            if log_y:
+                ax.set_yscale("log")
+        plt.tight_layout()
+    else:
+        qs = [qs[i:i + cols] for i in range(0, len(qs), cols)]
+        rows = len(qs)
+        # Init subplots.
+        fig, axes = plt.subplots(len(qs), cols, figsize=figsize, sharex=share_x)
+        # Plot histograms.
+        for x, row in enumerate(qs):
+            for y, q in enumerate(row):
+                col_name = prefix+'_'+str(q)
+                ax = dataframe.plot.hist(ax=axes[x, y], y=col_name, bins=bins)
+                apply_fontsize(ax, size=fontsize, name=prefix)
+                if log_y:
+                    ax.set_yscale("log")
+        plt.tight_layout()
+
+
+def apply_fontsize(ax: plt.Axes, size: int, name: str):
+    """Set font sizes for labels."""
+    for tick in ax.xaxis.get_major_ticks():
+        tick.label.set_fontsize(size-2)
+    for tick in ax.yaxis.get_major_ticks():
+        tick.label.set_fontsize(size-2)
+    ax.set_ylabel("Frequency", fontsize=size)
+    ax.set_xlabel(name, fontsize=size)
+
+
+def plot_ranges(
+    dataframe: pd.DataFrame, 
+    column: str, 
+    ranges: List[Tuple[float]], 
+    cols: int = 8, 
+    rows: int = 4,
+    max_pixels: int = 1_000_000 
+) -> None :
+    """Use tiles from different range of values using the plot_tiles()
+    
+    Arguments:
+        dataframe: Your metadata.
+        colum: Column name in dataframe.
+        ranges: List of ranges to plot in format [(low,high), (low,high), ...]
+        cols: For plot_tiles() function.
+        rows: For plot_tiles() function.
+        max_pixels: For plot_tiles() function.
+    """
+    if not isinstance(dataframe, pd.DataFrame):
+        raise ValueError('Expected {} not {}'.format(
+            pd.DataFrame, type(dataframe)
+        ))
+    if column not in dataframe.columns:
+        raise ValueError(f'Column {column} not in given dataframe.')
+    for low,high in ranges:
+        if low > high:
+            raise ValueError(
+                f'{low} > {high}. Please give list of ranges in format '
+                '[(low,high), (low,high), ...]'
+            )
+        print(f'{column}: {low} to {high}')
+        display(
+            plot_tiles(
+                dataframe[
+                    (dataframe[column] > low) & 
+                    (dataframe[column] < high)
+                ],
+                cols=cols, rows=rows, max_pixels=max_pixels
+            )
+        )

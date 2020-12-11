@@ -1,7 +1,9 @@
 import os
+from typing import List
+import pickle
 import multiprocessing as mp
 import xml.etree.ElementTree as ET
-from typing import List
+
 
 import numpy as np
 import pandas as pd
@@ -9,6 +11,19 @@ from tqdm import tqdm
 from shapely.geometry import Polygon, MultiPolygon
 
 
+def load_data(path):
+    """Load pickle from path."""
+    with open(path, "rb") as f:
+        data = pickle.load(f)
+    return data
+
+
+def save_data(data,path):
+    """Save data to pickle."""
+    with open(path, "wb") as f:
+        pickle.dump(data, f)
+
+    
 def remove_extension(path: str) -> str:
     """Return filename with the extension removed."""
     if '.' in path:
