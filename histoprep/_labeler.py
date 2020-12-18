@@ -102,12 +102,12 @@ class TileLabeler():
         ).convert('RGB')
 
     def numpy_to_shapely(
-            self, 
-            mask: np.ndarray,
-            downsample: int = None
-        ) -> MultiPolygon:
+        self,
+        mask: np.ndarray,
+        downsample: int = None
+    ) -> MultiPolygon:
         """Convert a numpy mask to a shapely mask.
-        
+
         Arguments:
             mask:
                 Mask of the desired labels in a 2-dimensional numpy.ndarray.
@@ -128,10 +128,11 @@ class TileLabeler():
         return MultiPolygon(polygons)
 
     def label_from_shapely(
-            self,
-            mask: Union[Polygon, MultiPolygon],
-            prefix: str,
-            threshold: int,
+        self,
+        mask: Union[Polygon, MultiPolygon],
+        prefix: str,
+        threshold: int,
+        overwrite: bool = False,
     ) -> None:
         """
         Add labels and intersection percentages to metadata from a shapely mask.
@@ -144,14 +145,24 @@ class TileLabeler():
             threshold: 
                 How much overlap with mask is required to turn the 
                 label to 1.
+            overwrite:
+                Wheter to overwrite labels if they are already in the metadata.
         """
         if not isinstance(mask, Polygon) and not isinstance(mask, MultiPolygon):
             raise ValueError('Excpected {} or {} not {}.'.format(
                 Polygon, MultiPolygon, type(mask)
             ))
+        if (
+            any(f'{prefix}_label' in x for x in self.metadata.columns)
+            and not overwrite
+        ):
+            raise ValueError(
+                f'This dataset has already been labeled with {prefix}! '
+                'To overwrite set overwrite=True.'
+            )
         # Drop previous labels if found.
         self.metadata = self._drop_labels(prefix)
-        if len(mask.bounds)==0:
+        if len(mask.bounds) == 0:
             # "Draw thumbnail"
             self._annotated_thumbnail = self._thumbnail
             # Empty mask so all are 0.
@@ -161,7 +172,7 @@ class TileLabeler():
                     f'{prefix}_perc': 0.0,
                     f'{prefix}_label': 0,
                 })
-        else: 
+        else:
             # Draw thumbnail.
             self._annotate(mask)
             # Collect labels.

@@ -173,8 +173,7 @@ class Cutter(object):
         self._summary_path = join(out_dir, 'summary.txt')
         self._image_dir = join(out_dir, 'images')
         # Make dirs.
-        os.makedirs(dirname(self._meta_path), exist_ok=True)
-        os.makedirs(dirname(self._thumb_path), exist_ok=True)
+        os.makedirs(out_dir, exist_ok=True)
         os.makedirs(self._image_dir, exist_ok=True)
 
     def _annotate(self) -> None:

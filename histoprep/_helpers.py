@@ -70,6 +70,7 @@ def mask_from_xml(xml_path: str) -> Polygon:
                 round(float(point.get('X'))),
                 round(float(point.get('Y'))))
             )
-        polygons.append(Polygon(np.array(polygon)))
+        if len(polygon) > 1:
+            polygons.append(Polygon(np.array(polygon)))
     mask = MultiPolygon(polygons).buffer(0)
     return mask

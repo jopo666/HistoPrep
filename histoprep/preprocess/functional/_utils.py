@@ -174,11 +174,19 @@ def RGB_quantiles(
         mask = tissue_mask(image, sat_thresh=sat_thresh)
     elif mask.shape != image.shape[:2]:
         mask = cv2.resize(mask, (resize, resize), cv2.INTER_LANCZOS4)
+    if mask.sum() == 0:
+        # No tissue, return empty dict
+        return {}
+    # Collect channels and sort.
+    red = np.sort(image[mask == 1, 0])
+    green = np.sort(image[mask == 1, 1])
+    blue = np.sort(image[mask == 1, 2])
+    gray = np.sort(gray[mask == 1])
     # Collect quantiles.
-    red = [np.quantile(image[mask == 1, 0], q) for q in quantiles]
-    green = [np.quantile(image[mask == 1, 1], q) for q in quantiles]
-    blue = [np.quantile(image[mask == 1, 2], q) for q in quantiles]
-    gray = [np.quantile(gray[mask == 1], q) for q in quantiles]
+    red = [np.quantile(red, q) for q in quantiles]
+    green = [np.quantile(green, q) for q in quantiles]
+    blue = [np.quantile(blue, q) for q in quantiles]
+    gray = [np.quantile(gray, q) for q in quantiles]
     keys = (
         [f'red_{x}' for x in quantiles] +
         [f'green_{x}' for x in quantiles] +
@@ -231,10 +239,18 @@ def HSV_quantiles(
         mask = tissue_mask(image, sat_thresh=sat_thresh)
     elif mask.shape != image.shape[:2]:
         mask = cv2.resize(mask, (resize, resize), cv2.INTER_LANCZOS4)
+    if mask.sum() == 0:
+        # No tissue, return empty dict
+        return {}
+    # Collect channels and sort.
     HSV = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-    hue = [np.quantile(HSV[mask == 1, 0], q) for q in quantiles]
-    sat = [np.quantile(HSV[mask == 1, 1], q) for q in quantiles]
-    val = [np.quantile(HSV[mask == 1, 2], q) for q in quantiles]
+    hue = np.sort(HSV[mask == 1, 0])
+    sat = np.sort(HSV[mask == 1, 1])
+    val = np.sort(HSV[mask == 1, 2])
+    # Collect quantiles.
+    hue = [np.quantile(hue, q) for q in quantiles]
+    sat = [np.quantile(sat, q) for q in quantiles]
+    val = [np.quantile(val, q) for q in quantiles]
     keys = (
         [f'hue_{x}' for x in quantiles] +
         [f'sat_{x}' for x in quantiles] +

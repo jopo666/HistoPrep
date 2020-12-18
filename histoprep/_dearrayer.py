@@ -220,3 +220,102 @@ class Dearrayer(object):
         mask = mask/mask.max()*255
         mask = Image.fromarray(mask.astype(np.uint8))
         return resize(mask, max_pixels)
+    
+    def _prepare_directories(self, parent_dir: str) -> None:
+        out_dir = join(parent_dir, self.slide_name)
+        # Save paths.
+        #self._meta_path = join(out_dir, 'metadata.csv')
+        self._thumb_path = join(out_dir, 'thumbnail.jpeg')
+        self._image_dir = join(out_dir, 'images')
+        # Make dirs.
+        os.makedirs(out_dir, exist_ok=True)
+        os.makedirs(self._image_dir, exist_ok=True)
+    
+    def save(
+        self,
+        parent_dir: str,
+        overwrite: bool = False,
+        image_format: str = 'jpeg',
+        quality: int = 95,
+    ) -> None:
+        """Cut and save tile images and metadata.
+
+        Arguments:
+            parent_dir: 
+                Save all information here.
+            overwrite: 
+                This will REMOVE all saved in parent_dir before saving 
+                everything again.
+            image_format: 
+                jpeg or png.
+            quality: 
+                For jpeg saving.
+        """
+        allowed_formats = ['jpeg', 'png']
+        if image_format not in allowed_formats:
+            raise ValueError(
+                'Image format {} not allowed. Select from {}'.format(
+                    image_format, allowed_formats
+                ))
+        self._prepare_directories(parent_dir)
+        # Check if slide has been cut before.
+        if exists(self._thumb_path) and not overwrite:
+            print(f'Slide has already been cut!')
+            return None
+        elif exists(self._thumb_path) and overwrite:
+            # Remove all previous files.
+            os.remove(self._thumb_path)
+            remove_images(self._image_dir)
+        # Save annotated thumbnail.
+        self._annotated_thumbnail.save(self._thumb_path, quality=95)
+        # Wrap the saving function so it can be parallized.
+        func = partial(save_spot, **{
+            'image_dir': self._image_dir,
+            'image_format': image_format,
+            'quality': quality,
+        })
+        # Multiprocessing to speed things up!
+        data = list(zip(self._numbers, self._boxes))
+        with mp.Pool(processes=os.cpu_count()) as p:
+            for result in tqdm(
+                p.imap(func, self.filtered_coordinates),
+                total=len(self.filtered_coordinates),
+                desc=self.slide_name,
+                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
+            ):
+                continue
+        metadata = list(filter(None, metadata))
+        if len(metadata) == 0:
+            print(f'No tiles saved from slide {self.slide_path}!')
+            return
+        # Save metadata
+        metadata = pd.DataFrame(metadata)
+        metadata.to_csv(self._meta_path, index=False)
+        return metadata
+     
+
+def save_spot(
+        data: Tuple[int,int,int,int],
+        image_dir: str,
+        image_format: str,
+        quality: int,
+) -> dict:
+    """Saves spot as an image (parallizable)."""
+    # Unpack variables
+    number, (x, y, w, h) = data
+    # Load slide from global.
+    reader = __READER__
+    # Prepare filename.
+    filepath = join(image_dir, f'{slide_name}_spot-{number}')
+    if image_format == 'png':
+        filepath = filepath + '.png'
+    else:
+        filepath = filepath + '.jpeg'
+    # Load image.
+    try:
+        image = reader.read_region((x, y), 0, (w, h)).convert('RGB')
+    except:
+        warnings.warn('Broken slide!')
+        return
+    # Save image.
+    image.save(filepath, quality=quality)
