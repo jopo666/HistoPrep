@@ -49,7 +49,7 @@ def mask_to_PIL(mask: np.ndarray) -> Image.Image:
 
 def tissue_mask(
         image: Union[np.ndarray, Image.Image],
-        sat_thresh: int = None,
+        threshold: int = None,
         blur_kernel: Tuple[int, int] = (5, 5),
         blur_iterations: int = 1,
         return_threshold: bool = False
@@ -57,13 +57,16 @@ def tissue_mask(
     """Generate a tissue mask for image.
 
     Arguments:
-        image: Input image.
-        sat_thresh: Saturation threshold for tissue detection (see the method
-            explanation below).
-        blur_kernel: Kernel to be used in Gaussian Blur. Set to None to disable.
-        blur_iterations: How many iterations to blur with kernel.
-        return_threshold: Whether to return the used sat_thresh in the case of
-            Otsu's method.
+        image: 
+            Input image.
+        threshold: 
+            Threshold for tissue detection (see the method explanation below).
+        blur_kernel: 
+            Kernel to be used in Gaussian Blur. Set to None to disable.
+        blur_iterations: 
+            How many iterations to blur with kernel.
+        return_threshold: 
+            Whether to return the used threshold in the case of Otsu's method.
 
     Return:
         np.ndarray: A tissue mask with 1 incidating tissue.
@@ -71,17 +74,16 @@ def tissue_mask(
     Two methods are implemented.
 
     Otsu's binarization:
-        Otsu's method is used to find an optimal saturation threshold by
-        minimizing the weighted within-class variance. Due to this, a relatively
-        high threshold for tissue detection is often selected and actual tissue
+        Otsu's method is used to find an optimal threshold by minimizing the 
+        weighted within-class variance. Due to this, a relatively high 
+        threshold for tissue detection is often selected and actual tissue
         is misclassified as background. Binarization is also forced even for 
         tiles with only background, causing the detection of non-existent 
         tissue.
 
     Adaptive gaussian thresholding:
-        Requires a saturation threshold to be given but performs better than 
-        Otsu's method. This is automatically implemented if a saturation 
-        threshold is given.
+        Requires a threshold to be given but performs better than Otsu's method.
+        This is automatically implemented if a threshold is given.
     """
     if isinstance(image, Image.Image):
         if image.mode != 'RGB':
@@ -93,27 +95,27 @@ def tissue_mask(
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
         ))
-    # HSV stands for hue, SATURATION, value.
-    saturation = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)[:, :, 1]
+    # Turn RGB to GRAY
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     # Blur if asked.
     if blur_kernel is not None:
-        saturation = cv2.GaussianBlur(saturation, blur_kernel, blur_iterations)
+        gray = cv2.GaussianBlur(gray, blur_kernel, blur_iterations)
     # Then do thresholding.
-    if sat_thresh is None:
+    if threshold is None:
         thresh, mask = cv2.threshold(
-            src=saturation,
+            src=gray,
             thresh=None,
             maxval=1,
             type=cv2.THRESH_BINARY+cv2.THRESH_OTSU
         )
     else:
         try:
-            sat_thresh = int(sat_thresh)
+            threshold = int(threshold)
         except:
-            raise TypeError(f'Excpected {int} not {type(sat_thresh)}.')
+            raise TypeError(f'Excpected {int} not {type(threshold)}.')
         thresh, mask = cv2.threshold(
-            src=saturation,
-            thresh=sat_thresh,
+            src=gray,
+            thresh=threshold,
             maxval=1,
             type=cv2.ADAPTIVE_THRESH_GAUSSIAN_C
         )
@@ -131,25 +133,29 @@ def RGB_quantiles(
                                   0.25, 0.5, 0.75, 0.9, 0.95, 0.99],
         mask: np.ndarray = None,
         resize: int = None,
-        sat_thresh: int = None
+        threshold: int = None
 ) -> Dict[int, int]:
-    """Color channel quantiles including grayscale.
+    """Color channel quantiles.
+
+    Useful in the detection of misclassified tissue and artifacts.
 
     Arguments:
-        image: Input image.
-        gray: Grayscale of the input image. Will be created if None.
-        mask: Tissue mask for the input image. Will be generated if not defined.
-        quantiles: The quantiles  of color channel values for tissue areas.
-        resize: Resize the image to resize x resize. The function can become 
+        image: 
+            Input image.
+        mask: 
+            Tissue mask for the input image. Will be generated if not defined.
+        quantiles: 
+            The quantiles  of color channel values for tissue areas.
+        resize: 
+            Resize the image to resize x resize. The function can become 
             really slow with large images, in these situations just use this
             option.
-        sat_thresh: For tissue_mask() function. Ignored if mask is defined.
+        threshold: 
+            For tissue_mask() function. Ignored if mask is defined.
 
     Return:
         dict: A dictionary of the quantiles of color channel values for tissue 
             areas.
-
-    Useful in the detection of misclassified tissue and artifacts.
     """
     if isinstance(image, Image.Image):
         if image.mode != 'RGB':
@@ -161,17 +167,10 @@ def RGB_quantiles(
         raise TypeError('Excpected {} or {} not {}.'.format(
             np.ndarray, Image.Image, type(image)
         ))
-    if gray is None:
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    elif not isinstance(gray, np.ndarray):
-        raise TypeError('Excpected grayscale to be {} not {}.'.format(
-            np.ndarray, type(gray)
-        ))
     if resize is not None:
         image = cv2.resize(image, (resize, resize), cv2.INTER_LANCZOS4)
-        gray = cv2.resize(gray, (resize, resize), cv2.INTER_LANCZOS4)
     if mask is None:
-        mask = tissue_mask(image, sat_thresh=sat_thresh)
+        mask = tissue_mask(image, threshold=threshold)
     elif mask.shape != image.shape[:2]:
         mask = cv2.resize(mask, (resize, resize), cv2.INTER_LANCZOS4)
     if mask.sum() == 0:
@@ -181,19 +180,16 @@ def RGB_quantiles(
     red = np.sort(image[mask == 1, 0])
     green = np.sort(image[mask == 1, 1])
     blue = np.sort(image[mask == 1, 2])
-    gray = np.sort(gray[mask == 1])
     # Collect quantiles.
     red = [np.quantile(red, q) for q in quantiles]
     green = [np.quantile(green, q) for q in quantiles]
     blue = [np.quantile(blue, q) for q in quantiles]
-    gray = [np.quantile(gray, q) for q in quantiles]
     keys = (
         [f'red_{x}' for x in quantiles] +
         [f'green_{x}' for x in quantiles] +
-        [f'blue_{x}' for x in quantiles] +
-        [f'gray_{x}' for x in quantiles]
+        [f'blue_{x}' for x in quantiles]
     )
-    results = dict(zip(keys, red + green + blue + gray))
+    results = dict(zip(keys, red + green + blue))
     return results
 
 
@@ -203,25 +199,29 @@ def HSV_quantiles(
                                   0.25, 0.5, 0.75, 0.9, 0.95, 0.99],
         mask: np.ndarray = None,
         resize: int = None,
-        sat_thresh: int = None,
+        threshold: int = None,
 ) -> Dict[int, int]:
-    """Detect artifacts with HSV color transformation.
+    """HSV channel quantiles.
+
+    Useful in the detection of misclassified tissue and artifacts.
 
     Arguments:
-        image: Input image.
-        mask: Tissue mask for the input image. Will be generated if not defined.
-        quantiles: The quantiles of hue, sat and value values for tissue
-            areas.
-        resize: Resize the image to resize x resize. The function can become 
+        image: 
+            Input image.
+        mask: 
+            Tissue mask for the input image. Will be generated if not defined.
+        quantiles: 
+            The quantiles of hue, sat and value values for tissue areas.
+        resize: 
+            Resize the image to resize x resize. The function can become 
             really slow with large images, in these situations just use this
             option.
-        sat_thresh: For tissue_mask() function. Ignored if mask is defined.
+        threshold: 
+            For tissue_mask() function. Ignored if mask is defined.
 
     Return:
         dict: A dictionary of the quantiles of hue, sat and value values for 
             tissue areas.
-
-    Useful in the detection of artifacts.
     """
     if isinstance(image, Image.Image):
         if image.mode != 'RGB':
@@ -236,7 +236,7 @@ def HSV_quantiles(
     if resize is not None:
         image = cv2.resize(image, (resize, resize), cv2.INTER_LANCZOS4)
     if mask is None:
-        mask = tissue_mask(image, sat_thresh=sat_thresh)
+        mask = tissue_mask(image, threshold=threshold)
     elif mask.shape != image.shape[:2]:
         mask = cv2.resize(mask, (resize, resize), cv2.INTER_LANCZOS4)
     if mask.sum() == 0:
@@ -261,7 +261,7 @@ def HSV_quantiles(
 
 
 def data_loss(image: Union[np.ndarray, Image.Image]) -> Dict[float, float]:
-    """Detect data_loss.
+    """Detect data loss.
 
     Arguments:
         image: Input image.
@@ -297,10 +297,13 @@ def sharpness(
     """Sharpness detection with Laplacian variance.
 
     Arguments:
-        image: Input image.
-        divider: Divider argument for the sliding_window() function. Window size
+        image: 
+            Input image.
+        divider: 
+            Divider argument for the sliding_window() function. Window size
             is defined as min(heigh,width)/divider
-        reduction: Reduction method(s) for the Laplacian variance values for 
+        reduction: 
+            Reduction method(s) for the Laplacian variance values for 
             each window.
 
     Return:
@@ -358,8 +361,10 @@ def sliding_window(
     """Sliding window with 0.5 overlap.
 
     Arguments:
-        image: Input image.
-        divider: Window size is defined as min(height,width)/divider.
+        image: 
+            Input image.
+        divider: 
+            Window size is defined as min(height,width)/divider.
             For square images, divider values will produce:
                 1: original image
                 2: 3x3=9 windows
@@ -392,7 +397,7 @@ def sliding_window(
 
 def preprocess(
         image: Union[np.ndarray, Image.Image],
-        sat_thresh: int = None,
+        threshold: int = None,
         resize: int = 64,
         quantiles: List[float] = [.01, .05, 0.1,
                                   0.25, 0.5, 0.75, 0.9, 0.95, 0.99],
@@ -401,13 +406,18 @@ def preprocess(
     """Preprocessing metrics for a histological image.
 
     Arguments:
-        image: Image to be preprocessed
-        sat_thresh: If not defined Otsu's binarization will be used (which) may
+        image: 
+            Image to be preprocessed
+        threshold: 
+            If not defined Otsu's binarization will be used (which) may
             fail for images with data loss or only background.
-        resize: For artifact() function (it's slow as fuck if tiles are not
-            resized to 64x64).
-        quantiles: For artifact() function.
-        reduction: For sharpness() function.
+        resize: 
+            For artifact() function (it's slow as fuck if tiles are not resized
+            to 64x64).
+        quantiles: 
+            For artifact() function.
+        reduction: 
+            For sharpness() function.
     """
     if isinstance(image, Image.Image):
         if image.mode != 'RGB':
@@ -422,7 +432,7 @@ def preprocess(
     # Initialize results and other shit.
     results = {}
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    mask = tissue_mask(image, sat_thresh=sat_thresh)
+    mask = tissue_mask(image, threshold=threshold)
     # Background percentage.
     results['background'] = (mask == 0).sum()/mask.size
     # Sharpness.
@@ -430,13 +440,11 @@ def preprocess(
     # Data loss.
     results.update(data_loss(gray))
     # Artifacts.
-    # Resize
-    small_img = cv2.resize(image, (resize, resize), cv2.INTER_LANCZOS4) 
-    small_gray = cv2.resize(image, (resize, resize), cv2.INTER_LANCZOS4)
+    small_img = cv2.resize(image, (resize, resize), cv2.INTER_LANCZOS4)
     small_mask = cv2.resize(mask, (resize, resize), cv2.INTER_LANCZOS4)
     results.update(HSV_quantiles(
         small_img, mask=small_mask, quantiles=quantiles))
     results.update(RGB_quantiles(
-        small_img, mask=small_mask, quantiles=quantiles, gray=small_gray))
-    
+        small_img, mask=small_mask, quantiles=quantiles))
+
     return results

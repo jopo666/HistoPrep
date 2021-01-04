@@ -39,8 +39,8 @@ class Cutter(object):
             Width of the square tiles to be cut.
         overlap: 
             Proportion of overlap between neighboring tiles
-        sat_thresh: 
-            Saturation threshold for tissue detection. Can be left 
+        threshold: 
+            Threshold value for tissue detection. Can be left 
             undefined, in which case Otsu's binarization is used. This is not
             recommended! Values can easily be searched with 
             Cutter.try_thresholds() function.
@@ -61,7 +61,7 @@ class Cutter(object):
         slide_path: str,
         width: int,
         overlap: float = 0.0,
-        sat_thresh: int = None,
+        threshold: int = None,
         downsample: int = 16,
         max_background: float = 0.999,
         create_thumbnail: bool = False
@@ -81,7 +81,7 @@ class Cutter(object):
         self.downsample = downsample
         self.width = width
         self.overlap = overlap
-        self.sat_thresh = sat_thresh
+        self.threshold = threshold
         self.max_background = max_background
         self.all_coordinates = self._get_all_coordinates()
         # Filter coordinates.
@@ -97,9 +97,9 @@ class Cutter(object):
                 'Please set create_thumbnail=True or select downsample from\n\n'
                 f'{self._downsamples()}'
             )
-        self.sat_thresh, self._tissue_mask = tissue_mask(
+        self.threshold, self._tissue_mask = tissue_mask(
             image=self._thumbnail,
-            sat_thresh=self.sat_thresh,
+            threshold=self.threshold,
             return_threshold=True
         )
         self.filtered_coordinates = self._filter_coordinates()
@@ -130,7 +130,7 @@ class Cutter(object):
             f"{self.slide_name}"
             f"\n  Tile width: {self.width}"
             f"\n  Tile overlap: {self.overlap}"
-            f"\n  Saturation threshold: {self.sat_thresh}"
+            f"\n  Threshold: {self.threshold}"
             f"\n  Max background: {self.max_background}"
             f"\n  Thumbnail downsample: {self.downsample}"
             f"\n  Total number of tiles: {len(self.all_coordinates)}"
@@ -144,7 +144,7 @@ class Cutter(object):
                 'width': self.width,
                 'overlap': self.overlap,
                 'downsample': self.downsample,
-                'sat_thresh': self.sat_thresh,
+                'threshold': self.threshold,
                 'max_background': self.max_background
             },
             path=self._param_path
@@ -169,6 +169,7 @@ class Cutter(object):
         # Save paths.
         self._meta_path = join(out_dir, 'metadata.csv')
         self._thumb_path = join(out_dir, 'thumbnail.jpeg')
+        self._ann_path = join(out_dir, 'thumbnail_annotated.jpeg')
         self._param_path = join(out_dir, 'parameters.p')
         self._summary_path = join(out_dir, 'summary.txt')
         self._image_dir = join(out_dir, 'images')
@@ -233,15 +234,16 @@ class Cutter(object):
             os.remove(self._meta_path)
             remove_images(self._image_dir)
         # Warn about Otsu's thresholding.
-        if self.sat_thresh is None:
+        if self.threshold is None:
             warnings.warn(
                 "Otsu's binarization will be used which might lead to errors "
                 "in tissue detection (seriously it takes a few seconds to "
                 "check for a good value with Cutter.try_thresholds() "
                 "function...)"
             )
-        # Save annotated thumbnail.
-        self._annotated_thumbnail.save(self._thumb_path, quality=95)
+        # Save both thumbnails.
+        self._thumbnail.save(self._thumb_path, quality=95)
+        self._annotated_thumbnail.save(self._ann_path, quality=95)
         # Save used parameters.
         self._save_parameters()
         # Save text summary.
@@ -253,7 +255,7 @@ class Cutter(object):
             'slide_name': self.slide_name,
             'image_dir': self._image_dir,
             'width': self.width,
-            'sat_thresh': self.sat_thresh,
+            'threshold': self.threshold,
             'image_format': image_format,
             'quality': quality,
             'custom_preprocess': custom_preprocess,
@@ -313,7 +315,7 @@ def save_tile(
         slide_name: str,
         image_dir: str,
         width: int,
-        sat_thresh: int,
+        threshold: int,
         image_format: str,
         quality: int,
         custom_preprocess: Callable[[Image.Image], dict] = None
@@ -345,7 +347,7 @@ def save_tile(
         return
     # Update metadata with preprocessing metrics.
     if custom_preprocess is None:
-        metadata.update(preprocess(image=image, sat_thresh=sat_thresh))
+        metadata.update(preprocess(image=image, threshold=threshold))
     else:
         metadata.update(custom_preprocess(image))
     # Save image.

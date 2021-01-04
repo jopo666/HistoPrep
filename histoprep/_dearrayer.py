@@ -34,8 +34,8 @@ class Dearrayer(object):
         slide_path:
             Path to the TMA slide array. All formats that are supported by 
             openslide can be used.
-        sat_thresh: 
-            Saturation threshold for tissue detection. Can be left 
+        threshold: 
+            Threshold value for tissue detection. Can be left 
             undefined, in which case Otsu's binarization is used. This is not
             recommended! Values can easily be searched with 
             Dearrayer.try_thresholds() function.
@@ -60,7 +60,7 @@ class Dearrayer(object):
     def __init__(
         self,
         slide_path: str,
-        sat_thresh: int = None,
+        threshold: int = None,
         downsample: int = 64,
         min_area: float = 0.1,
         max_area: float = 3,
@@ -81,7 +81,7 @@ class Dearrayer(object):
         self.slide_name = remove_extension(basename(slide_path))
         self.dimensions = self._reader.dimensions
         self.downsample = downsample
-        self.sat_thresh = sat_thresh
+        self.threshold = threshold
         self.min_area = min_area
         self.max_area = max_area
         self.kernel_size = kernel_size
@@ -98,9 +98,9 @@ class Dearrayer(object):
                 'Please set create_thumbnail=True or select downsample from\n\n'
                 f'{self._downsamples()}'
             )
-        self.sat_thresh, self._tissue_mask = tissue_mask(
+        self.threshold, self._tissue_mask = tissue_mask(
             image=self._thumbnail, 
-            sat_thresh=self.sat_thresh,
+            threshold=self.threshold,
             return_threshold=True
         )
         self._spot_mask = detect_spots(
@@ -129,7 +129,7 @@ class Dearrayer(object):
     def _summary(self):
         return (
             f"{self.slide_name}"
-            f"\n  Saturation threshold: {self.sat_thresh}"
+            f"\n  Threshold: {self.threshold}"
             f"\n  Number of TMA spots: {len(self._boxes)}"
         )
 

@@ -18,12 +18,13 @@ def load_data(path):
     return data
 
 
-def save_data(data,path):
+def save_data(data, path):
     """Save data to pickle."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
         pickle.dump(data, f)
 
-    
+
 def remove_extension(path: str) -> str:
     """Return filename with the extension removed."""
     if '.' in path:

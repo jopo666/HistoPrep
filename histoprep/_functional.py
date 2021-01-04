@@ -151,7 +151,7 @@ def try_thresholds(
         rows.append(np.hstack(row))
     summary = Image.fromarray(np.vstack(rows).astype('uint8'))
     l = ['original'] + thresholds
-    print('Saturation thresholds:\n')
+    print('Thresholds:\n')
     for row in [l[i:i + 4] for i in range(0, len(l), 4)]:
         [print(str(x).center(8), end='') for x in row]
         print()
@@ -280,11 +280,11 @@ def get_spots(
 
 
 def get_theta(image: Union[np.ndarray, Image.Image]) -> float:
-    """Detect if image is rotated and return the angle."""
+    """Detect if image is rotated and return the angle in radians."""
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     edges = cv2.Canny(gray, 0, 255, apertureSize=3)
     theta = cv2.HoughLines(edges, 1, np.pi/180, 200)[0][0][1]
-    return theta
+    return -np.radians(theta)
 
 
 def rotate_coordinates(coords: np.ndarray, theta: float) -> np.ndarray:
