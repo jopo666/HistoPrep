@@ -41,7 +41,8 @@ def mask_to_PIL(mask: np.ndarray) -> Image.Image:
     """Normalize a numpy mask between 0 and 255 and convert to PIL image."""
     if isinstance(mask, np.ndarray):
         # Normalize between 0-255.
-        mask = (mask/mask.max()) * 255
+        if mask.max() != 0:
+            mask = (mask/mask.max()) * 255
         return Image.fromarray(mask.astype(np.uint8))
     else:
         raise TypeError('Excpected {} not {}.'.format(np.ndarray, type(mask)))

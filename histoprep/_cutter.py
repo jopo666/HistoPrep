@@ -150,13 +150,13 @@ class Cutter(object):
             path=self._param_path
         )
 
-    def plot_tiles(self, max_pixels=1_000_000) -> Image.Image:
+    def get_annotated_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
         return resize(self._annotated_thumbnail, max_pixels)
 
-    def plot_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
+    def get_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
         return resize(self._thumbnail, max_pixels)
 
-    def plot_tissue_mask(self, max_pixels=1_000_000) -> Image.Image:
+    def get_tissue_mask(self, max_pixels=1_000_000) -> Image.Image:
         mask = self._tissue_mask
         # Flip for a nicer image
         mask = 1 - mask

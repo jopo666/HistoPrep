@@ -142,13 +142,13 @@ class Dearrayer(object):
             f"\n  Dimensions: {self.dimensions}"
         )
 
-    def plot_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
+    def get_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
         return resize(self._thumbnail, max_pixels)
 
-    def plot_annotated_thumbnail(self, max_pixels=5_000_000) -> Image.Image:
+    def get_annotated_thumbnail(self, max_pixels=5_000_000) -> Image.Image:
         return resize(self._annotated_thumbnail, max_pixels)
 
-    def plot_tissue_mask(self, max_pixels=1_000_000) -> Image.Image:
+    def get_tissue_mask(self, max_pixels=1_000_000) -> Image.Image:
         mask = self._tissue_mask
         # Flip for a nicer image
         mask = 1 - mask
@@ -156,7 +156,7 @@ class Dearrayer(object):
         mask = Image.fromarray(mask.astype(np.uint8))
         return resize(mask, max_pixels)
 
-    def plot_spot_mask(self, max_pixels=1_000_000) -> Image.Image:
+    def get_spot_mask(self, max_pixels=1_000_000) -> Image.Image:
         mask = self._spot_mask
         # Flip for a nicer image.
         mask = 1 - mask
@@ -297,7 +297,7 @@ class Dearrayer(object):
         # Finally save metadata.
         metadata = pd.DataFrame(
             np.hstack((self._numbers.reshape(-1, 1), self.bounding_boxes)))
-        metadata.columns = ['number','x','y','width','height']
+        metadata.columns = ['number', 'x', 'y', 'width', 'height']
         metadata.to_csv(self._meta_path, index=False)
         return metadata
 
