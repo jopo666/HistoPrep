@@ -65,7 +65,7 @@ def get_arguments():
                          help='Maximum area for a spot. [Default: median_area*%(default)s]')
     dearray.add_argument('--kernel_size', type=int, default=10, metavar='',
                          help='Kernel size for spot detection (give int). [Default: (%(default)s,%(default)s)]')
-    dearray.add_argument('--font_size', type=int, default=2, metavar='',
+    dearray.add_argument('--fontsize', type=int, default=2, metavar='',
                          help='For annotations. [Default: %(default)s]')
     dearray.add_argument('--overwrite', action='store_true',
                          help='Remove everything before dearraying. [Default: %(default)s]')

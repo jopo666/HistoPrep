@@ -74,7 +74,7 @@ class Dearrayer(object):
         if not exists(slide_path):
             raise IOError(f'{slide_path} not found.')
         self._reader = OpenSlide(slide_path)
-        # Make it global so cutting is faster.
+        # Make it global so cutting is faster (can't be pickled).
         global __READER__
         __READER__ = self._reader
         # Assing basic stuff that user can see/check.
@@ -133,8 +133,13 @@ class Dearrayer(object):
     def _summary(self):
         return (
             f"{self.slide_name}"
-            f"\n  Threshold: {self.threshold}"
             f"\n  Number of TMA spots: {len(self.bounding_boxes)}"
+            f"\n  Downsample: {self.downsample}",
+            f"\n  Threshold: {self.threshold}",
+            f"\n  Min area: {self.min_area}",
+            f"\n  Max area: {self.max_area}",
+            f"\n  Kernel size: {self.kernel_size}",
+            f"\n  Dimensions: {self.dimensions}"
         )
 
     def plot_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
@@ -230,6 +235,7 @@ class Dearrayer(object):
         # Save paths.
         self._thumb_path = join(out_dir, 'thumbnail.jpeg')
         self._annotated_path = join(out_dir, 'thumbnail_annotated.jpeg')
+        self._meta_path = join(out_dir, 'metadata.csv')
         self._image_dir = join(out_dir, 'images')
         # Make dirs.
         os.makedirs(self._image_dir, exist_ok=True)
@@ -269,7 +275,8 @@ class Dearrayer(object):
             # Remove all previous files.
             os.remove(self._thumb_path)
             remove_images(self._image_dir)
-        # Save annotated thumbnail.
+        # Save both thumbnails.
+        self._thumbnail.save(self._thumb_path, quality=95)
         self._annotated_thumbnail.save(self._annotated_path, quality=95)
         # Wrap the saving function so it can be parallized.
         func = partial(save_spot, **{
@@ -287,8 +294,12 @@ class Dearrayer(object):
                 bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
             ):
                 continue
-        # Finally save thumbnail (used to check if all spots have been saved).
-        self._thumbnail.save(self._thumb_path, quality=95)
+        # Finally save metadata.
+        metadata = pd.DataFrame(
+            np.hstack((self._numbers.reshape(-1, 1), self.bounding_boxes)))
+        metadata.columns = ['number','x','y','width','height']
+        metadata.to_csv(self._meta_path, index=False)
+        return metadata
 
 
 def save_spot(

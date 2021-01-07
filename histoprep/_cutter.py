@@ -169,7 +169,7 @@ class Cutter(object):
         # Save paths.
         self._meta_path = join(out_dir, 'metadata.csv')
         self._thumb_path = join(out_dir, 'thumbnail.jpeg')
-        self._ann_path = join(out_dir, 'thumbnail_annotated.jpeg')
+        self._annotated_path = join(out_dir, 'thumbnail_annotated.jpeg')
         self._param_path = join(out_dir, 'parameters.p')
         self._summary_path = join(out_dir, 'summary.txt')
         self._image_dir = join(out_dir, 'images')
@@ -230,6 +230,7 @@ class Cutter(object):
             return pd.read_csv(self._meta_path)
         elif exists(self._meta_path) and overwrite:
             # Remove all previous files.
+            os.remove(self._annotated_path)
             os.remove(self._thumb_path)
             os.remove(self._meta_path)
             remove_images(self._image_dir)
@@ -241,8 +242,9 @@ class Cutter(object):
                 "check for a good value with Cutter.try_thresholds() "
                 "function...)"
             )
-        # Save annotated thumbnail.
-        self._annotated_thumbnail.save(self._ann_path, quality=95)
+                # Save both thumbnails.
+        self._thumbnail.save(self._thumb_path, quality=95)
+        self._annotated_thumbnail.save(self._annotated_path, quality=95)
         # Save used parameters.
         self._save_parameters()
         # Save text summary.
@@ -273,11 +275,9 @@ class Cutter(object):
         if len(metadata) == 0:
             print(f'No tiles saved from slide {self.slide_path}!')
             return
-        # Save metadata
+        # Save metadata.
         metadata = pd.DataFrame(metadata)
         metadata.to_csv(self._meta_path, index=False)
-         # Finally save thumbnail (used to check if all tiles have been saved).
-        self._thumbnail.save(self._thumb_path, quality=95)
         return metadata
 
     def _get_all_coordinates(self):
