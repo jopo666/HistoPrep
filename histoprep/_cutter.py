@@ -190,8 +190,8 @@ class Cutter(object):
 
     def try_thresholds(
         self,
-        thresholds: List[int] = [5, 10, 15,
-                                 20, 30, 40, 50, 60, 80, 100, 120],
+        thresholds: List[int] = [250, 240, 230,
+                                 220, 200, 190, 180, 170, 160, 150, 140],
         max_pixels=1_000_000
     ) -> Image.Image:
         """Returns a summary image of different thresholds."""
@@ -241,8 +241,7 @@ class Cutter(object):
                 "check for a good value with Cutter.try_thresholds() "
                 "function...)"
             )
-        # Save both thumbnails.
-        self._thumbnail.save(self._thumb_path, quality=95)
+        # Save annotated thumbnail.
         self._annotated_thumbnail.save(self._ann_path, quality=95)
         # Save used parameters.
         self._save_parameters()
@@ -277,6 +276,8 @@ class Cutter(object):
         # Save metadata
         metadata = pd.DataFrame(metadata)
         metadata.to_csv(self._meta_path, index=False)
+         # Finally save thumbnail (used to check if all tiles have been saved).
+        self._thumbnail.save(self._thumb_path, quality=95)
         return metadata
 
     def _get_all_coordinates(self):

@@ -12,12 +12,13 @@ from tqdm import tqdm
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 
-from .preprocess.functional import tissue_mask
+from .preprocess.functional import tissue_mask, PIL_to_array
 
-
+import seaborn as sns
 ########################
 ### Common functions ###
 ########################
+
 
 def get_downsamples(slide_path: str) -> dict:
     reader = OpenSlide(slide_path)
@@ -107,9 +108,7 @@ def load_tile(
 def resize(image: Union[np.ndarray, Image.Image], max_pixels: int = 1_000_000):
     """Donwsaple image until it has less than max_pixels pixels."""
     if isinstance(image, Image.Image):
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        image = np.array(image, dtype=np.uint8)
+        image = PIL_to_array(image)
     elif isinstance(image, np.ndarray):
         image = image.astype(np.uint8)
     else:
@@ -129,8 +128,7 @@ def resize(image: Union[np.ndarray, Image.Image], max_pixels: int = 1_000_000):
 
 def try_thresholds(
     thumbnail: Image.Image,
-    thresholds: List[int] = [5, 10, 15,
-                             20, 30, 40, 50, 60, 80, 100, 120],
+    thresholds: List[int],
     max_pixels=1_000_000
 ) -> Image.Image:
     """Returns a summary image of different thresholds."""
@@ -139,9 +137,9 @@ def try_thresholds(
     images = [gray]
     for t in thresholds:
         mask = tissue_mask(thumbnail, t)
-        # Flip for a nicer image
+        # Flip for a nicer image.
         mask = 1 - mask
-        mask = mask/mask.max()*255
+        mask = mask*255
         images.append(mask.astype(np.uint8))
     images = [images[i:i + 4] for i in range(0, len(images), 4)]
     rows = []
@@ -163,45 +161,35 @@ def try_thresholds(
 #################################
 
 def detect_spots(
-        image: Union[np.ndarray, Image.Image],
         mask: np.ndarray,
         min_area: float = 0.1,
         max_area: float = 3,
-        kernel_size: Tuple[int] = (5, 5)
+        kernel_size: Tuple[int, int] = (5, 5)
 ):
-    """ Detect TMA spots from image.
+    """ Detect TMA spots from a thumbnail image.
 
-    How: Detect tissue mask -> clean up non-TMA stuff -> return mask
+    How: Detect tissue mask -> clean up non-TMA stuff -> return mask.
 
     Arguments:
-        image: thumbnail
-        min_area: min_area = median_spot_area * min_area
-        max_area: max_area = median_spot_area * max_area
-        kernel_size: Sometimes the default doesn't work for large/small
-            thumbnails
+        min_area: 
+            median_spot_area * min_area
+        max_area: 
+            median_spot_area * max_area
+        kernel_size: 
+            Sometimes the default doesn't work for large/small thumbnails.
     """
-    if isinstance(image, Image.Image):
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        image = np.array(image, dtype=np.uint8)
-    elif isinstance(image, np.ndarray):
-        image = image.astype(np.uint8)
-    else:
-        raise TypeError('Excpected {} or {} not {}.'.format(
-            np.ndarray, Image.Image, type(image)
-        ))
     # Structuring element to close gaps.
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, kernel_size)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=10)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
     # Erode & dilate trick.
-    mask = cv2.erode(mask, np.ones(kernel_size, np.uint8), iterations=5)
-    mask = cv2.dilate(mask, np.ones(kernel_size, np.uint8), iterations=10)
+    mask = cv2.erode(mask, np.ones(kernel_size, np.uint8), iterations=1)
+    mask = cv2.dilate(mask, np.ones(kernel_size, np.uint8), iterations=4)
     # Remove too small/large spots.
     contours, __ = cv2.findContours(
         mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     areas = np.array([cv2.contourArea(x) for x in contours])
     # Define min and max values
-    min_area, max_area = np.median(areas)*0.1, np.median(areas)*5
+    min_area, max_area = np.median(areas)*min_area, np.median(areas)*max_area
     idx = (areas > min_area) & (areas < max_area)
     contours = [contours[i] for i in range(len(idx)) if idx[i]]
     # Draw new mask.
@@ -212,79 +200,78 @@ def detect_spots(
 
 
 def get_spots(
-    image: Union[np.ndarray, Image.Image],
     spot_mask: np.ndarray,
     downsample: int,
 ):
     """Orders the spots on a spot_mask taking into consideration empty spots."""
-    if isinstance(image, Image.Image):
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        image = np.array(image, dtype=np.uint8)
-    elif isinstance(image, np.ndarray):
-        image = image.astype(np.uint8)
-    else:
-        raise TypeError('Excpected {} or {} not {}.'.format(
-            np.ndarray, Image.Image, type(image)
-        ))
-    # Collect bounding boxes
+    # Collect bounding boxes.
     contours, _ = cv2.findContours(
         spot_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    # The format is (x,y,w,h)
     boxes = [cv2.boundingRect(cnt) for cnt in contours]
     boxes = np.array(boxes) * downsample
-    # Get centroid of each contour.
-    coords = np.zeros(boxes[:,:2].shape)
-    for i,cnt in enumerate(contours):
-        # compute the center of the contour
+    # Get centroid of each bounding box.
+    coords = np.zeros(boxes[:, :2].shape)
+    for i, cnt in enumerate(contours):
         M = cv2.moments(cnt)
         centroid_x = int(M["m10"] / M["m00"])
         centroid_y = int(M["m01"] / M["m00"])
-        coords[i,:] = [centroid_x,centroid_y]
-    # Detect rotation and rotate coordinates.
-    theta = get_theta(image)
+        coords[i, :] = [centroid_x, centroid_y]
+    # Rotate coordinates.
+    theta = get_theta(coords)
     coords = rotate_coordinates(coords, theta)
-    # Find optimal columns and rows.
-    cols = get_optimal_n(coords[:, 0])
-    rows = get_optimal_n(coords[:, 1])
+    # Detect optimal number of rows and columns.
+    cols = get_optimal_cluster_size(coords[:, 0])
+    rows = get_optimal_cluster_size(coords[:, 1])
     # Cluster.
     col_labels = hierachial_clustering(coords[:, 0], n_clusters=cols)
     row_labels = hierachial_clustering(coords[:, 1], n_clusters=rows)
-    # Order so that top-left spot is first.
-    idx = np.lexsort((-coords[:, 0], coords[:, 1]))
-    coords = coords[idx, :]
-    boxes = boxes[idx, :]
-    col_labels = col_labels[idx] + 1000
-    row_labels = row_labels[idx] + 1000
-    # Rename clusters.
-    for labs in [col_labels, row_labels]:
-        __, idx = np.unique(labs, return_index=True)
-        idx = np.sort(idx)
-        for cluster, i in enumerate(idx):
-            labs[labs == labs[i]] = cluster
-    # Collect spot numbers
+    # Detect cluster means.
+    x_means = [coords[col_labels == i, 0].mean() for i in range(cols)]
+    y_means = [coords[row_labels == i, 1].mean() for i in range(rows)]
+    # Change label numbers to correct order (starting from top-left).
+    for i in range(cols):
+        new_label = np.arange(cols)[np.argsort(x_means) == i]
+        col_labels[col_labels == i] = -new_label
+    col_labels *= -1
+    for i in range(rows):
+        new_label = np.arange(rows)[np.argsort(y_means) == i]
+        row_labels[row_labels == i] = -new_label
+    row_labels *= -1
     labels = list(zip(col_labels, row_labels))
-    numbers = []
+    # Collect numbers.
+    numbers = np.zeros(len(coords)).astype(np.str)
     i = 1
-    for row in range(rows):
-        for col in range(cols):
-            labs = [x for x in labels if x ==  (col, row)]
-            if len(labs) == 1:
-                numbers.append(i)
-            elif len(labs) > 1:
-                ii = 1
-                for z in labs:
-                    numbers.append(f'{str(i)} _{str(ii)}')
-                    ii += 1
+    for r in range(rows):
+        for c in range(cols):
+            idx = [x == (c, r) for x in labels]
+            if sum(idx) == 1:
+                numbers[idx] = i
+            elif sum(idx) > 1:
+                numbers[idx] = [f'{i}_{ii}' for ii in range(sum(idx))]
             i += 1
     return numbers, boxes
 
 
-def get_theta(image: Union[np.ndarray, Image.Image]) -> float:
-    """Detect if image is rotated and return the angle in radians."""
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    edges = cv2.Canny(gray, 0, 255, apertureSize=3)
-    theta = cv2.HoughLines(edges, 1, np.pi/180, 200)[0][0][1]
-    return -np.radians(theta)
+def get_theta(coords: np.ndarray) -> float:
+    """Detect rotation from centroid coordinates and return angle in radians."""
+    n = len(coords)
+    thetas = []
+    for r in range(n):
+        for c in range(n):
+            x1, y1 = coords[r, :]
+            x2, y2 = coords[c, :]
+            thetas.append(np.rad2deg(np.arctan2(y2 - y1, x2 - x1)))
+    # We want deviations from 0 so divide corrections.
+    corr = np.array([0, 45, 90, 135, 180])
+    for i, theta in enumerate(thetas):
+        sign = np.sign(theta)
+        idx = np.abs(np.abs(theta)-corr).argmin()
+        thetas[i] = theta-sign*corr[idx]
+    # Finally return most common angle
+    values, counts = np.unique(np.round(thetas), return_counts=True)
+    theta = values[counts.argmax()]
+    return np.radians(theta)
 
 
 def rotate_coordinates(coords: np.ndarray, theta: float) -> np.ndarray:
@@ -294,16 +281,16 @@ def rotate_coordinates(coords: np.ndarray, theta: float) -> np.ndarray:
     return coords @ R
 
 
-def get_optimal_n(X: np.ndarray, min_n: int = 2, max_n: int = 50) -> int:
+def get_optimal_cluster_size(X: np.ndarray) -> int:
     """Find optimal cluster size for dataset X."""
     if len(X.shape) < 2:
         X = X.reshape(-1, 1)
     sil = []
-    for n in range(2, 50):
+    for n in range(2, X.shape[0]):
         clust = AgglomerativeClustering(n_clusters=n, linkage='ward')
         clust.fit(X)
         sil.append(silhouette_score(X, clust.labels_))
-    return np.argmax(sil)+min_n
+    return np.argmax(sil)+2
 
 
 def hierachial_clustering(

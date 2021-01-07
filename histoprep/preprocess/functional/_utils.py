@@ -108,6 +108,7 @@ def tissue_mask(
             maxval=1,
             type=cv2.THRESH_BINARY+cv2.THRESH_OTSU
         )
+        mask = 1 - mask
     else:
         try:
             threshold = int(threshold)
@@ -119,7 +120,6 @@ def tissue_mask(
             maxval=1,
             type=cv2.ADAPTIVE_THRESH_GAUSSIAN_C
         )
-        mask = 1 - mask
     if return_threshold:
         return int(thresh), mask
     else:
