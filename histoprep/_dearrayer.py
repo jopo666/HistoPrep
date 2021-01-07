@@ -52,8 +52,6 @@ class Dearrayer(object):
             max_area = median_spot_area * max_area
         kernel_size: 
             Sometimes the default doesn't work for large/small downsamples.
-        fontsize: 
-            For annotating the thumbnail.
         create_thumbnail:
             Create a thumbnail if downsample is not available.
     """
@@ -66,21 +64,20 @@ class Dearrayer(object):
         min_area: float = 0.4,
         max_area: float = 2,
         kernel_size: Tuple[int] = (10, 10),
-        fontsize: int = 2,
         create_thumbnail: bool = False,
     ):
         super().__init__()
         # Define openslide reader.
         if not exists(slide_path):
             raise IOError(f'{slide_path} not found.')
-        self._reader = OpenSlide(slide_path)
+        self.openslide_reader = OpenSlide(slide_path)
         # Make it global so cutting is faster (can't be pickled).
         global __READER__
-        __READER__ = self._reader
+        __READER__ = self.openslide_reader
         # Assing basic stuff that user can see/check.
         self.slide_path = slide_path
         self.slide_name = remove_extension(basename(slide_path))
-        self.dimensions = self._reader.dimensions
+        self.dimensions = self.openslide_reader.dimensions
         self.downsample = downsample
         self.threshold = threshold
         self.min_area = min_area
@@ -110,11 +107,14 @@ class Dearrayer(object):
             max_area=self.max_area,
             kernel_size=self.kernel_size,
         )
-        self._numbers, self.bounding_boxes = get_spots(
+        self._numbers, self._bounding_boxes = get_spots(
             spot_mask=self._spot_mask,
             downsample=self.downsample,
         )
-        self._annotate(fontsize)
+        self.metadata = pd.DataFrame(
+            np.hstack((self._numbers.reshape(-1, 1), self._bounding_boxes)))
+        self.metadata.columns = ['number', 'x', 'y', 'width', 'height']
+        self._annotate()
         if len([x for x in self._numbers if '_' in x]) > 0:
             print(
                 'Some spots were assinged the same number. Please check the '
@@ -125,7 +125,7 @@ class Dearrayer(object):
         return self.__class__.__name__ + '()'
 
     def __len__(self):
-        return len(self.bounding_boxes)
+        return len(self._bounding_boxes)
 
     def summary(self):
         print(self._summary())
@@ -133,7 +133,7 @@ class Dearrayer(object):
     def _summary(self):
         return (
             f"{self.slide_name}"
-            f"\n  Number of TMA spots: {len(self.bounding_boxes)}"
+            f"\n  Number of TMA spots: {len(self._bounding_boxes)}"
             f"\n  Downsample: {self.downsample}",
             f"\n  Threshold: {self.threshold}",
             f"\n  Min area: {self.min_area}",
@@ -150,7 +150,7 @@ class Dearrayer(object):
 
     def get_tissue_mask(self, max_pixels=1_000_000) -> Image.Image:
         mask = self._tissue_mask
-        # Flip for a nicer image
+        # Flip for a nicer image.
         mask = 1 - mask
         mask = mask/mask.max()*255
         mask = Image.fromarray(mask.astype(np.uint8))
@@ -164,26 +164,28 @@ class Dearrayer(object):
         mask = Image.fromarray(mask.astype(np.uint8))
         return resize(mask, max_pixels)
 
-    def _annotate(self, fontsize):
+    def _annotate(self):
         """Draw bounding boxes and numbers to the thumbnail."""
+        fontsize = (self.metadata.width.median()/6000)*70/self.downsample
         self._annotated_thumbnail = self._thumbnail.copy()
         annotated = ImageDraw.Draw(self._annotated_thumbnail)
-        # Bounding boxes
+        # Bounding boxes.
         for i in range(len(self)):
-            x, y, w, h = self.bounding_boxes[i]/self.downsample
-            annotated.rectangle([x, y, x+w, y+h], outline='red', width=10)
+            x, y, w, h = self._bounding_boxes[i]/self.downsample
+            annotated.rectangle(
+                [x, y, x+w, y+h], outline='red', width=round(fontsize*5))
         arr = np.array(self._annotated_thumbnail)
         # Numbers.
         for i in range(len(self)):
-            x, y, w, h = self.bounding_boxes[i]/self.downsample
+            x, y, w, h = self._bounding_boxes[i]/self.downsample
             arr = cv2.putText(
                 arr,
                 str(self._numbers[i]),
                 (int(x+10), int(y-10+h)),
-                cv2.FONT_HERSHEY_SIMPLEX,
+                cv2.FONT_HERSHEY_SCRIPT_SIMPLEX,
                 fontsize,
                 (0, 0, 255),
-                5,
+                round(fontsize*3),
                 cv2.LINE_AA
             )
         self._annotated_thumbnail = Image.fromarray(arr)
@@ -285,7 +287,7 @@ class Dearrayer(object):
             'quality': quality,
         })
         # Multiprocessing to speed things up!
-        data = list(zip(self._numbers, self.bounding_boxes))
+        data = list(zip(self._numbers, self._bounding_boxes))
         with mp.Pool(processes=os.cpu_count()) as p:
             for result in tqdm(
                 p.imap(func, data),
@@ -295,11 +297,8 @@ class Dearrayer(object):
             ):
                 continue
         # Finally save metadata.
-        metadata = pd.DataFrame(
-            np.hstack((self._numbers.reshape(-1, 1), self.bounding_boxes)))
-        metadata.columns = ['number', 'x', 'y', 'width', 'height']
-        metadata.to_csv(self._meta_path, index=False)
-        return metadata
+        self.metadata.to_csv(self._meta_path, index=False)
+        return self.metadata
 
 
 def save_spot(

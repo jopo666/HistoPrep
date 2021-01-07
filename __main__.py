@@ -98,7 +98,6 @@ def dearray(args):
             min_area=args.min_area,
             max_area=args.max_area,
             kernel_size=(args.kernel_size, args.kernel_size),
-            fontsize=args.fontsize,
             create_thumbnail=True,
         )
         # Dearray away!

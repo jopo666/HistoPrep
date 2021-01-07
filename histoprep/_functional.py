@@ -14,7 +14,7 @@ from sklearn.metrics import silhouette_score
 
 from .preprocess.functional import tissue_mask, PIL_to_array
 
-import seaborn as sns
+
 ########################
 ### Common functions ###
 ########################
@@ -162,9 +162,9 @@ def try_thresholds(
 
 def detect_spots(
         mask: np.ndarray,
-        min_area: float = 0.1,
-        max_area: float = 3,
-        kernel_size: Tuple[int, int] = (5, 5)
+        min_area: float,
+        max_area: float,
+        kernel_size: Tuple[int, int],
 ):
     """ Detect TMA spots from a thumbnail image.
 
@@ -183,7 +183,7 @@ def detect_spots(
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
     # Erode & dilate trick.
     mask = cv2.erode(mask, np.ones(kernel_size, np.uint8), iterations=1)
-    mask = cv2.dilate(mask, np.ones(kernel_size, np.uint8), iterations=4)
+    mask = cv2.dilate(mask, np.ones(kernel_size, np.uint8), iterations=2)
     # Remove too small/large spots.
     contours, __ = cv2.findContours(
         mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)

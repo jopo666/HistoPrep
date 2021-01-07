@@ -70,14 +70,14 @@ class Cutter(object):
         # Define openslide reader.
         if not exists(slide_path):
             raise IOError(f'{slide_path} not found.')
-        self._reader = OpenSlide(slide_path)
+        self.openslide_reader = OpenSlide(slide_path)
         # Make it global so cutting is faster.
         global __READER__
-        __READER__ = self._reader
+        __READER__ = self.openslide_reader
         # Assing basic stuff that user can see/check.
         self.slide_path = slide_path
         self.slide_name = remove_extension(basename(slide_path))
-        self.dimensions = self._reader.dimensions
+        self.dimensions = self.openslide_reader.dimensions
         self.downsample = downsample
         self.width = width
         self.overlap = overlap
@@ -156,7 +156,7 @@ class Cutter(object):
     def get_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
         return resize(self._thumbnail, max_pixels)
 
-    def get_tissue_mask(self, max_pixels=1_000_000) -> Image.Image:
+    def plot_tissue_mask(self, max_pixels=1_000_000) -> Image.Image:
         mask = self._tissue_mask
         # Flip for a nicer image
         mask = 1 - mask
