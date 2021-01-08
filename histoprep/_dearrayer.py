@@ -271,7 +271,7 @@ class Dearrayer(object):
         self._prepare_directories(parent_dir)
         # Check if slide has been cut before.
         if exists(self._thumb_path) and not overwrite:
-            print(f'Slide has already been cut!')
+            print('Slide has already been cut! Please set overwrite=True')
             return None
         elif exists(self._thumb_path) and overwrite:
             # Remove all previous files.

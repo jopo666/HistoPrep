@@ -76,6 +76,6 @@ def get_arguments():
 
     # Check paths.
     if not os.path.exists(args.input_dir):
-        raise IOError('Path {args.input_dir} not found.')
+        raise IOError(f'Path {args.input_dir} not found.')
 
     return args
