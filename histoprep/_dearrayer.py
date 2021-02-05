@@ -111,15 +111,24 @@ class Dearrayer(object):
             spot_mask=self._spot_mask,
             downsample=self.downsample,
         )
-        self.metadata = pd.DataFrame(
-            np.hstack((self._numbers.reshape(-1, 1), self._bounding_boxes)))
-        self.metadata.columns = ['number', 'x', 'y', 'width', 'height']
-        self._annotate()
-        if len([x for x in self._numbers if '_' in x]) > 0:
+        if self._numbers is None or self._bounding_boxes is None:
             print(
-                'Some spots were assinged the same number. Please check the '
-                f'annotated thumbnail for slide {self.slide_name}.'
+                'No spots detected from the slide! Please try and adjust, '
+                'the kernel_size, min_area and max_area parameters using the '
+                'dearrayer.try_spot_mask() function.'
             )
+            self.metadata = None
+            self._annotate()
+        else:
+            self.metadata = pd.DataFrame(
+                np.hstack((self._numbers.reshape(-1, 1), self._bounding_boxes)))
+            self.metadata.columns = ['number', 'x', 'y', 'width', 'height']
+            self._annotate()
+            if len([x for x in self._numbers if '_' in x]) > 0:
+                print(
+                    'Some spots were assinged the same number. Please check the '
+                    f'annotated thumbnail for slide {self.slide_name}.'
+                )
 
     def __repr__(self):
         return self.__class__.__name__ + '()'
@@ -168,27 +177,30 @@ class Dearrayer(object):
         """Draw bounding boxes and numbers to the thumbnail."""
         fontsize = (self.metadata.width.median()/6000)*70/self.downsample
         self._annotated_thumbnail = self._thumbnail.copy()
-        annotated = ImageDraw.Draw(self._annotated_thumbnail)
-        # Bounding boxes.
-        for i in range(len(self)):
-            x, y, w, h = self._bounding_boxes[i]/self.downsample
-            annotated.rectangle(
-                [x, y, x+w, y+h], outline='red', width=round(fontsize*5))
-        arr = np.array(self._annotated_thumbnail)
-        # Numbers.
-        for i in range(len(self)):
-            x, y, w, h = self._bounding_boxes[i]/self.downsample
-            arr = cv2.putText(
-                arr,
-                str(self._numbers[i]),
-                (int(x+10), int(y-10+h)),
-                cv2.FONT_HERSHEY_SCRIPT_SIMPLEX,
-                fontsize,
-                (0, 0, 255),
-                round(fontsize*3),
-                cv2.LINE_AA
-            )
-        self._annotated_thumbnail = Image.fromarray(arr)
+        if self.metadata = None:
+            return
+        else:
+            annotated = ImageDraw.Draw(self._annotated_thumbnail)
+            # Bounding boxes.
+            for i in range(len(self)):
+                x, y, w, h = self._bounding_boxes[i]/self.downsample
+                annotated.rectangle(
+                    [x, y, x+w, y+h], outline='red', width=round(fontsize*5))
+            arr = np.array(self._annotated_thumbnail)
+            # Numbers.
+            for i in range(len(self)):
+                x, y, w, h = self._bounding_boxes[i]/self.downsample
+                arr = cv2.putText(
+                    arr,
+                    str(self._numbers[i]),
+                    (int(x+10), int(y-10+h)),
+                    cv2.FONT_HERSHEY_SCRIPT_SIMPLEX,
+                    fontsize,
+                    (0, 0, 255),
+                    round(fontsize*3),
+                    cv2.LINE_AA
+                )
+            self._annotated_thumbnail = Image.fromarray(arr)
 
     def try_thresholds(
         self,

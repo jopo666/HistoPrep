@@ -51,9 +51,9 @@ def combine_metadata(
         # There might be slides that haven't been finished.
         if not os.path.exists(metadata_path):
             warnings.warn(
-                f'{metadata_path} path not found! Might arise if you are still '
-                'cutting slides, some of the slides were broken or no '
-                'tissue was found on the slide.'
+                f'{metadata_path} path not found! This warning might arise '
+                'if you are still cutting slides, some of the slides were '
+                'broken or no tissue was found on the slide.'
             )
         # There might be empty files.
         elif os.path.getsize(metadata_path) > 5:

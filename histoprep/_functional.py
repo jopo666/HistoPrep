@@ -207,6 +207,8 @@ def get_spots(
     # Collect bounding boxes.
     contours, _ = cv2.findContours(
         spot_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    if len(contours) == 0:
+        return None, None
     # The format is (x,y,w,h)
     boxes = [cv2.boundingRect(cnt) for cnt in contours]
     boxes = np.array(boxes) * downsample

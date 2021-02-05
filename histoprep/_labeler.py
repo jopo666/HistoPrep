@@ -20,7 +20,7 @@ class TileLabeler():
 
     Arguments:
         data_dir: 
-            Directory that contains the output of Cutter.cut(data_dir) function.
+            Directory that contains the output of Cutter.save() function.
         create_thumbnail:
             Create a thumbnail if downsample is not available.
     """
@@ -33,14 +33,14 @@ class TileLabeler():
         super().__init__()
         self.data_dir = data_dir
         # Check paths.
-        meta_path = join(data_dir, 'metadata.csv')
+        self._meta_path = join(data_dir, 'metadata.csv')
         param_path = join(data_dir, 'parameters.p')
-        if not exists(meta_path):
-            raise IOError('{meta_path} does not exist!')
+        if not exists(self._meta_path):
+            raise IOError(f'{self._meta_path} does not exist!')
         if not exists(param_path):
-            raise IOError('{param_path} does not exist!')
+            raise IOError(f'{param_path} does not exist!')
         # Get metadata and params.
-        self.metadata = pd.read_csv(meta_path)
+        self.metadata = pd.read_csv(self._meta_path)
         self._params = load_data(param_path)
         self.slide_path = self._params['slide_path']
         self.downsample = self._params['downsample']
@@ -106,7 +106,7 @@ class TileLabeler():
         mask: np.ndarray,
         downsample: int = None
     ) -> MultiPolygon:
-        """Convert a numpy mask to a shapely mask.
+        """Convert a binary numpy mask to a shapely mask.
 
         Arguments:
             mask:
@@ -119,13 +119,14 @@ class TileLabeler():
             raise ValueError('Expected a 2-dimensional numpy mask.')
         contours, __ = cv2.findContours(
             mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-        polygons = []
+        coords = []
         for cnt in contours:
-            coordinates = np.squeeze(cnt)
             if downsample is not None:
-                coordinates = coordinates * downsample
-            polygons.append(Polygon(np.squeeze(cnt)))
-        return MultiPolygon(polygons)
+                coords.append(np.squeeze(cnt) * downsample)
+            else:
+                coords.append(np.squeeze(cnt))
+        polygons = [Polygon(x) for x in coords if x.shape[0] > 2]
+        return MultiPolygon(polygons).buffer(0)
 
     def label_from_shapely(
         self,
@@ -163,7 +164,7 @@ class TileLabeler():
         # Drop previous labels if found.
         self.metadata = self._drop_labels(prefix)
         if len(mask.bounds) == 0:
-            # "Draw thumbnail"
+            # "Draw thumbnail".
             self._annotated_thumbnail = self._thumbnail
             # Empty mask so all are 0.
             rows = []
@@ -199,6 +200,9 @@ class TileLabeler():
         # Save thumbnail.
         path = join(self.data_dir, f'{prefix}_mask.jpeg')
         self._annotated_thumbnail.save(path)
+        # Save new metadata.
+        self.metadata.to_csv(self._meta_path, index=False)
+
 
     def __repr__(self):
         return self.__class__.__name__ + '()'

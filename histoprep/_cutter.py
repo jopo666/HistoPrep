@@ -82,6 +82,13 @@ class Cutter(object):
         self.width = width
         self.overlap = overlap
         self.threshold = threshold
+        if self.threshold is None:
+            warnings.warn(
+                "No threshold defined for tissue detection! Otsu's method will "
+                "be used to select a threshold which is not always optimal. "
+                "Different thresholds can be easily tried with the "
+                "Cutter.try_tresholds() command."
+            )
         self.max_background = max_background
         self.all_coordinates = self._get_all_coordinates()
         # Filter coordinates.
@@ -164,8 +171,8 @@ class Cutter(object):
         mask = Image.fromarray(mask.astype(np.uint8))
         return resize(mask, max_pixels)
 
-    def _prepare_directories(self, parent_dir: str) -> None:
-        out_dir = join(parent_dir, self.slide_name)
+    def _prepare_directories(self, output_dir: str) -> None:
+        out_dir = join(output_dir, self.slide_name)
         # Save paths.
         self._meta_path = join(out_dir, 'metadata.csv')
         self._thumb_path = join(out_dir, 'thumbnail.jpeg')
@@ -197,9 +204,9 @@ class Cutter(object):
         """Returns a summary image of different thresholds."""
         return try_thresholds(thumbnail=self._thumbnail, thresholds=thresholds)
 
-    def cut(
+    def save(
             self,
-            parent_dir: str,
+            output_dir: str,
             overwrite: bool = False,
             image_format: str = 'jpeg',
             quality: int = 95,
@@ -208,7 +215,7 @@ class Cutter(object):
         """Cut and save tile images and metadata.
 
         Arguments:
-            parent_dir: save all information here
+            output_dir: save all information here
             overwrite: This will REMOVE all saved images,thumbnail and metadata
                 and save images again.
             image_format: jpeg or png.
@@ -223,7 +230,7 @@ class Cutter(object):
                 'Image format {} not allowed. Select from {}'.format(
                     image_format, allowed_formats
                 ))
-        self._prepare_directories(parent_dir)
+        self._prepare_directories(output_dir)
         # Check if slide has been cut before.
         if exists(self._meta_path) and not overwrite:
             print(f'Slide has already been cut!')
@@ -242,13 +249,13 @@ class Cutter(object):
                 "check for a good value with Cutter.try_thresholds() "
                 "function...)"
             )
-                # Save both thumbnails.
+            # Save both thumbnails.
         self._thumbnail.save(self._thumb_path, quality=95)
         self._annotated_thumbnail.save(self._annotated_path, quality=95)
         # Save used parameters.
         self._save_parameters()
         # Save text summary.
-        with open(self._summary_path , "w") as f:
+        with open(self._summary_path, "w") as f:
             f.write(self._summary())
         # Wrap the saving function so it can be parallized.
         func = partial(save_tile, **{

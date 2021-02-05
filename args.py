@@ -9,7 +9,7 @@ TITLE = """ python3 HistoPrep {step} {arguments}
 █  █  █    █  █  █   █ █    █  █ █   █
 █  █  █  ██   █   ███  █    █  █ ███ █
 
-             by Jopo (2020)      
+             by Jopo (2021)
 """
 
 
