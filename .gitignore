@@ -1,9 +1,9 @@
 *__pycache__*
 secret_stuff/*
 project.toml
-setup.py
 *.egg-info/*
 build/*
 dist/*
 settings.json
 *.ipynb
+update_package.sh
