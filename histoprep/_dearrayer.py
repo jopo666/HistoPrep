@@ -177,7 +177,7 @@ class Dearrayer(object):
         """Draw bounding boxes and numbers to the thumbnail."""
         fontsize = (self.metadata.width.median()/6000)*70/self.downsample
         self._annotated_thumbnail = self._thumbnail.copy()
-        if self.metadata = None:
+        if self.metadata is None:
             return
         else:
             annotated = ImageDraw.Draw(self._annotated_thumbnail)

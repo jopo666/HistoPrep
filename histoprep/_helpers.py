@@ -2,13 +2,10 @@ import os
 from typing import List
 import pickle
 import multiprocessing as mp
-import xml.etree.ElementTree as ET
-
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from shapely.geometry import Polygon, MultiPolygon
 
 
 def load_data(path):
