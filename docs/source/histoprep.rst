@@ -28,22 +28,6 @@ histoprep.dearrayer module
    :undoc-members:
    :show-inheritance:
 
-histoprep.functional module
----------------------------
-
-.. automodule:: histoprep.functional
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-histoprep.helpers module
-------------------------
-
-.. automodule:: histoprep.helpers
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 

@@ -9,17 +9,6 @@ Subpackages
 
    histoprep.preprocess.functional
 
-Submodules
-----------
-
-histoprep.preprocess.utils module
----------------------------------
-
-.. automodule:: histoprep.preprocess.utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 

@@ -14,14 +14,14 @@ from tqdm import tqdm
 from PIL import Image, ImageDraw
 from openslide import OpenSlide
 
-from .functional import (
+from ._functional import (
     get_thumbnail,
     get_downsamples,
     try_thresholds,
     resize
 )
 from .preprocess.functional import preprocess, tissue_mask
-from .helpers import (
+from ._helpers import (
     remove_extension,
     remove_images,
     save_data
