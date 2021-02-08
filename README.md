@@ -53,7 +53,7 @@ python3 HistoPrep cut ./input_dir ./output_dir --width 512 --overlap 0.25 --img_
 
 Detailed examples with best practices:
 
-- [Cutting and preprocessing a whole slide image.](https://github.com/jopo666/HistoPrep/examples/cut.ipynb) [coming in the future!]
+- [Cutting and preprocessing a whole slide image.](https://github.com/jopo666/HistoPrep/examples/cut.ipynb)
 - [Cutting individual TMA spots from a slide.](https://github.com/jopo666/HistoPrep/examples/dearray.ipynb) [coming in the future!]
 
 ## Documentation
