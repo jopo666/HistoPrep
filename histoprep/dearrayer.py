@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from openslide import OpenSlide
 
-from ._functional import (
+from .functional import (
     get_thumbnail,
     get_downsamples,
     try_thresholds,
@@ -25,7 +25,11 @@ from ._functional import (
     get_theta
 )
 from .preprocess.functional import preprocess, tissue_mask
-from ._helpers import remove_extension, remove_images
+from .helpers import remove_extension, remove_images
+
+__all__ = [
+    'Dearrayer'
+]
 
 
 class Dearrayer(object):

@@ -1,4 +1,7 @@
+import sys
+sys.path.append('..')  # Used for Sphinx
 
-from ._cutter import Cutter
-from ._dearrayer import Dearrayer
+
+from .cutter import Cutter
+from .dearrayer import Dearrayer
 from . import preprocess

@@ -20,6 +20,8 @@ pip install histoprep
 
 # install as an executable
 git clone https://github.com/jopo666/HistoPrep
+cd HistoPrep
+pip install -r requirements.txt
 ```
 
 ## Requirements

@@ -1,1 +1,4 @@
-from ._utils import *
+from .utils import *
+
+import sys
+sys.path.append('..')  # Used for Sphinx
