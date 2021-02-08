@@ -1,10 +1,10 @@
-``HistoPrep``
-=============
+HistoPrep
+=========
 
 Welcome to the documentation of ``HistoPrep``!
 
-What is ``HistoPrep``
-*********************
+What is ``HistoPrep``?
+**********************
 
 ``HistoPrep`` can be used to process and preprocess large histological slides for machine learning.
 
@@ -15,40 +15,52 @@ What is ``HistoPrep``
 Installation
 ************
 
-``
-# install as a module   
-pip install histoprep
+.. code-block:: bash
 
-# install as an executable
-git clone https://github.com/jopo666/HistoPrep
-cd HistoPrep
-pip install -r requirements.txt
-``
+   # install as a module   
+   pip install histoprep
 
-You should also have `openslide-tools` installed on your machine.
+   # install as an executable
+   git clone https://github.com/jopo666/HistoPrep
+   cd HistoPrep
+   pip install -r requirements.txt
 
-``
-sudo apt-get install openslide-tools
-``
+You should also have ``openslide-tools`` installed on your machine.
 
-Cut
-***
+.. code-block:: bash
 
-.. autoclass:: histoprep.Cutter
+   sudo apt-get install openslide-tools
 
-Dearray
-*******
+API documentation
+=================
 
-.. autoclass:: histoprep.Dearray
-
-Preprocess
+``Cutter``
 **********
+.. autoclass:: histoprep.Cutter
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
+
+``Dearrayer``
+*************
+.. autoclass:: histoprep.Dearrayer
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+``preprocess``
+**************
 .. automodule:: histoprep.preprocess
+    :members: combine_metadata, plot_on_thumbnail, plot_tiles, plot_histograms, 
+      plot_ranges
+    :undoc-members:
+    :show-inheritance:
 
-Indices and tables
-******************
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+``preprocess.functional``
++++++++++++++++++++++++++
+.. automodule:: histoprep.preprocess.functional
+    :members: tissue_mask, HSV_quantiles, RGB_quantiles, data_loss, sharpness,
+      preprocess, sliding_window, PIL_to_array, array_to_PIL, mask_to_PIL,
+    :undoc-members:
+    :show-inheritance:

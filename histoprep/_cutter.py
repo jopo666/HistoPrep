@@ -63,6 +63,11 @@ class Cutter(object):
     Raises:
         IOError: slide_path not found.
         ValueError: downsample is not available and create_thumbnail=False.
+
+    Example::
+        import histoprep as hp
+        cutter = hp.Cutter(slide_path='path/to/slide', width=512, overlap=0.2)
+        metadata = cutter.save('/path/to/output_dir')
     """
 
     def __init__(
@@ -129,6 +134,9 @@ class Cutter(object):
         return len(self.filtered_coordinates)
 
     def available_downsamples(self):
+        """
+        Returns available downsamples for the slide.
+        """
         print(self._downsamples())
 
     def _downsamples(self):
@@ -139,7 +147,7 @@ class Cutter(object):
         return string
 
     def summary(self):
-        """Print a summary of the cutting process."""
+        """Returns a summary of the cutting process."""
         print(self._summary())
 
     def _summary(self):
@@ -194,7 +202,7 @@ class Cutter(object):
         """
         return resize(self._thumbnail, max_pixels)
 
-    def get_tissue_mask(self, max_pixels: int = 1_000_000) -> Image.Image:
+    def plot_tissue_mask(self, max_pixels: int = 1_000_000) -> Image.Image:
         """
         Returns an Pillow Image of the tissue mask for inspection.
 
@@ -266,7 +274,7 @@ class Cutter(object):
             image_format: str = 'jpeg',
             quality: int = 95,
             custom_preprocess: Callable[[Image.Image], dict] = None
-    ) -> pd.DataFrame:
+        ) -> pd.DataFrame:
         """
         Save tile images and metadata.
 

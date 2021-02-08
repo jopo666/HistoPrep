@@ -162,8 +162,8 @@ def try_thresholds(
 
 def detect_spots(
         mask: np.ndarray,
-        min_area: float,
-        max_area: float,
+        min_area_multiplier_: float,
+        max_area_multiplier: float,
         kernel_size: Tuple[int, int],
 ):
     """ Detect TMA spots from a thumbnail image.
@@ -171,10 +171,10 @@ def detect_spots(
     How: Detect tissue mask -> clean up non-TMA stuff -> return mask.
 
     Arguments:
-        min_area: 
-            median_spot_area * min_area
-        max_area: 
-            median_spot_area * max_area
+        min_area_multiplier: 
+            median_spot_area * min_area_multiplier
+        max_area_multiplier: 
+            median_spot_area * max_area_multiplier
         kernel_size: 
             Sometimes the default doesn't work for large/small thumbnails.
     """
@@ -189,7 +189,8 @@ def detect_spots(
         mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     areas = np.array([cv2.contourArea(x) for x in contours])
     # Define min and max values
-    min_area, max_area = np.median(areas)*min_area, np.median(areas)*max_area
+    min_area = np.median(areas)*min_area_multiplier
+    max_area = np.median(areas)*max_area_multiplier
     idx = (areas > min_area) & (areas < max_area)
     contours = [contours[i] for i in range(len(idx)) if idx[i]]
     # Draw new mask.

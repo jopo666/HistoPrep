@@ -21,19 +21,24 @@ __all__ = [
 def combine_metadata(
         parent_dir: str,
         csv_path: str = None,
-        overwrite: bool = False,
-) -> pd.DataFrame:
-    """Combine all metadata into a single csv-file.
+        overwrite: bool = False) -> pd.DataFrame:
+    """
+    Combines all metadata in ``parent_dir`` into a single csv-file.
 
-    Arguments:
-        parent_dir: Directory with all the slides.
-        csv_path: Path for the combined metadata.csv. Doesn't have to be defined
-            if you just want to return the pandas dataframe and for example 
-            save it in another format.
-        overwrite: Whether to overwrite if csv_path exists.
+    Args:
+        parent_dir (str): Directory with all the processed tiles.
+        csv_path (str, optional): Path for the combined metadata.csv. Doesn't 
+            have to be defined if you just want to return the pandas dataframe.
+            Defaults to None.
+        overwrite (bool, optional): Whether to overwrite if csv_path exists. 
+            Defaults to False.
 
-    Return:
-        pandas.DataFrame: The combined metadata.
+    Raises:
+        IOError: ``parent_dir`` does not exist.
+        IOError: ``csv_path`` exist and ``overwrite=False``.
+
+    Returns:
+        pd.DataFrame: Combined metadata.
     """
     if not os.path.exists(parent_dir):
         raise IOError(f'{parent_dir} does not exist.')
@@ -70,31 +75,38 @@ def combine_metadata(
 def plot_on_thumbnail(
         dataframe: pd.DataFrame,
         thumbnail: Image.Image,
-        downsample: int
-) -> Image.Image:
-    """Plot all tiles in a dataframe to a thumbnail.
+        downsample: int) -> Image.Image:
+    """
+    Plot all tiles in the metadata dataframe onto the thumbnail.
 
-    Arguments:
-        dataframe: Dataframe that contains the metadata of ONE SLIDE. The
-            function obviously doesn't work with combined metadata.
-        thumbnail: Thumbnail where the tiles should be drawn.
-        downsample: Downsample of the thumbnail.
+    Useful when preprocessing individual slides to determine wether you have
+    selected all the necessary tiles in a dataframe.
 
-    Return:
-        PIL.Image.Image: Thumbnail with the tiles of the dataframe drawn on it.
+    Args:
+        dataframe (pd.DataFrame): Dataframe that contains the metadata of 
+            **one slide**. The function does not work with combined metadata.
+        thumbnail (Imsage.Image): Thumbnail where the tiles should be drawn.
+        downsample (int): Downsample of the thumbnail.
+
+    Raises:
+        TypeError: Invalid input type for ``dataframe``, ``thumbnail`` or 
+            ``downsample``.
+
+    Returns:
+        Image.Image: Thumbail annotated with tiles in the dataframe.
     """
     if not isinstance(dataframe, pd.DataFrame):
-        raise ValueError('Expected {} not {}'.format(
+        raise TypeError('Expected {} not {}'.format(
             pd.DataFrame, type(dataframe)
         ))
     if not isinstance(thumbnail, Image.Image):
-        raise ValueError('Expected {} not {}'.format(
+        raise TypeError('Expected {} not {}'.format(
             Image.Image, type(thumbnail)
         ))
     try:
         downsample = int(downsample)
     except:
-        raise ValueError('Expected {} not {}'.format(
+        raise TypeError('Expected {} not {}'.format(
             int, type(downsample)
         ))
     # Draw tiles to the thumbnail.
@@ -116,7 +128,7 @@ def plot_on_thumbnail(
 
 
 def resize(image: Union[np.ndarray, Image.Image], max_pixels: int = 1_000_000):
-    """Donwsaple image until it has less than max_pixels pixels."""
+    """Donwsaple image until it has less than ``max_pixels`` pixels."""
     if isinstance(image, Image.Image):
         if image.mode != 'RGB':
             image = image.convert('RGB')
@@ -143,34 +155,41 @@ def plot_tiles(
         rows: int = 3,
         cols: int = 3,
         max_pixels: int = 1_000_000,
-        title_column: str = None,
-) -> Image.Image:
-    """Return a random collection of tiles from given DataFrame.
-
-    Arguments:
-        dataframe: Dataframe that contains the metadata (from one or more 
-            slides).
-        rows: Maximum number of rows.
-        cols: Maximum number of columns.
-        max_pixels: Maximum number of pixels of the returned image.
-        title_column: Dataframe column where to draw a values for the title.
-
-    Return:
-        PIL.Image.Image: Collection of random tiles from the dataframe.
+        title_column: str = None) -> Image.Image:
     """
+    Return a random collection of tiles from given metadata dataframe.
+
+    Args:
+        dataframe (pd.DataFrame): Dataframe that contains the metadata from one 
+            or more slides.
+        rows (int, optional): Maximum number of rows in the image collage.
+            Defaults to 3.
+        cols (int, optional): Maximum number of columns in the image collage.
+            Defaults to 3.
+        max_pixels (int, optional): Maximum number of pixels of the returned 
+            image. Defaults to 1_000_000.
+        title_column (str, optional): Dataframe column where to draw a values 
+            for a simple verbose title. Defaults to None.
+
+    Raises:
+        TypeError: Invalid input type for ``dataframe``.
+        FileNotFoundError: Image file for a certain row is not found.
+
+    Returns:
+        Image.Image: Collection of random tiles from the dataframe.
+    """
+
     if not isinstance(dataframe, pd.DataFrame):
-        raise ValueError('Expected {} not {}'.format(
+        raise TypeError('Expected {} not {}'.format(
             pd.DataFrame, type(dataframe)
         ))
     if len(dataframe) == 0:
         print('No images.')
         return
-    dataframe = dataframe.sample(n=min(len(dataframe),rows*cols))
+    dataframe = dataframe.sample(n=min(len(dataframe), rows*cols))
     paths = list(dataframe.get('path', None))[:rows*cols]
     if title_column is not None:
         titles = list(dataframe.get(title_column, None))[:rows*cols]
-    if any(x is None for x in paths):
-        raise AttributeError(f"{row} doens't have attribute 'path'.")
     images = []
     for path in paths:
         try:
@@ -203,28 +222,33 @@ def plot_tiles(
 
 
 def plot_histograms(
-    dataframe: pd.DataFrame,
-    prefix: str,
-    cols: int = 3,
-    bins: int = 20,
-    figsize: tuple = (20, 20),
-    share_x: bool = False,
-    log_y: bool = False,
-    fontsize=20
-) -> None:
-    """Plot histograms for different columns named prefix_*.
-
-    Arguments:
-        dataframe: Your metadata.
-        prefix: Name of the value you want to plot (ie. hue).
-        cols: Number of columns in the figure, rows are set automatically.
-        bins: Bins for histogram.
-        figsize: Figure size in inches.
-        sharex: Whether to share x axis between subplots.
-        log_y: Log scale for y-axis.
-        fontsize: Font size for labels etc.
-
+        dataframe: pd.DataFrame,
+        prefix: str,
+        cols: int = 3,
+        bins: int = 20,
+        figsize: tuple = (20, 20),
+        share_x: bool = False,
+        log_y: bool = False,
+        fontsize=20) -> None:
     """
+    Plot histograms for different columns named prefix_*.
+
+    Args:
+        dataframe (pd.DataFrame): metadata dataframe.
+        prefix (str): Prefix of the columsn you want to plot (ie. hue).
+        cols (int, optional): Number of columns in the figure, rows are set 
+            automatically. Defaults to 3.
+        bins (int, optional): Bins for the histogram. Defaults to 20.
+        figsize (tuple, optional): Figure size in inches. Defaults to (20, 20).
+        share_x (bool, optional): Whether to share x axis between subplots. 
+            Defaults to False.
+        log_y (bool, optional): Log scale for y-axis. Defaults to False.
+        fontsize (int, optional): Font size for labels etc. Defaults to 20.
+
+    Raises:
+        ValueError: [description]
+    """
+
     if not isinstance(dataframe, pd.DataFrame):
         raise ValueError('Expected {} not {}'.format(
             pd.DataFrame, type(dataframe)
@@ -242,7 +266,8 @@ def plot_histograms(
                 ax.set_yscale("log")
         plt.tight_layout()
     elif cols == 1:
-        fig, axes = plt.subplots(len(qs), cols, figsize=figsize, sharex=share_x)
+        fig, axes = plt.subplots(
+            len(qs), cols, figsize=figsize, sharex=share_x)
         # Plot histograms.
         for i, q in enumerate(qs):
             col_name = prefix+'_'+str(q)
@@ -255,7 +280,8 @@ def plot_histograms(
         qs = [qs[i:i + cols] for i in range(0, len(qs), cols)]
         rows = len(qs)
         # Init subplots.
-        fig, axes = plt.subplots(len(qs), cols, figsize=figsize, sharex=share_x)
+        fig, axes = plt.subplots(
+            len(qs), cols, figsize=figsize, sharex=share_x)
         # Plot histograms.
         for x, row in enumerate(qs):
             for y, q in enumerate(row):
@@ -276,32 +302,50 @@ def apply_fontsize(ax: plt.Axes, size: int, name: str):
     ax.set_ylabel("Frequency", fontsize=size)
     ax.set_xlabel(name, fontsize=size)
 
+    """
 
-def plot_ranges(
-    dataframe: pd.DataFrame, 
-    column: str, 
-    ranges: List[Tuple[float]], 
-    cols: int = 8, 
-    rows: int = 4,
-    max_pixels: int = 1_000_000 
-) -> None :
-    """Use tiles from different range of values using the plot_tiles()
-    
     Arguments:
         dataframe: Your metadata.
-        colum: Column name in dataframe.
-        ranges: List of ranges to plot in format [(low,high), (low,high), ...]
+        colum: Column name in metadata.
+        ranges: 
         cols: For plot_tiles() function.
         rows: For plot_tiles() function.
         max_pixels: For plot_tiles() function.
     """
+
+
+def plot_ranges(
+        dataframe: pd.DataFrame,
+        column: str,
+        ranges: List[Tuple[float]],
+        cols: int = 8,
+        rows: int = 4,
+        max_pixels: int = 1_000_000) -> None:
+    """
+    Plot a random set of tiles a columns with values from ``ranges``.
+
+    Args:
+        dataframe (pd.DataFrame): Metadata dataframe.
+        column (str): Column to plot from the dataframe.
+        ranges (List[Tuple[float]]): List of ranges to plot in format 
+            [(low,high), (low,high), ...]
+        cols (int, optional): For plot_tiles() function. Defaults to 8.
+        rows (int, optional): For plot_tiles() function. Defaults to 4.
+        max_pixels (int, optional):  Maximum number of pixels of the returned 
+            image. Defaults to 1_000_000.
+
+    Raises:
+        TypeError: Invalid type for ``dataframe``.
+        ValueError: Column not found in ``dataframe``.
+        ValueError: If min > max in ranges.
+    """
     if not isinstance(dataframe, pd.DataFrame):
-        raise ValueError('Expected {} not {}'.format(
+        raise TypeError('Expected {} not {}'.format(
             pd.DataFrame, type(dataframe)
         ))
     if column not in dataframe.columns:
         raise ValueError(f'Column {column} not in given dataframe.')
-    for low,high in ranges:
+    for low, high in ranges:
         if low > high:
             raise ValueError(
                 f'{low} > {high}. Please give list of ranges in format '
@@ -311,7 +355,7 @@ def plot_ranges(
         display(
             plot_tiles(
                 dataframe[
-                    (dataframe[column] > low) & 
+                    (dataframe[column] > low) &
                     (dataframe[column] < high)
                 ],
                 cols=cols, rows=rows, max_pixels=max_pixels

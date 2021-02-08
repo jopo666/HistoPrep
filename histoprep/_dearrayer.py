@@ -33,43 +33,47 @@ __all__ = [
 
 
 class Dearrayer(object):
-    """Cut TMA spots from a TMA array slide.
+    """
+    Cut TMA spots from a TMA array slide.
 
-    Parameters:
-        slide_path:
-            Path to the TMA slide array. All formats that are supported by 
-            openslide can be used.
-        threshold: 
-            Threshold value for tissue detection. Can be left 
-            undefined, in which case Otsu's binarization is used. This is not
-            recommended! Values can easily be searched with 
-            Dearrayer.try_thresholds() function.
-        downsample: 
-            Downsample used for the thumbnail. When a lower downsample is used, 
-            the thumbnail-based background detection is more accurate but 
-            slower. Good results are achieved with downsample=16.
-        min_area:
-            Used to detect small shit from the image that isn't a TMA spot.
-                min_area = median_spot_area * min_area
-        max_area:
-            Used to detect big shit from the image that isn't a TMA spot.
-            max_area = median_spot_area * max_area
-        kernel_size: 
-            Sometimes the default doesn't work for large/small downsamples.
-        create_thumbnail:
-            Create a thumbnail if downsample is not available.
+    Args:
+        slide_path (str): Path to the TMA slide array. All formats that are 
+            supported by openslide can be used.
+        threshold (int, optional): Threshold value for tissue detection.
+            Can be left undefined, in which case Otsu's binarization is used. 
+            This is not recommended! Values can easily be searched with 
+            Cutter.try_thresholds() function. Defaults to None.
+        downsample (int, optional): Downsample used for the thumbnail. The user
+            might have to tweak this value depending on the magnification of the
+            slide. The TMA spot detection method is optimized for downsamlpe=64
+            when the magnification is 20x. If no spots are found, try adjusting
+            the downsample or tweak the spot detection variables with 
+            ``Dearrayer.try_spot_mask()`` function.  Defaults to 64.
+        min_area_multiplier (float, optional): Remove all detected contours that 
+            have an area smaller than ``median_area*min_area_multiplier``. 
+            Defaults to 0.4.
+        max_area_multiplier (float, optional): Remove all detected contours that 
+            have an area larger than ``median_area*max_area_multiplier``. 
+            Defaults to 2.
+        kernel_size (Tuple[int], optional): Kernel size used during spot 
+            detection. Defaults to (10, 10).
+        create_thumbnail (bool, optional):  Create a thumbnail if downsample is 
+            not available. Defaults to False.
+
+    Raises:
+        IOError: slide_path not found.
+        ValueError: downsample is not available and create_thumbnail=False.
     """
 
     def __init__(
-        self,
-        slide_path: str,
-        threshold: int = None,
-        downsample: int = 64,
-        min_area: float = 0.4,
-        max_area: float = 2,
-        kernel_size: Tuple[int] = (10, 10),
-        create_thumbnail: bool = False,
-    ):
+            self,
+            slide_path: str,
+            threshold: int = None,
+            downsample: int = 64,
+            min_area_multiplier: float = 0.4,
+            max_area_multiplier: float = 2,
+            kernel_size: Tuple[int] = (10, 10),
+            create_thumbnail: bool = False):
         super().__init__()
         # Define openslide reader.
         if not exists(slide_path):
@@ -84,8 +88,8 @@ class Dearrayer(object):
         self.dimensions = self.openslide_reader.dimensions
         self.downsample = downsample
         self.threshold = threshold
-        self.min_area = min_area
-        self.max_area = max_area
+        self.min_area_multiplier = min_area_multiplier
+        self.max_area_multiplier = max_area_multiplier
         self.kernel_size = kernel_size
         # Get spots.
         self._thumbnail = get_thumbnail(
@@ -107,8 +111,8 @@ class Dearrayer(object):
         )
         self._spot_mask = detect_spots(
             mask=self._tissue_mask,
-            min_area=self.min_area,
-            max_area=self.max_area,
+            min_area_multiplier=self.min_area_multiplier,
+            max_area_multiplier=self.max_area_multiplier,
             kernel_size=self.kernel_size,
         )
         self._numbers, self._bounding_boxes = get_spots(
@@ -118,8 +122,8 @@ class Dearrayer(object):
         if self._numbers is None or self._bounding_boxes is None:
             print(
                 'No spots detected from the slide! Please try and adjust, '
-                'the kernel_size, min_area and max_area parameters using the '
-                'dearrayer.try_spot_mask() function.'
+                'the kernel_size, min_area_multiplier and max_area_multiplier '
+                'parameters using the dearrayer.try_spot_mask() function.'
             )
             self.metadata = None
             self._annotate()
@@ -149,19 +153,50 @@ class Dearrayer(object):
             f"\n  Number of TMA spots: {len(self._bounding_boxes)}"
             f"\n  Downsample: {self.downsample}",
             f"\n  Threshold: {self.threshold}",
-            f"\n  Min area: {self.min_area}",
-            f"\n  Max area: {self.max_area}",
+            f"\n  Min area multiplier: {self.min_area_multiplier}",
+            f"\n  Max area multiplier: {self.max_area_multiplier}",
             f"\n  Kernel size: {self.kernel_size}",
             f"\n  Dimensions: {self.dimensions}"
         )
 
-    def get_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
+    def get_thumbnail(self, max_pixels: int = 1_000_000) -> Image.Image:
+        """
+        Returns an Pillow Image of the thumbnail for inspection.
+
+        Args:
+            max_pixels (int, optional): Downsample the image until the image 
+                has less than max_pixles pixels. Defaults to 1_000_000.
+
+        Returns:
+            Image.Image: Thumbnail.
+        """
         return resize(self._thumbnail, max_pixels)
 
-    def get_annotated_thumbnail(self, max_pixels=5_000_000) -> Image.Image:
+    def get_annotated_thumbnail(self,
+                                max_pixels: int = 1_000_000) -> Image.Image:
+        """
+        Returns an Pillow Image of the annotated thumbnail for inspection.
+
+        Args:
+            max_pixels (int, optional): Downsample the image until the image 
+                has less than max_pixles pixels. Defaults to 1_000_000.
+
+        Returns:
+            Image.Image: Annotated thumbnail.
+        """
         return resize(self._annotated_thumbnail, max_pixels)
 
-    def get_tissue_mask(self, max_pixels=1_000_000) -> Image.Image:
+    def get_tissue_mask(self, max_pixels: int = 1_000_000) -> Image.Image:
+        """
+        Returns an Pillow Image of the tissue mask for inspection.
+
+        Args:
+            max_pixels (int, optional): Downsample the image until the image 
+                has less than max_pixles pixels. Defaults to 1_000_000.
+
+        Returns:
+            Image.Image: Tissue mask.
+        """
         mask = self._tissue_mask
         # Flip for a nicer image.
         mask = 1 - mask
@@ -169,7 +204,17 @@ class Dearrayer(object):
         mask = Image.fromarray(mask.astype(np.uint8))
         return resize(mask, max_pixels)
 
-    def get_spot_mask(self, max_pixels=1_000_000) -> Image.Image:
+    def get_spot_mask(self, max_pixels: int = 1_000_000) -> Image.Image:
+        """
+        Returns an Pillow Image of the TMA spot mask for inspection.
+
+        Args:
+            max_pixels (int, optional): Downsample the image until the image 
+                has less than max_pixles pixels. Defaults to 1_000_000.
+
+        Returns:
+            Image.Image: Spot mask.
+        """
         mask = self._spot_mask
         # Flip for a nicer image.
         mask = 1 - mask
@@ -207,39 +252,56 @@ class Dearrayer(object):
             self._annotated_thumbnail = Image.fromarray(arr)
 
     def try_thresholds(
-        self,
-        thresholds: List[int] = [250, 240, 230,
-                                 220, 200, 190, 180, 170, 160, 150, 140],
-        max_pixels=1_000_000
-    ) -> Image.Image:
-        """Returns a summary image of different thresholds."""
+            self,
+            thresholds: List[int] = [250, 240, 230,
+                                     220, 200, 190, 180, 170, 160, 150, 140],
+            max_pixels=1_000_000) -> Image.Image:
+        """
+        Try out different thresholds for tissue detection.
+
+        The function prepares tissue masks with given thresholds and slaps them
+        all together in one summary image.
+
+        Args:
+            thresholds (List[int], optional): Thresholds to try. Defaults to 
+                [250, 240, 230, 220, 200, 190, 180, 170, 160, 150, 140].
+            max_pixels (int, optional): Downsample the image until the image 
+                has less than max_pixles pixels. Defaults to 1_000_000.
+
+        Returns:
+            Image.Image: [description]
+        """
         return try_thresholds(thumbnail=self._thumbnail, thresholds=thresholds)
 
     def try_spot_mask(
-        self,
-        min_area: float = 0.1,
-        max_area: float = 3,
-        kernel_size: Tuple[int] = (5, 5),
-        max_pixels: int = 1_000_000
-    ) -> Image.Image:
-        """Returns a spot mask with given arguments.
+            self,
+            min_area_multiplier: float = 0.1,
+            max_area_multiplier: float = 2,
+            kernel_size: Tuple[int] = (5, 5),
+            max_pixels: int = 1_000_000) -> Image.Image:
+        """
+        Try out different values for TMA spot detection.
 
-        Arguments:
-            min_area: 
-                Increase if some of the small shit is detected as a spot.
-                Decrease if some spots are missed.
-            max_area: 
-                Increase if some spots are missed.
-                Decrease if some large elements are detected as spots.
-            kernel_size:
-                Increase if using a small downsample.
-                Decrease if using a large downsample.
+        Args:
+            min_area_multiplier (float, optional): Increase if some of the small 
+                shit is detected as a spot. Decrease if some spots are missed. 
+                Defaults to 0.1.
+            max_area_multiplier (float, optional): Increase if some spots are
+                missed.  Decrease if some large elements are detected as spots. 
+                Defaults to 2.
+            kernel_size (Tuple[int], optional): Increase with a small downsample
+             and vice versa. Defaults to (5, 5).
+            max_pixels (int, optional): Downsample the image until the image 
+                has less than max_pixles pixels. Defaults to 1_000_000.
+
+        Returns:
+            Image.Image: TMA spot massk.
         """
         mask = detect_spots(
             image=self._thumbnail,
             mask=self._tissue_mask,
-            min_area=min_area,
-            max_area=max_area,
+            min_area_multiplier=min_area_multiplier,
+            max_area_multiplier=max_area_multiplier,
             kernel_size=kernel_size,
         )
         # Flip for a nicer image.
@@ -259,24 +321,28 @@ class Dearrayer(object):
         os.makedirs(self._image_dir, exist_ok=True)
 
     def save(
-        self,
-        parent_dir: str,
-        overwrite: bool = False,
-        image_format: str = 'jpeg',
-        quality: int = 95,
-    ) -> None:
-        """Cut and save tile images and metadata.
+            self,
+            parent_dir: str,
+            overwrite: bool = False,
+            image_format: str = 'jpeg',
+            quality: int = 95) -> pd.DataFrame:
+        """
+        Save TMA spots, coordinates and spot numbering.
 
-        Arguments:
-            parent_dir: 
-                Save all information here.
-            overwrite: 
-                This will REMOVE all saved in parent_dir before saving
-                everything again.
-            image_format: 
-                jpeg or png.
-            quality: 
-                For jpeg saving.
+        Args:
+            output_dir (str): Parent directory for all output.
+            overwrite (bool, optional): This will **remove** all saved images,
+                thumbnail and metadata and save images again.. Defaults to
+                False.
+            image_format (str, optional): Format can be jpeg or png. Defaults
+                to 'jpeg'.
+            quality (int, optional): For jpeg compression. Defaults to 95.
+
+        Raises:
+            ValueError: Invalid image format.
+
+        Returns:
+            pd.DataFrame: Coordinates and spot numbers.
         """
         allowed_formats = ['jpeg', 'png']
         if image_format not in allowed_formats:
@@ -321,8 +387,7 @@ def save_spot(
         data: Tuple[int, Tuple[int, int, int, int]],
         image_dir: str,
         image_format: str,
-        quality: int,
-) -> dict:
+        quality: int) -> dict:
     """Saves spot as an image (parallizable)."""
     # Unpack variables
     number, (x, y, w, h) = data
