@@ -1,8 +1,9 @@
 ``HistoPrep``
 =====================================
 
+Welcome to the documentation of ``HistoPrep``!
 
-.. automodule:: histoprep
+.. automodule:: histoprep.cutter
     :members:
 
 .. toctree::
