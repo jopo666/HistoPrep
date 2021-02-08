@@ -39,35 +39,30 @@ class Cutter(object):
     This class detectct tissue on the slide and cuts tiles of desired width
     from the image.
 
+    Args:
+        slide_path (str): Path to the slide image. All formats that are 
+            supported by openslide can be used.
+        width (int): Tile width.
+        overlap (float, optional): Overlap between neighbouring tiles. Defaults 
+            to 0.0.
+        threshold (int, optional): Threshold value for tissue detection.
+            Can be left undefined, in which case Otsu's binarization is used. 
+            This is not recommended! Values can easily be searched with 
+            Cutter.try_thresholds() function. Defaults to None.
+        downsample (int, optional): Downsample used for the thumbnail.
+            When a lower downsample is used, the thumbnail-based background 
+            detection is more accurate but slower. Good results are achieved 
+            with downsample=16. Defaults to 16.
+        max_background (float, optional): Maximum amount of background allowed 
+            for a tile. Due to the thumbnail-based background detection, tiles 
+            with higher background percentage may pass through but rarely the 
+            other way around. Defaults to 0.999.
+        create_thumbnail (bool, optional):  Create a thumbnail if downsample is 
+            not available. Defaults to False.
 
-    :param slide_path: Path to the slide image. All formats that are supported 
-        by openslidecan be used.
-    :type width: str
-    :param width: Tile width.
-    :type width: int
-    :param overlap: Overlap between neighbouring tiles, defaults to ``0.0``.
-    :type overlap: float, optional
-    :param threshold: Threshold value for tissue detection, defaults to None. 
-        Can be left undefined, in which case Otsu's binarization is used. 
-        This is not recommended! Values can easily be searched with 
-        ``Cutter.try_thresholds()`` function.
-    :type threshold: int, optional
-    :param downsample: Downsample used for the thumbnail, defaults to 16. 
-        When a lower downsample is used, the thumbnail-based background 
-        detection is more accurate but slower. Good results are achieved 
-        with downsample=16.
-    :type downsample: int, optional
-    :param max_background: Maximum amount of background allowed for a tile, 
-        defaults to `0.999`. Due to the thumbnail-based background detection, 
-        tiles with higher background percentage may pass through but rarely 
-        the other way around.
-    :type max_background: float, optional
-    :param create_thumbnail: Create a thumbnail if downsample is not available, 
-        defaults to False.
-    :type create_thumbnail: bool, optional
-    :raises IOError: If slide_path is not found.
-    :raises ValueError: If downsample is not available and 
-        create_thumbnail=False.
+    Raises:
+        IOError: slide_path not found.
+        ValueError: downsample is not available and create_thumbnail=False.
     """
 
     def __init__(

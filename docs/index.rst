@@ -10,7 +10,8 @@ Welcome to HistoPrep's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   source/modules
+   source/histoprep
+
 
 Indices and tables
 ==================
