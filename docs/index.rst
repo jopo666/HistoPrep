@@ -1,17 +1,13 @@
-.. HistoPrep documentation master file, created by
-   sphinx-quickstart on Mon Feb  8 11:08:07 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to HistoPrep's documentation!
+``HistoPrep``
 =====================================
+
+
+.. automodule:: histoprep
+    :members:
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
-   source/modules
-
 
 Indices and tables
 ==================

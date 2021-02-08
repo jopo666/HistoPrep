@@ -16,7 +16,7 @@ histoprep.cutter module
 -----------------------
 
 .. automodule:: histoprep.cutter
-   :members: Cutter
+   :members:
    :undoc-members:
    :show-inheritance:
 
@@ -24,7 +24,7 @@ histoprep.dearrayer module
 --------------------------
 
 .. automodule:: histoprep.dearrayer
-   :members: Dearrayer
+   :members:
    :undoc-members:
    :show-inheritance:
 
@@ -32,6 +32,6 @@ Module contents
 ---------------
 
 .. automodule:: histoprep
-   :members: Cutter, Dearrayer, preprocess
+   :members:
    :undoc-members:
    :show-inheritance:
