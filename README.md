@@ -14,6 +14,7 @@ This module allows you to cut and preprocess large histological slides. Some of 
 - Save a lot of tears while preprocessing images.
 
 ## Installation
+
 ```bash
 # install as a module   
 pip install histoprep
@@ -24,14 +25,11 @@ cd HistoPrep
 pip install -r requirements.txt
 ```
 
-## Requirements
-
-`python >= 3.8` and `openslide`
+You should also have `openslide-tools` installed on your machine.
 
 ```bash
 sudo apt-get install openslide-tools
 ```
-
 
 ## Usage
 
@@ -53,8 +51,8 @@ python3 HistoPrep cut ./input_dir ./output_dir --width 512 --overlap 0.25 --img_
 
 Detailed examples with best practices:
 
-- [Cutting and preprocessing a whole slide image.](https://github.com/jopo666/HistoPrep/examples/cut.ipynb)
-- [Cutting individual TMA spots from a slide.](https://github.com/jopo666/HistoPrep/examples/dearray.ipynb) [coming in the future!]
+- [Cutting and preprocessing a whole slide image.](https://github.com/jopo666/HistoPrep/blob/master/examples/cut.ipynb)
+- [Cutting individual TMA spots from a slide.](https://github.com/jopo666/HistoPrep/blob/master/examples/dearray.ipynb) [coming in the future!]
 
 ## Documentation
 
