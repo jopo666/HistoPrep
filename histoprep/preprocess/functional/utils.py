@@ -360,21 +360,21 @@ def sliding_window(
         image: Union[np.ndarray, Image.Image],
         divider: int = 2,
 ) -> List[np.ndarray]:
-    """Sliding window with 0.5 overlap.
+    """
+    Sliding window with 0.5 overlap.
 
-    Arguments:
-        image: 
-            Input image.
-        divider: 
-            Window size is defined as min(height,width)/divider.
-            For square images, divider values will produce:
-                1: original image
-                2: 3x3=9 windows
-                3: 5x5=25 windows
-                4: 7x7=49 windows
-                ...
-    Return:
-        list: List of window images as numpy arrays.
+    :param image: Input image.
+    :type image: Union[np.ndarray, Image.Image]
+    :param divider: Window size is defined as min(height,width)/divider, where
+        divider defaults to 2. For square images, divider values will produce:
+            1: original image
+            2: 3x3=9 windows
+            3: 5x5=25 windows
+            4: 7x7=49 windows
+    :type divider: int, optional
+    :raises TypeError: If image is in a wrong format.
+    :return: List of window images.
+    :rtype: List[np.ndarray]
     """
     if isinstance(image, Image.Image):
         image = np.array(image, dtype=np.uint8)
