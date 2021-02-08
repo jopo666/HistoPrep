@@ -9,29 +9,10 @@ Subpackages
 
    histoprep.preprocess
 
-Submodules
-----------
-
-histoprep.cutter module
------------------------
-
-.. automodule:: histoprep.cutter
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-histoprep.dearrayer module
---------------------------
-
-.. automodule:: histoprep.dearrayer
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 
 .. automodule:: histoprep
-   :members:
+   :members: Cutter, Dearrayer, preprocess
    :undoc-members:
    :show-inheritance:

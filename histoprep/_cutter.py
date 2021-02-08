@@ -194,7 +194,7 @@ class Cutter(object):
         """
         return resize(self._thumbnail, max_pixels)
 
-    def plot_tissue_mask(self, max_pixels: int = 1_000_000) -> Image.Image:
+    def get_tissue_mask(self, max_pixels: int = 1_000_000) -> Image.Image:
         """
         Returns an Pillow Image of the tissue mask for inspection.
 

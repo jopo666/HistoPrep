@@ -1,3 +1,3 @@
-from .cutter import Cutter
-from .dearrayer import Dearrayer
+from ._cutter import Cutter
+from ._dearrayer import Dearrayer
 from . import preprocess
