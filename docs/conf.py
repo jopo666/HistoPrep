@@ -40,6 +40,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
 ]
+napoleon_google_docstring = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

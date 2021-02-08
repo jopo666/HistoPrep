@@ -32,22 +32,19 @@ sudo apt-get install openslide-tools
 ``
 
 Cut
-*******
+***
 
-.. automodule:: histoprep
-    :members: Cutter
+.. autoclass:: histoprep.Cutter
 
 Dearray
 *******
 
-.. automodule:: histoprep
-    :members: Dearray
+.. autoclass:: histoprep.Dearray
 
 Preprocess
 **********
 
 .. automodule:: histoprep.preprocess
-    :members:
 
 Indices and tables
 ******************
