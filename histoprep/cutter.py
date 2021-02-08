@@ -139,6 +139,7 @@ class Cutter(object):
         return string
 
     def summary(self):
+        """Print a summary of the cutting process."""
         print(self._summary())
 
     def _summary(self):
@@ -166,13 +167,44 @@ class Cutter(object):
             path=self._param_path
         )
 
-    def get_annotated_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
+    def get_annotated_thumbnail(self,
+                                max_pixels: int = 1_000_000) -> Image.Image:
+        """
+        Returns an Pillow Image of the annotated thumbnail for inspection.
+
+        Args:
+            max_pixels (int, optional): Downsample the image until the image 
+                has less than max_pixles pixels. Defaults to 1_000_000.
+
+        Returns:
+            Image.Image: Annotated thumbnail.
+        """
         return resize(self._annotated_thumbnail, max_pixels)
 
-    def get_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
+    def get_thumbnail(self, max_pixels: int = 1_000_000) -> Image.Image:
+        """
+        Returns an Pillow Image of the thumbnail for inspection.
+
+        Args:
+            max_pixels (int, optional): Downsample the image until the image 
+                has less than max_pixles pixels. Defaults to 1_000_000.
+
+        Returns:
+            Image.Image: Thumbnail.
+        """
         return resize(self._thumbnail, max_pixels)
 
-    def plot_tissue_mask(self, max_pixels=1_000_000) -> Image.Image:
+    def plot_tissue_mask(self, max_pixels: int = 1_000_000) -> Image.Image:
+        """
+        Returns an Pillow Image of the tissue mask for inspection.
+
+        Args:
+            max_pixels (int, optional): Downsample the image until the image 
+                has less than max_pixles pixels. Defaults to 1_000_000.
+
+        Returns:
+            Image.Image: Tissue mask.
+        """
         mask = self._tissue_mask
         # Flip for a nicer image
         mask = 1 - mask
@@ -208,9 +240,23 @@ class Cutter(object):
         self,
         thresholds: List[int] = [250, 240, 230,
                                  220, 200, 190, 180, 170, 160, 150, 140],
-        max_pixels=1_000_000
+        max_pixels: int = 1_000_000
     ) -> Image.Image:
-        """Returns a summary image of different thresholds."""
+        """
+        Try out different thresholds for tissue detection.
+
+        The function prepares tissue masks with given thresholds and slaps them
+        all together in one summary image.
+
+        Args:
+            thresholds (List[int], optional): Thresholds to try. Defaults to 
+                [250, 240, 230, 220, 200, 190, 180, 170, 160, 150, 140].
+            max_pixels (int, optional): Downsample the image until the image 
+                has less than max_pixles pixels. Defaults to 1_000_000.
+
+        Returns:
+            Image.Image: [description]
+        """
         return try_thresholds(thumbnail=self._thumbnail, thresholds=thresholds)
 
     def save(
@@ -221,19 +267,35 @@ class Cutter(object):
             quality: int = 95,
             custom_preprocess: Callable[[Image.Image], dict] = None
     ) -> pd.DataFrame:
-        """Cut and save tile images and metadata.
-
-        Arguments:
-            output_dir: save all information here
-            overwrite: This will REMOVE all saved images,thumbnail and metadata
-                and save images again.
-            image_format: jpeg or png.
-            quality: For jpeg saving.
-            custom_preprocess: This is intended for users that want to define 
-                their own preprocessing function. Function must take a Pillow
-                image as an input and return a dictionary of desired metrics.
         """
+        Save tile images and metadata.
+
+        The function saves all the detected tiles in the desired format. When
+        the acutal image is loaded into memory, basic preprocessing metrics are
+        computed and added to metadata for preprocessing.
+
+        Args:
+            output_dir (str): Parent directory for all output.
+            overwrite (bool, optional): This will **remove** all saved images, 
+                thumbnail and metadata and save images again.. Defaults to 
+                False.
+            image_format (str, optional): Format can be jpeg or png. Defaults 
+                to 'jpeg'.
+            quality (int, optional): For jpeg compression. Defaults to 95.
+            custom_preprocess (Callable[[Image.Image], dict], optional): This is
+                intended for users that want to define their own preprocessing 
+                function. The function must take a Pillow image as an input and 
+                return a dictionary of desired metrics. Defaults to None.
+
+        Raises:
+            ValueError: Invalid image format.
+
+        Returns:
+            pd.DataFrame: Metadata.
+        """
+
         allowed_formats = ['jpeg', 'png']
+
         if image_format not in allowed_formats:
             raise ValueError(
                 'Image format {} not allowed. Select from {}'.format(
@@ -337,7 +399,7 @@ def save_tile(
         quality: int,
         custom_preprocess: Callable[[Image.Image], dict] = None
 ) -> dict:
-    """Saves tile and returns metadata (parallizable)."""
+    """Saves a tile and returns metadata (parallizable)."""
     # Load slide from global.
     reader = __READER__
     (x, y), bg_estimate = coords
