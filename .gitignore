@@ -7,3 +7,6 @@ dist/*
 settings.json
 *.ipynb
 update_package.sh
+_build
+_static
+_templates

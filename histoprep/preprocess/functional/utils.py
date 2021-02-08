@@ -290,6 +290,7 @@ def data_loss(image: Union[np.ndarray, Image.Image]) -> Dict[float, float]:
     }
 
 
+
 def sharpness(
         image: Union[np.ndarray, Image.Image],
         divider: int = 2,
