@@ -43,6 +43,7 @@ extensions = [
 ]
 napoleon_google_docstring = True
 autoapi_dirs = ['../histoprep']
+autoapi_type = 'python'
 autodoc_typehints = 'description'
 autoapi_generate_api_docs = False
 
