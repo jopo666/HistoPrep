@@ -1,12 +1,15 @@
+# Notes and other stuff.
 *__pycache__*
 secret_stuff/*
+*.ipynb
+update_package.sh
+# PyPi.
 project.toml
 *.egg-info/*
 build/*
 dist/*
 settings.json
-*.ipynb
-update_package.sh
+# Docs.
 _build
 _static
 _templates
