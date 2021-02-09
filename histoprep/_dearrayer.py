@@ -25,7 +25,7 @@ from ._functional import (
     get_theta
 )
 from .preprocess.functional import preprocess, tissue_mask
-from ._helpers import remove_extension, remove_images
+from ._helpers import remove_extension, remove_images, flatten
 
 __all__ = [
     'Dearrayer'
@@ -37,27 +37,27 @@ class Dearrayer(object):
     Cut TMA spots from a TMA array slide.
 
     Args:
-        slide_path (str): Path to the TMA slide array. All formats that are 
+        slide_path (str): Path to the TMA slide array. All formats that are
             supported by openslide can be used.
         threshold (int, optional): Threshold value for tissue detection.
-            Can be left undefined, in which case Otsu's binarization is used. 
-            This is not recommended! Values can easily be searched with 
+            Can be left undefined, in which case Otsu's binarization is used.
+            This is not recommended! Values can easily be searched with
             Cutter.try_thresholds() function. Defaults to None.
         downsample (int, optional): Downsample used for the thumbnail. The user
             might have to tweak this value depending on the magnification of the
             slide. The TMA spot detection method is optimized for downsamlpe=64
             when the magnification is 20x. If no spots are found, try adjusting
-            the downsample or tweak the spot detection variables with 
+            the downsample or tweak the spot detection variables with
             ``Dearrayer.try_spot_mask()`` function.  Defaults to 64.
-        min_area_multiplier (float, optional): Remove all detected contours that 
-            have an area smaller than ``median_area*min_area_multiplier``. 
+        min_area_multiplier (float, optional): Remove all detected contours that
+            have an area smaller than ``median_area*min_area_multiplier``.
             Defaults to 0.4.
-        max_area_multiplier (float, optional): Remove all detected contours that 
-            have an area larger than ``median_area*max_area_multiplier``. 
+        max_area_multiplier (float, optional): Remove all detected contours that
+            have an area larger than ``median_area*max_area_multiplier``.
             Defaults to 2.
-        kernel_size (Tuple[int], optional): Kernel size used during spot 
+        kernel_size (Tuple[int], optional): Kernel size used during spot
             detection. Defaults to (10, 10).
-        create_thumbnail (bool, optional):  Create a thumbnail if downsample is 
+        create_thumbnail (bool, optional):  Create a thumbnail if downsample is
             not available. Defaults to False.
 
     Raises:
@@ -88,9 +88,17 @@ class Dearrayer(object):
         self.dimensions = self.openslide_reader.dimensions
         self.downsample = downsample
         self.threshold = threshold
+        if self.threshold is None:
+            warnings.warn(
+                "No threshold defined for tissue detection! Otsu's method will "
+                "be used to select a threshold which is not always optimal. "
+                "Different thresholds can be easily tried with the "
+                "Dearrayer.try_tresholds() command."
+            )
         self.min_area_multiplier = min_area_multiplier
         self.max_area_multiplier = max_area_multiplier
         self.kernel_size = kernel_size
+        self._spots_saved = False
         # Get spots.
         self._thumbnail = get_thumbnail(
             slide_path=self.slide_path,
@@ -145,17 +153,18 @@ class Dearrayer(object):
         return len(self._bounding_boxes)
 
     def summary(self):
+        """Returns a summary of the dearraying process."""
         print(self._summary())
 
     def _summary(self):
         return (
             f"{self.slide_name}"
             f"\n  Number of TMA spots: {len(self._bounding_boxes)}"
-            f"\n  Downsample: {self.downsample}",
-            f"\n  Threshold: {self.threshold}",
-            f"\n  Min area multiplier: {self.min_area_multiplier}",
-            f"\n  Max area multiplier: {self.max_area_multiplier}",
-            f"\n  Kernel size: {self.kernel_size}",
+            f"\n  Downsample: {self.downsample}"
+            f"\n  Threshold: {self.threshold}"
+            f"\n  Min area multiplier: {self.min_area_multiplier}"
+            f"\n  Max area multiplier: {self.max_area_multiplier}"
+            f"\n  Kernel size: {self.kernel_size}"
             f"\n  Dimensions: {self.dimensions}"
         )
 
@@ -164,7 +173,7 @@ class Dearrayer(object):
         Returns an Pillow Image of the thumbnail for inspection.
 
         Args:
-            max_pixels (int, optional): Downsample the image until the image 
+            max_pixels (int, optional): Downsample the image until the image
                 has less than max_pixles pixels. Defaults to 1_000_000.
 
         Returns:
@@ -178,7 +187,7 @@ class Dearrayer(object):
         Returns an Pillow Image of the annotated thumbnail for inspection.
 
         Args:
-            max_pixels (int, optional): Downsample the image until the image 
+            max_pixels (int, optional): Downsample the image until the image
                 has less than max_pixles pixels. Defaults to 1_000_000.
 
         Returns:
@@ -191,7 +200,7 @@ class Dearrayer(object):
         Returns an Pillow Image of the tissue mask for inspection.
 
         Args:
-            max_pixels (int, optional): Downsample the image until the image 
+            max_pixels (int, optional): Downsample the image until the image
                 has less than max_pixles pixels. Defaults to 1_000_000.
 
         Returns:
@@ -209,7 +218,7 @@ class Dearrayer(object):
         Returns an Pillow Image of the TMA spot mask for inspection.
 
         Args:
-            max_pixels (int, optional): Downsample the image until the image 
+            max_pixels (int, optional): Downsample the image until the image
                 has less than max_pixles pixels. Defaults to 1_000_000.
 
         Returns:
@@ -263,9 +272,9 @@ class Dearrayer(object):
         all together in one summary image.
 
         Args:
-            thresholds (List[int], optional): Thresholds to try. Defaults to 
+            thresholds (List[int], optional): Thresholds to try. Defaults to
                 [250, 240, 230, 220, 200, 190, 180, 170, 160, 150, 140].
-            max_pixels (int, optional): Downsample the image until the image 
+            max_pixels (int, optional): Downsample the image until the image
                 has less than max_pixles pixels. Defaults to 1_000_000.
 
         Returns:
@@ -283,15 +292,15 @@ class Dearrayer(object):
         Try out different values for TMA spot detection.
 
         Args:
-            min_area_multiplier (float, optional): Increase if some of the small 
-                shit is detected as a spot. Decrease if some spots are missed. 
+            min_area_multiplier (float, optional): Increase if some of the small
+                shit is detected as a spot. Decrease if some spots are missed.
                 Defaults to 0.1.
             max_area_multiplier (float, optional): Increase if some spots are
-                missed.  Decrease if some large elements are detected as spots. 
+                missed.  Decrease if some large elements are detected as spots.
                 Defaults to 2.
             kernel_size (Tuple[int], optional): Increase with a small downsample
              and vice versa. Defaults to (5, 5).
-            max_pixels (int, optional): Downsample the image until the image 
+            max_pixels (int, optional): Downsample the image until the image
                 has less than max_pixles pixels. Defaults to 1_000_000.
 
         Returns:
@@ -316,7 +325,11 @@ class Dearrayer(object):
         self._thumb_path = join(out_dir, 'thumbnail.jpeg')
         self._annotated_path = join(out_dir, 'thumbnail_annotated.jpeg')
         self._meta_path = join(out_dir, 'metadata.csv')
+        self._tile_meta_path = join(out_dir, 'tile_metadata.csv')
         self._image_dir = join(out_dir, 'images')
+        self._tile_dir = join(out_dir, 'tiles')
+        self._summary_path = join(out_dir, 'summary.txt')
+
         # Make dirs.
         os.makedirs(self._image_dir, exist_ok=True)
 
@@ -359,6 +372,9 @@ class Dearrayer(object):
             # Remove all previous files.
             os.remove(self._thumb_path)
             remove_images(self._image_dir)
+        # Save text summary.
+        with open(self._summary_path, "w") as f:
+            f.write(self._summary())
         # Save both thumbnails.
         self._thumbnail.save(self._thumb_path, quality=95)
         self._annotated_thumbnail.save(self._annotated_path, quality=95)
@@ -370,17 +386,110 @@ class Dearrayer(object):
         })
         # Multiprocessing to speed things up!
         data = list(zip(self._numbers, self._bounding_boxes))
+        spot_paths = []
         with mp.Pool(processes=os.cpu_count()) as p:
-            for result in tqdm(
+            for filepath in tqdm(
                 p.imap(func, data),
                 total=len(data),
                 desc=self.slide_name,
                 bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
             ):
-                continue
+                spot_paths.append(filepath)
         # Finally save metadata.
+        self.metadata['path'] = spot_paths
         self.metadata.to_csv(self._meta_path, index=False)
+        self._spots_saved = True
         return self.metadata
+
+    def cut_spots(
+        self,
+        width: int,
+        overlap: float = 0.0,
+        max_background: float = 0.999,
+        overwrite: bool = False,
+        image_format: str = 'jpeg',
+        quality: int = 95,
+        custom_preprocess: Callable[[Image.Image], dict] = None
+    ) -> pd.DataFrame:
+        """
+        Cut tiles from dearrayed TMA spots.
+
+        Args:
+            width (int): Tile width.
+            overlap (float, optional): Overlap between neighbouring tiles.
+                Defaults to 0.0.
+            max_background (float, optional): Maximum amount of background
+                allowed for a tile. Defaults to 0.999.
+            overwrite (bool, optional): This will **remove** the tiles directory
+                completely and save all the tiles again. Defaults to False.
+            image_format (str, optional): Format can be jpeg or png. Defaults
+                to 'jpeg'.
+            quality (int, optional): For jpeg compression. Defaults to 95.
+            custom_preprocess (Callable[[Image.Image], dict], optional): This is
+                intended for users that want to define their own preprocessing
+                function. The function must take a Pillow image as an input and
+                return a dictionary of desired metrics. Defaults to None.
+
+        Raises:
+            ValueError: Invalid image format.
+            IOError: Spots have not been saved first with Dearrayer.save().
+            IOError: No spot paths found.
+
+        Returns:
+            pd.DataFrame: Metadata.
+        """
+
+        allowed_formats = ['jpeg', 'png']
+        if image_format not in allowed_formats:
+            raise ValueError(
+                'Image format {} not allowed. Select from {}'.format(
+                    image_format, allowed_formats
+                ))
+        if not self._spots_saved:
+            raise IOError('Please save the spots first with Dearrayer.save()')
+        if exists(self._tile_dir) and overwrite == False:
+            print(
+                f'{self._tile_dir} already exists! If you want to save tiles'
+                'again please set overwrite=True.'
+            )
+            return pd.read_csv(self._meta_path)
+        else:
+            # Create the tiles directory
+            os.makedirs(self._tile_dir, exist_ok=True)
+        # Let's collect all spot paths.
+        spot_paths = self.metadata['path'].tolist()
+        if len(spot_paths) == 0:
+            raise IOError('No spot paths found!')
+        # Wrap the saving function so it can be parallized.
+        func = partial(save_tile, **{
+            'image_dir': self._tile_dir,
+            'width': width,
+            'overlap': overlap,
+            'threshold': self.threshold,
+            'max_background': max_background,
+            'image_format': image_format,
+            'quality': quality,
+            'custom_preprocess': custom_preprocess
+        })
+        # Multiprocessing to speed things up!
+        metadata = []
+        with mp.Pool(processes=os.cpu_count()) as p:
+            for results in tqdm(
+                p.imap(func, spot_paths),
+                total=len(spot_paths),
+                desc='Cutting TMAs',
+                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
+            ):
+                metadata.append(results)
+        metadata = list(filter(None, metadata))
+        metadata = flatten(metadata)
+        if len(metadata) == 0:
+            print(f'No tiles saved from any of the spots!')
+            return None
+        # Save metadata.
+        self.tile_metadata = pd.DataFrame(metadata)
+        self.tile_metadata.to_csv(self._tile_meta_path, index=False)
+        return self.tile_metadata
 
 
 def save_spot(
@@ -408,3 +517,86 @@ def save_spot(
         return
     # Save image.
     image.save(filepath, quality=quality)
+    return filepath
+
+
+def save_tile(
+        path: str,
+        image_dir: str,
+        width: int,
+        overlap: float,
+        threshold: int,
+        max_background: float,
+        image_format: str,
+        quality: int,
+        custom_preprocess: Callable[[Image.Image], dict]) -> dict:
+    """Saves tiles from a TMA spot (parallizable)."""
+    # Load spot image.
+    image = cv2.imread(path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # Collect all the tile coordinates.
+    coords = _get_all_coordidates(dimensions=image.shape[:2],
+                                  width=width, overlap=overlap)
+    # Discard based on tissue_mask
+    mask = tissue_mask(image=image, threshold=threshold)
+    coords = _filter_coordinates(coords, mask, width, max_background)
+    if len(coords) == 0:
+        return
+    # Prepare filename prefix.
+    prefix = remove_extension(basename(path))
+    # Create spot dir.
+    image_dir = join(image_dir, prefix)
+    os.makedirs(image_dir, exist_ok=True)
+    # Load and save each tile.
+    spot_metadata = []
+    for (x, y), background in coords:
+        tile = Image.fromarray(image[y:y+width, x:x+width, :])
+        # Define path.
+        tile_path = join(image_dir, f'{prefix}_x-{x}_y-{y}.{image_format}')
+        # Collect basic metadata.
+        metadata = {
+            'path': tile_path,
+            'spot_path': path,
+            'x': x,
+            'y': y,
+            'width': width,
+            'background': background,
+        }
+        # Update metadata with preprocessing metrics.
+        metadata.update(preprocess(image=tile, threshold=threshold))
+        # Add custom metrics.
+        if custom_preprocess is not None:
+            metadata.update(custom_preprocess(image))
+        # Add to spot metadata.
+        spot_metadata.append(metadata)
+        # Save tile.
+        tile.save(tile_path, quality=quality)
+    return spot_metadata
+
+
+def _get_all_coordidates(dimensions, width, overlap):
+    """Return all coordinates."""
+    x = [0]
+    y = [0]
+    overlap_px = int(width*overlap)
+    while x[-1] < dimensions[0]:
+        x.append(x[-1] + width - overlap_px)
+    x = x[:-1]
+    while y[-1] < dimensions[1]:
+        y.append(y[-1] + width - overlap_px)
+    y = y[:-1]
+    coordinates = list(itertools.product(x, y))
+    return coordinates
+
+
+def _filter_coordinates(coords, mask, width, max_background):
+    """Discard coordinates with too much background."""
+    filtered = []
+    for x, y in coords:
+        tile_mask = mask[y:y+width, x:x+width]
+        if tile_mask.size == 0:
+            continue
+        bg_perc = 1 - tile_mask.sum()/tile_mask.size
+        if bg_perc < max_background:
+            filtered.append(((x, y), bg_perc))
+    return filtered

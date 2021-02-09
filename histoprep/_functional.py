@@ -162,7 +162,7 @@ def try_thresholds(
 
 def detect_spots(
         mask: np.ndarray,
-        min_area_multiplier_: float,
+        min_area_multiplier: float,
         max_area_multiplier: float,
         kernel_size: Tuple[int, int],
 ):
@@ -178,12 +178,10 @@ def detect_spots(
         kernel_size: 
             Sometimes the default doesn't work for large/small thumbnails.
     """
-    # Structuring element to close gaps.
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, kernel_size)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-    # Erode & dilate trick.
-    mask = cv2.erode(mask, np.ones(kernel_size, np.uint8), iterations=1)
-    mask = cv2.dilate(mask, np.ones(kernel_size, np.uint8), iterations=2)
+    # Opening to remove small shit.
+    opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_size, iterations=3)
+    # Dilate.
+    mask = cv2.dilate(mask, np.ones(kernel_size, np.uint8), iterations=3)
     # Remove too small/large spots.
     contours, __ = cv2.findContours(
         mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)

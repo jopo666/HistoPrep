@@ -43,7 +43,13 @@ def remove_images(image_dir: str) -> None:
             ):
                 continue
 
-
 def remove(path: str) -> None:
     if os.path.exists(path):
         os.remove(path)
+
+def flatten(l):
+    """Flatten list of lists."""
+    if all(isinstance(x, list) for x in l):
+        return [item for sublist in l for item in sublist]
+    else:
+        return l

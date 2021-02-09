@@ -28,7 +28,8 @@ from ._helpers import (
 )
 
 __all__ = [
-    'Cutter'
+    'Cutter',
+    'TMACutter'
 ]
 
 
@@ -65,21 +66,22 @@ class Cutter(object):
         ValueError: downsample is not available and create_thumbnail=False.
 
     Example::
+
         import histoprep as hp
         cutter = hp.Cutter(slide_path='path/to/slide', width=512, overlap=0.2)
         metadata = cutter.save('/path/to/output_dir')
+
     """
 
     def __init__(
-        self,
-        slide_path: str,
-        width: int,
-        overlap: float = 0.0,
-        threshold: int = None,
-        downsample: int = 16,
-        max_background: float = 0.999,
-        create_thumbnail: bool = False
-    ):
+            self,
+            slide_path: str,
+            width: int,
+            overlap: float = 0.0,
+            threshold: int = None,
+            downsample: int = 16,
+            max_background: float = 0.999,
+            create_thumbnail: bool = False):
         super().__init__()
         # Define openslide reader.
         if not exists(slide_path):
@@ -162,18 +164,18 @@ class Cutter(object):
             f"\n  After background filtering: {len(self.filtered_coordinates)}"
         )
 
-    def _save_parameters(self):
-        save_data(
-            data={
-                'slide_path': self.slide_path,
-                'width': self.width,
-                'overlap': self.overlap,
-                'downsample': self.downsample,
-                'threshold': self.threshold,
-                'max_background': self.max_background
-            },
-            path=self._param_path
-        )
+    # def _save_parameters(self):
+    #     save_data(
+    #         data={
+    #             'slide_path': self.slide_path,
+    #             'width': self.width,
+    #             'overlap': self.overlap,
+    #             'downsample': self.downsample,
+    #             'threshold': self.threshold,
+    #             'max_background': self.max_background
+    #         },
+    #         path=self._param_path
+    #     )
 
     def get_annotated_thumbnail(self,
                                 max_pixels: int = 1_000_000) -> Image.Image:
@@ -268,13 +270,13 @@ class Cutter(object):
         return try_thresholds(thumbnail=self._thumbnail, thresholds=thresholds)
 
     def save(
-            self,
-            output_dir: str,
-            overwrite: bool = False,
-            image_format: str = 'jpeg',
-            quality: int = 95,
-            custom_preprocess: Callable[[Image.Image], dict] = None
-        ) -> pd.DataFrame:
+        self,
+        output_dir: str,
+        overwrite: bool = False,
+        image_format: str = 'jpeg',
+        quality: int = 95,
+        custom_preprocess: Callable[[Image.Image], dict] = None
+    ) -> pd.DataFrame:
         """
         Save tile images and metadata.
 
@@ -331,8 +333,8 @@ class Cutter(object):
             # Save both thumbnails.
         self._thumbnail.save(self._thumb_path, quality=95)
         self._annotated_thumbnail.save(self._annotated_path, quality=95)
-        # Save used parameters.
-        self._save_parameters()
+        # Save used parameters. NOTE: Can't remember where I would need these...
+        # self._save_parameters()
         # Save text summary.
         with open(self._summary_path, "w") as f:
             f.write(self._summary())
@@ -433,9 +435,9 @@ def save_tile(
         # Sometimes parts of the slide are corrupt or something...
         return
     # Update metadata with preprocessing metrics.
-    if custom_preprocess is None:
-        metadata.update(preprocess(image=image, threshold=threshold))
-    else:
+    metadata.update(preprocess(image=image, threshold=threshold))
+    # Add custom metrics.
+    if custom_preprocess is not None:
         metadata.update(custom_preprocess(image))
     # Save image.
     image.save(filepath, quality=quality)
