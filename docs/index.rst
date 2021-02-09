@@ -13,8 +13,3 @@ Table of Contents
    intro
    install
    usage
-
-.. toctree::
-   :maxdepth: 1
-   
-   API

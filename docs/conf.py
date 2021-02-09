@@ -32,6 +32,7 @@ release = '0.0.1'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.inheritance_diagram',
     'sphinx.ext.napoleon',
     'sphinx.ext.coverage',
     'sphinx.ext.todo',
@@ -40,6 +41,19 @@ extensions = [
     'sphinx.ext.viewcode',
     'recommonmark'
 ]
+extensions.append('autoapi.extension')
+autoapi_type = 'python'
+autoapi_dirs = ['../histoprep']
+autoapi_options = [
+    'members',
+    'undoc-members',
+    'show-inheritance',
+    'imported-members'
+]
+autoapi_root = 'autoapi'
+autoapi_generate_api_docs = True
+
+
 napoleon_google_docstring = True
 autodoc_typehints = 'description'
 
