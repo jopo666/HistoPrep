@@ -19,7 +19,7 @@ You should also have ``openslide-tools`` installed on your machine.
    # You might also need this if errors keep showing up.
    # sudo apt-get install libjpeg-dev zlib1g-de
 
-There is also an annoying `bug <https://github.com/openslide/openslide/issues/278>`_. in ``openslide`` dependecies that might have to be fixed. If you are using ``conda`` the quick-fix is:
+There is also an annoying `bug <https://github.com/openslide/openslide/issues/278>`_ in ``openslide`` dependecies that might have to be fixed. If you are using ``conda`` the quick-fix is:
 
 .. code-block:: bash
 
