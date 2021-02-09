@@ -12,10 +12,7 @@
 #
 import os
 import sys
-import recommonmark
-from recommonmark.transform import AutoStructify
 sys.path.insert(0, os.path.abspath('..'))
-
 
 
 # -- Project information -----------------------------------------------------
@@ -35,7 +32,7 @@ release = '0.0.1'
 # ones.
 extensions = [
     'autoapi.extension',
-    'sphinx.ext.autodoc', 
+    'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.coverage',
     'sphinx.ext.todo',
@@ -48,6 +45,7 @@ napoleon_google_docstring = True
 autoapi_dirs = ['../histoprep']
 autodoc_typehints = 'description'
 autoapi_generate_api_docs = False
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -61,10 +59,3 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 html_title = project
 html_theme = "furo"
-
-def setup(app):
-    app.add_config_value('recommonmark_config', {
-            'url_resolver': lambda url: github_doc_root + url,
-            'auto_toc_tree_section': 'Contents',
-            }, True)
-    app.add_transform(AutoStructify)

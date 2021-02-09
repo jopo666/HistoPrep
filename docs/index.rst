@@ -3,8 +3,9 @@ HistoPrep
 
 Welcome to ``HistoPrep``'s documentation!
 
+
 Table of Contents
-********************************************************************************
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. toctree::
    :maxdepth: 2
@@ -12,4 +13,8 @@ Table of Contents
    intro
    install
    usage
+
+.. toctree::
+   :maxdepth: 1
+   
    API
