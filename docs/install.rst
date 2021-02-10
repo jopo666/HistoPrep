@@ -4,16 +4,16 @@ Installation
 Dependecies
 ********************************************************************************
 
-``HistoPrep`` depends heavily on two exceptional python packages ``openslide-python`` and ``opencv-python``. Both of these are python interfaces for the original C libraries (`OpenSlide <https://openslide.org>`_ and `OpenCV <https://opencv.org>`_) and require additional steps to install on your system.
+``HistoPrep`` depends heavily on two exceptional python packages ``openslide-python`` and ``opencv-python``. Both of these are python interfaces for the original C libraries (`OpenSlide <https://openslide.org>`_ and `OpenCV <https://opencv.org>`_) and require that the respective libraries are installed on you system.
 
-The official instructions for installing ``openslide`` on your system can be found `here <https://openslide.org/download/>`_.
+The official instructions for installing ``OpenSlide`` on your system can be found `here <https://openslide.org/download/>`_.
 
-The official instructions for installing ``opencv`` on your system can be found below.
+The official instructions for installing ``OpenCV`` on your system can be found below.
 
-   - `General install instructions <https://docs.opencv.org/master/d0/d3d/tutorial_general_install.html>`_
-   - `MacOS <https://docs.opencv.org/master/d0/db2/tutorial_macos_install.html>`_
-   - `Linux <https://docs.opencv.org/master/d7/d9f/tutorial_linux_install.html>`_
-   - `Windows <https://docs.opencv.org/master/d3/d52/tutorial_windows_install.html>`_
+* `General install instructions <https://docs.opencv.org/master/d0/d3d/tutorial_general_install.html>`_
+* `MacOS <https://docs.opencv.org/master/d0/db2/tutorial_macos_install.html>`_
+* `Linux <https://docs.opencv.org/master/d7/d9f/tutorial_linux_install.html>`_
+* `Windows <https://docs.opencv.org/master/d3/d52/tutorial_windows_install.html>`_
 
 
 .. note::
