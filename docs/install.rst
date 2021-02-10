@@ -9,6 +9,7 @@ Dependecies
 The official instructions for installing ``openslide`` on your system can be found `here <https://openslide.org/download/>`_.
 
 The official instructions for installing ``opencv`` on your system can be found below.
+
    - `General install instructions <https://docs.opencv.org/master/d0/d3d/tutorial_general_install.html>`_
    - `MacOS <https://docs.opencv.org/master/d0/db2/tutorial_macos_install.html>`_
    - `Linux <https://docs.opencv.org/master/d7/d9f/tutorial_linux_install.html>`_
