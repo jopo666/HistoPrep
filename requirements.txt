@@ -1,4 +1,4 @@
-opencv-python>=4.5.0
+opencv-python>=4.2.0
 openslide-python>=1.1.2
 pandas>=1.2.1
 Pillow>=7.0.0

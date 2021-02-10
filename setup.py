@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="histoprep",
-    version="0.0.1.dev5",
+    version="0.0.1.dev6",
     author="jopo666",
     author_email="jopo@birdlover.com",
     description="Preprocessing module for large histological images.",
@@ -14,13 +14,13 @@ setuptools.setup(
     url="https://github.com/jopo666/HistoPrep",
     packages=setuptools.find_packages(include=['histoprep','histoprep.*']),
     install_requires=[
-        'opencv-python>=4.5.0',
+        'opencv-python>=4.2.0',
         'openslide-python>=1.1.2',
-        'pandas>=1.2.1',
+        'pandas>=1.1.0',
         'Pillow>=7.0.0',
         'seaborn>=0.11.0',
         'numpy>=1.19.0',
-        'scikit-learn>0.24',
+        'scikit-learn>0.23',
         'tqdm>=4.0',
     ],
     classifiers=[
