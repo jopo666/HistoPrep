@@ -4,7 +4,7 @@ Installation
 Dependecies
 ********************************************************************************
 
-``HistoPrep`` depends heavily on two exceptional python packages ``openslide-python`` and ``opencv-python``. Both of these are C libraries and require additional steps to install on your system.
+``HistoPrep`` depends heavily on two exceptional python packages ``openslide-python`` and ``opencv-python``. Both of these are python interfaces for the original C libraries (`OpenSlide <https://openslide.org>`_ and `OpenCV <https://opencv.org>`_) and require additional steps to install on your system.
 
 The official instructions for installing ``openslide`` on your system can be found `here <https://openslide.org/download/>`_.
 
