@@ -9,6 +9,7 @@ __all__ = [
     'HSV_quantiles',
     'RGB_quantiles',
     'data_loss',
+    'laplacian_variance',
     'sharpness',
     'preprocess',
     'sliding_window',
@@ -16,8 +17,6 @@ __all__ = [
     'array_to_PIL',
     'mask_to_PIL',
 ]
-
-"""C."""
 
 
 def PIL_to_array(image: Image.Image) -> np.ndarray:
@@ -366,6 +365,32 @@ def data_loss(image: Union[np.ndarray, Image.Image]) -> Dict[float, float]:
         'white_pixels': gray[gray == 255].size/gray.size
     }
 
+def laplacian_variance(image: Union[np.ndarray, Image.Image]):
+    """
+    Return the laplacian variance of the image.
+
+    Args:
+        image (Union[np.ndarray, Image.Image]): input image.
+
+    Raises:
+        TypeError: Invalid type for ``image``.
+    """
+    if isinstance(image, Image.Image):
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = np.array(image, dtype=np.uint8)
+    elif isinstance(image, np.ndarray):
+        image = image.astype(np.uint8)
+    else:
+        raise TypeError('Excpected {} or {} not {}.'.format(
+            np.ndarray, Image.Image, type(image)
+        ))
+    # Laplacian variance is defined for greyscale images.
+    if len(image.shape) > 2:
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    else:
+        gray = image
+    return cv2.Laplacian(gray, cv2.CV_32F).var()
 
 def sharpness(
         image: Union[np.ndarray, Image.Image],

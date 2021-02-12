@@ -15,6 +15,8 @@ This module allows you to cut and preprocess large histological slides. Some of 
 
 ## Installation
 
+First install `OpenCV` and `OpenSlide` on your system (instructions [here](https://docs.opencv.org/master/d0/d3d/tutorial_general_install.html) and [here](https://openslide.org/download/)).
+
 ```bash
 # install as a module   
 pip install histoprep
@@ -23,12 +25,6 @@ pip install histoprep
 git clone https://github.com/jopo666/HistoPrep
 cd HistoPrep
 pip install -r requirements.txt
-```
-
-You should also have `openslide-tools` installed on your machine.
-
-```bash
-sudo apt-get install openslide-tools
 ```
 
 ## Usage
@@ -56,5 +52,4 @@ Documentation can be found [here](https://histoprep.readthedocs.io/en/latest/)!
 
 Detailed examples with best practices:
 
-- [Cutting and preprocessing a whole slide image.](https://github.com/jopo666/HistoPrep/blob/master/examples/cut.ipynb)
-- [Cutting individual TMA spots from a slide.](https://github.com/jopo666/HistoPrep/blob/master/examples/dearray.ipynb) [coming in the future!]
+- Coming soon!

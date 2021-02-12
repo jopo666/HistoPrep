@@ -357,7 +357,9 @@ class Dearrayer(object):
         # Check if slide has been cut before.
         if exists(self._thumb_path) and not overwrite:
             print('Slide has already been cut! Please set overwrite=True')
-            return None
+            self.spot_metadata = pd.read_csv(self._spot_meta_path)
+            self._spots_saved = True
+            return self.spot_metadata
         elif exists(self._thumb_path) and overwrite:
             # Remove all previous files.
             os.remove(self._thumb_path)
@@ -388,7 +390,7 @@ class Dearrayer(object):
                 spot_paths.append(filepath)
         # Finally save metadata.
         self.spot_metadata['path'] = spot_paths
-        self.spot_metadata.to_csv(self._meta_path, index=False)
+        self.spot_metadata.to_csv(self._spot_meta_path, index=False)
         self._spots_saved = True
         return self.spot_metadata
 
@@ -440,10 +442,10 @@ class Dearrayer(object):
             raise IOError('Please save the spots first with Dearrayer.save()')
         if exists(self._tile_dir) and overwrite == False:
             print(
-                f'{self._tile_dir} already exists! If you want to save tiles'
+                f'{self._tile_dir} already exists! If you want to save tiles '
                 'again please set overwrite=True.'
             )
-            return pd.read_csv(self._meta_path)
+            return pd.read_csv(self._spot_meta_path)
         else:
             # Create the tiles directory
             os.makedirs(self._tile_dir, exist_ok=True)
