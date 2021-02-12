@@ -4,7 +4,7 @@ Installation
 Dependecies
 ********************************************************************************
 
-``HistoPrep`` depends heavily on two exceptional python packages ``openslide-python`` and ``opencv-python``. Both of these are python interfaces for the original C libraries (`OpenSlide <https://openslide.org>`_ and `OpenCV <https://opencv.org>`_) and require that the respective libraries are installed on you system.
+``HistoPrep`` depends heavily on two exceptional C libraries, `OpenSlide <https://openslide.org>`_ and `OpenCV <https://opencv.org>`_). Both of these have python interfaces (``openslide-python`` and ``opencv-python``) which require that the original C libraries are installed and compiled on your system.
 
 The official instructions for installing ``OpenSlide`` on your system can be found `here <https://openslide.org/download/>`_.
 
@@ -17,17 +17,17 @@ The official instructions for installing ``OpenCV`` on your system can be found 
 
 
 .. note::
-    There is an annoying `bug <https://github.com/openslide/openslide/issues/278>`_ when installing ``openslide`` on MacOS with ``brew``. This can be easily fixed by running ``brew upgrade pixman`` after the installation is complete.
+    There is an annoying `bug <https://github.com/openslide/openslide/issues/278>`_ which sometimes arises when installing ``openslide``. This can be easily fixed by upgrading ``pixman`` package to the its newest version. If you are using Anaconda, you can simply run ``conda install pixman`` in your active conda environment. On MacOS you can also use ``brew upgrade pixman``.
 
 
 ``HistoPrep``
 ********************************************************************************
 
-Be sure you have installed ``openslide`` and ``opencv`` succesfully on your system before installing ``HistoPrep``
+Be sure you have installed ``OpenSlide`` and ``OpenCV`` succesfully on your system before installing ``HistoPrep``.
 
 .. code-block:: bash
 
-   # update pip
+   # upgrade pip
    pip install --upgrade pip
 
    # install as a module   
@@ -35,7 +35,4 @@ Be sure you have installed ``openslide`` and ``opencv`` succesfully on your syst
 
    # or install as an executable
    git clone https://github.com/jopo666/HistoPrep
-   cd HistoPrep
-   pip install -r requirements.txt
-
-
+   pip install -r HistoPrep/requirements.txt

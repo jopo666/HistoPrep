@@ -95,8 +95,8 @@ def dearray(args):
             slide_path=f.path,
             threshold=args.threshold,
             downsample=args.downsample,
-            min_area=args.min_area,
-            max_area=args.max_area,
+            min_area_multiplier=args.min_area,
+            max_area_multiplier=args.max_area,
             kernel_size=(args.kernel_size, args.kernel_size),
             create_thumbnail=True,
         )
@@ -107,6 +107,15 @@ def dearray(args):
             image_format=args.image_format,
             quality=args.quality,
         )
+        if args.cut:
+            dearrayer.cut_spots(
+                width=args.width,
+                overlap=args.overlap,
+                max_background=args.max_bg,
+                overwrite=args.overwrite,
+                image_format=args.image_format,
+                quality=args.quality,
+            )
     print(f'All {total} TMA arrays processed.')
 
 

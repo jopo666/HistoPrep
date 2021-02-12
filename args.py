@@ -37,8 +37,8 @@ def get_arguments():
                      help='Tile width.')
     cut.add_argument('--overlap', type=float, default=0.0, metavar='',
                      help='Tile overlap. [Default: %(default)s]')
-    cut.add_argument('--max_bg', type=float, default=0.6, metavar='',
-                     help='Maximum background percentage. [Default: %(default)s]')
+    cut.add_argument('--max_bg', type=float, default=0.7, metavar='',
+                     help='Maximum background percentage for a tile. [Default: %(default)s]')
     cut.add_argument('--downsample', type=int, default=32, metavar='',
                      help='Thumbnail downsample. [Default: %(default)s]')
     cut.add_argument('--threshold', type=int, default=None, metavar='',
@@ -59,14 +59,22 @@ def get_arguments():
                          help='Thumbnail downsample. [Default: %(default)s]')
     dearray.add_argument('--threshold', type=int, default=None, metavar='',
                          help='Threshold for background detection. [Default: %(default)s]')
-    dearray.add_argument('--min_area', type=float, default=0.4, metavar='',
+    dearray.add_argument('--min_area', type=float, default=0.2, metavar='',
                          help='Minimum area for a spot. [Default: median_area*%(default)s]')
-    dearray.add_argument('--max_area', type=float, default=2, metavar='',
+    dearray.add_argument('--max_area', type=float, default=None, metavar='',
                          help='Maximum area for a spot. [Default: median_area*%(default)s]')
-    dearray.add_argument('--kernel_size', type=int, default=10, metavar='',
-                         help='Kernel size for spot detection (give as an integer). [Default: (%(default)s,%(default)s)]')
+    dearray.add_argument('--kernel_size', type=int, default=8, metavar='',
+                         help='Kernel size for spot detection (give as a single integer). [Default: (%(default)s,%(default)s)]')
+    dearray.add_argument('--cut', action='store_true',
+                         help='Cut spots after dearraying. [Default: %(default)s]')
+    dearray.add_argument('--width', type=int, default=512,
+                         help='Tile width. [Default: %(default)s]')
+    dearray.add_argument('--overlap', type=float, default=0.0, metavar='',
+                         help='Tile overlap. [Default: %(default)s]')
+    dearray.add_argument('--max_bg', type=float, default=0.7, metavar='',
+                         help='Maximum background percentage for a tile. [Default: %(default)s]')
     dearray.add_argument('--overwrite', action='store_true',
-                         help='Remove everything before dearraying. [Default: %(default)s]')
+                         help='Remove everything before dearraying and cutting. [Default: %(default)s]')
     dearray.add_argument('--image_format', default='jpeg', metavar='', choices=['jpeg', 'png'],
                          help='Image format (jpeg or png). [Default: %(default)s]')
     dearray.add_argument('--quality', type=int, default=95, metavar='',

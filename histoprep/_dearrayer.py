@@ -51,12 +51,12 @@ class Dearrayer(object):
             ``Dearrayer.try_spot_mask()`` function.  Defaults to 64.
         min_area_multiplier (float, optional): Remove all detected contours that
             have an area smaller than ``median_area*min_area_multiplier``.
-            Defaults to 0.4.
+            Defaults to 0.2.
         max_area_multiplier (float, optional): Remove all detected contours that
             have an area larger than ``median_area*max_area_multiplier``.
-            Defaults to 2.
+            Defaults to None.
         kernel_size (Tuple[int], optional): Kernel size used during spot
-            detection. Defaults to (10, 10).
+            detection. Defaults to (8, 8).
         create_thumbnail (bool, optional):  Create a thumbnail if downsample is
             not available. Defaults to False.
 
@@ -70,9 +70,9 @@ class Dearrayer(object):
             slide_path: str,
             threshold: int = None,
             downsample: int = 64,
-            min_area_multiplier: float = 0.4,
-            max_area_multiplier: float = 2,
-            kernel_size: Tuple[int] = (10, 10),
+            min_area_multiplier: float = 0.2,
+            max_area_multiplier: float = None,
+            kernel_size: Tuple[int] = (8, 8),
             create_thumbnail: bool = False):
         super().__init__()
         # Define openslide reader.
@@ -88,13 +88,6 @@ class Dearrayer(object):
         self.dimensions = self.openslide_reader.dimensions
         self.downsample = downsample
         self.threshold = threshold
-        if self.threshold is None:
-            warnings.warn(
-                "No threshold defined for tissue detection! Otsu's method will "
-                "be used to select a threshold which is not always optimal. "
-                "Different thresholds can be easily tried with the "
-                "Dearrayer.try_tresholds() command."
-            )
         self.min_area_multiplier = min_area_multiplier
         self.max_area_multiplier = max_area_multiplier
         self.kernel_size = kernel_size
@@ -182,13 +175,13 @@ class Dearrayer(object):
         return resize(self._thumbnail, max_pixels)
 
     def get_annotated_thumbnail(self,
-                                max_pixels: int = 1_000_000) -> Image.Image:
+                                max_pixels: int = 5_000_000) -> Image.Image:
         """
         Returns an Pillow Image of the annotated thumbnail for inspection.
 
         Args:
             max_pixels (int, optional): Downsample the image until the image
-                has less than max_pixles pixels. Defaults to 1_000_000.
+                has less than max_pixles pixels. Defaults to 5_000_000.
 
         Returns:
             Image.Image: Annotated thumbnail.
@@ -458,6 +451,8 @@ class Dearrayer(object):
             os.makedirs(self._tile_dir, exist_ok=True)
         # Let's collect all spot paths.
         spot_paths = self.metadata['path'].tolist()
+        # Remove nan paths.
+        spot_paths = [x for x in spot_paths if isinstance(x, str)]
         if len(spot_paths) == 0:
             raise IOError('No spot paths found!')
         # Wrap the saving function so it can be parallized.

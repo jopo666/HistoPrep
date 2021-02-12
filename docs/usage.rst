@@ -1,5 +1,5 @@
-How to use HistoPrep
-====================
+How to use ``HistoPrep``?
+=========================
 
 There are two main ways of using ``HistoPrep`` to cut/dearray large histological slides.
 
@@ -23,7 +23,7 @@ There are two main ways of using ``HistoPrep`` to cut/dearray large histological
     Recommended practice is to use the ``HistoPrep`` module inside a jupyter-notebook to find out optimal values that can then *optionally* be passed onto the excecutable to process a large number of files easily.
 
 
-After the tiles have been extracted from the slides, preprocessing can be done with the ``histoprep`` module
+After the tiles have been extracted from the slides, preprocessing can be done with the ``histoprep`` module.
 
 Cutting tiles from a large histological slide.
 ********************************************************************************
@@ -64,7 +64,7 @@ To see all the available options for please take look at the documentation for
 Dearraying a TMA slide
 ********************************************************************************
 
-Tissue microarray slides often have tens or hundreds of samples from different patients. In practive, we could just cut the TMA slide as well wit the ``Cutter`` class, but then all the tiles from different patient samples would be mixed. Therefore, if we want to separate the tiles/spots by patient, we must first dearray the TMA slide.
+Tissue microarray slides often have tens or hundreds of samples from different patients. In practice, we could just cut the TMA slide as well wit the ``Cutter`` class, but then all the tiles from different patient samples would be mixed. Therefore, if we want to separate the tiles/spots by patient, we must first dearray the TMA slide.
 
 Lucky for you, with ``HistoPrep`` dearraying can also be done with only a few lines of code!
 

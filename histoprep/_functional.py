@@ -164,8 +164,7 @@ def detect_spots(
         mask: np.ndarray,
         min_area_multiplier: float,
         max_area_multiplier: float,
-        kernel_size: Tuple[int, int],
-):
+        kernel_size: Tuple[int, int],):
     """ Detect TMA spots from a thumbnail image.
 
     How: Detect tissue mask -> clean up non-TMA stuff -> return mask.
@@ -186,10 +185,13 @@ def detect_spots(
     contours, __ = cv2.findContours(
         mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     areas = np.array([cv2.contourArea(x) for x in contours])
-    # Define min and max values
+    # Define min and max values.
     min_area = np.median(areas)*min_area_multiplier
-    max_area = np.median(areas)*max_area_multiplier
-    idx = (areas > min_area) & (areas < max_area)
+    if max_area_multiplier is not None:
+        max_area = np.mean(areas)*max_area_multiplier
+    else:
+        max_area = np.max(areas)
+    idx = (areas >= min_area) & (areas <= max_area)
     contours = [contours[i] for i in range(len(idx)) if idx[i]]
     # Draw new mask.
     new_mask = np.zeros(mask.shape, dtype="uint8")
@@ -198,10 +200,7 @@ def detect_spots(
     return new_mask
 
 
-def get_spots(
-    spot_mask: np.ndarray,
-    downsample: int,
-):
+def get_spots(spot_mask: np.ndarray, downsample: int):
     """Orders the spots on a spot_mask taking into consideration empty spots."""
     # Collect bounding boxes.
     contours, _ = cv2.findContours(
