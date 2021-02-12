@@ -101,7 +101,7 @@ class Cutter(object):
                 "No threshold defined for tissue detection! Otsu's method will "
                 "be used to select a threshold which is not always optimal. "
                 "Different thresholds can be easily tried with the "
-                "Cutter.try_tresholds() command.
+                "Cutter.try_tresholds() command."
             )
         self.max_background = max_background
         self.all_coordinates = self._get_all_coordinates()
