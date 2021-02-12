@@ -79,9 +79,6 @@ class Dearrayer(object):
         if not exists(slide_path):
             raise IOError(f'{slide_path} not found.')
         self.openslide_reader = OpenSlide(slide_path)
-        # Make it global so cutting is faster (can't be pickled).
-        global __READER__
-        __READER__ = self.openslide_reader
         # Assing basic stuff that user can see/check.
         self.slide_path = slide_path
         self.slide_name = remove_extension(basename(slide_path))
@@ -496,8 +493,8 @@ def save_spot(
     # Unpack variables
     number, (x, y, w, h) = data
     slide_name = basename(dirname(image_dir))
-    # Load slide from global.
-    reader = __READER__
+    # Load slide as it can't be pickled...
+    reader = OpenSlide(slide_path)
     # Prepare filename.
     filepath = join(image_dir, f'{slide_name}_spot-{number}')
     if image_format == 'png':
