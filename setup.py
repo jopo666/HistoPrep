@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="histoprep",
-    version="0.0.1.dev8",
+    version="0.0.1.dev10",
     author="jopo666",
     author_email="jopo@birdlover.com",
     description="Preprocessing module for large histological images.",

@@ -123,12 +123,12 @@ class Dearrayer(object):
                 'the kernel_size, min_area_multiplier and max_area_multiplier '
                 'parameters using the dearrayer.try_spot_mask() function.'
             )
-            self.metadata = None
+            self.spot_metadata = None
             self._annotate()
         else:
-            self.metadata = pd.DataFrame(
+            self.spot_metadata = pd.DataFrame(
                 np.hstack((self._numbers.reshape(-1, 1), self._bounding_boxes)))
-            self.metadata.columns = ['number', 'x', 'y', 'width', 'height']
+            self.spot_metadata.columns = ['number', 'x', 'y', 'width', 'height']
             self._annotate()
             if len([x for x in self._numbers if '_' in x]) > 0:
                 print(
@@ -223,9 +223,9 @@ class Dearrayer(object):
 
     def _annotate(self):
         """Draw bounding boxes and numbers to the thumbnail."""
-        fontsize = (self.metadata.width.median()/6000)*70/self.downsample
+        fontsize = (self.spot_metadata.width.median()/6000)*70/self.downsample
         self._annotated_thumbnail = self._thumbnail.copy()
-        if self.metadata is None:
+        if self.spot_metadata is None:
             return
         else:
             annotated = ImageDraw.Draw(self._annotated_thumbnail)
@@ -314,8 +314,8 @@ class Dearrayer(object):
         # Save paths.
         self._thumb_path = join(out_dir, 'thumbnail.jpeg')
         self._annotated_path = join(out_dir, 'thumbnail_annotated.jpeg')
-        self._meta_path = join(out_dir, 'metadata.csv')
-        self._tile_meta_path = join(out_dir, 'tile_metadata.csv')
+        self._spot_meta_path = join(out_dir, 'spot_metadata.csv')
+        self._tile_meta_path = join(out_dir, 'metadata.csv')
         self._image_dir = join(out_dir, 'images')
         self._tile_dir = join(out_dir, 'tiles')
         self._summary_path = join(out_dir, 'summary.txt')
@@ -323,7 +323,7 @@ class Dearrayer(object):
         # Make dirs.
         os.makedirs(self._image_dir, exist_ok=True)
 
-    def save(
+    def save_spots(
             self,
             parent_dir: str,
             overwrite: bool = False,
@@ -370,6 +370,7 @@ class Dearrayer(object):
         self._annotated_thumbnail.save(self._annotated_path, quality=95)
         # Wrap the saving function so it can be parallized.
         func = partial(save_spot, **{
+            'slide_path': self.slide_path,
             'image_dir': self._image_dir,
             'image_format': image_format,
             'quality': quality,
@@ -386,12 +387,12 @@ class Dearrayer(object):
             ):
                 spot_paths.append(filepath)
         # Finally save metadata.
-        self.metadata['path'] = spot_paths
-        self.metadata.to_csv(self._meta_path, index=False)
+        self.spot_metadata['path'] = spot_paths
+        self.spot_metadata.to_csv(self._meta_path, index=False)
         self._spots_saved = True
-        return self.metadata
+        return self.spot_metadata
 
-    def cut_spots(
+    def save_tiles(
         self,
         width: int,
         overlap: float = 0.0,
@@ -447,7 +448,7 @@ class Dearrayer(object):
             # Create the tiles directory
             os.makedirs(self._tile_dir, exist_ok=True)
         # Let's collect all spot paths.
-        spot_paths = self.metadata['path'].tolist()
+        spot_paths = self.spot_metadata['path'].tolist()
         # Remove nan paths.
         spot_paths = [x for x in spot_paths if isinstance(x, str)]
         if len(spot_paths) == 0:
@@ -486,6 +487,7 @@ class Dearrayer(object):
 
 def save_spot(
         data: Tuple[int, Tuple[int, int, int, int]],
+        slide_path: str,
         image_dir: str,
         image_format: str,
         quality: int) -> dict:

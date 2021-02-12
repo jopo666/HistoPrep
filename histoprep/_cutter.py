@@ -95,6 +95,14 @@ class Cutter(object):
         self.width = width
         self.overlap = overlap
         self.threshold = threshold
+        # Warn about Otsu's thresholding.
+        if self.threshold is None:
+            warnings.warn(
+                "No threshold defined for tissue detection! Otsu's method will "
+                "be used to select a threshold which is not always optimal. "
+                "Different thresholds can be easily tried with the "
+                "Cutter.try_tresholds() command.
+            )
         self.max_background = max_background
         self.all_coordinates = self._get_all_coordinates()
         # Filter coordinates.
@@ -312,15 +320,7 @@ class Cutter(object):
             os.remove(self._thumb_path)
             os.remove(self._meta_path)
             remove_images(self._image_dir)
-        # Warn about Otsu's thresholding.
-        if self.threshold is None:
-            warnings.warn(
-                "Otsu's binarization will be used which might lead to errors "
-                "in tissue detection (seriously it takes a few seconds to "
-                "check for a good value with Cutter.try_thresholds() "
-                "function...)"
-            )
-            # Save both thumbnails.
+        # Save both thumbnails.
         self._thumbnail.save(self._thumb_path, quality=95)
         self._annotated_thumbnail.save(self._annotated_path, quality=95)
         # Save used parameters. NOTE: Can't remember where I would need these...
