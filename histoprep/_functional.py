@@ -55,9 +55,8 @@ def generate_thumbnail(
 ) -> Image.Image:
     """Generate thumbnail for a slide."""
     # Save reader as global for multiprocessing
-    global __READER__
-    __READER__ = OpenSlide(slide_path)
-    dims = __READER__.dimensions
+    reader = OpenSlide(slide_path)
+    dims = reader.dimensions
     blocks = (
         int(dims[0]/width) + 1,
         int(dims[1]/width) + 1
@@ -97,7 +96,7 @@ def load_tile(
     coords: Tuple[int, Tuple[int, int]]
 ):
     # Load slide from global.
-    reader = __READER__
+    reader = OpenSlide(slide_path)
     i, (x, y) = coords
     out_shape = (int(width/downscale), int(width/downscale))
     tile = reader.read_region((x, y), 0, (width, width)).convert('RGB')
