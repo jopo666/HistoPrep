@@ -101,14 +101,14 @@ def dearray(args):
             create_thumbnail=True,
         )
         # Dearray away!
-        dearrayer.save(
+        dearrayer.save_spots(
             parent_dir=args.output_dir,
             overwrite=args.overwrite,
             image_format=args.image_format,
             quality=args.quality,
         )
         if args.cut:
-            dearrayer.cut_spots(
+            dearrayer.save_tiles(
                 width=args.width,
                 overlap=args.overlap,
                 max_background=args.max_bg,
