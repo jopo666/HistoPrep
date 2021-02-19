@@ -60,10 +60,13 @@ class Cutter(object):
             other way around. Defaults to 0.999.
         create_thumbnail (bool, optional):  Create a thumbnail if downsample is 
             not available. Defaults to False.
+        thumbnail_path (str, optional): Load a created thumbnail from a file.
+            Defaults to None.
 
     Raises:
         IOError: slide_path not found.
         ValueError: downsample is not available and create_thumbnail=False.
+        IOError: thumbnail_path not found.
 
     Example::
 
@@ -81,7 +84,8 @@ class Cutter(object):
             threshold: int = None,
             downsample: int = 16,
             max_background: float = 0.999,
-            create_thumbnail: bool = False):
+            create_thumbnail: bool = False,
+            thumbnail_path: str = None):
         super().__init__()
         # Define openslide reader.
         if not exists(slide_path):
@@ -106,12 +110,17 @@ class Cutter(object):
         self.max_background = max_background
         self.all_coordinates = self._get_all_coordinates()
         # Filter coordinates.
-        self._thumbnail = get_thumbnail(
-            slide_path=self.slide_path,
-            downsample=self.downsample,
-            create_thumbnail=create_thumbnail
-        )
-        if self._thumbnail is None:
+        if thumbnail_path is not None:
+            if not exists(thumbnail_path):
+                raise IOError(f'{thumbnail_path} not found.')
+            self.thumbnail = Image.open(thumbnail_path).convert('RGB')
+        else:
+            self.thumbnail = get_thumbnail(
+                slide_path=self.slide_path,
+                downsample=self.downsample,
+                create_thumbnail=create_thumbnail
+            )
+        if self.thumbnail is None:
             # Downsample not available.
             raise ValueError(
                 f'Thumbnail not available for downsample {self.downsample}. '
@@ -119,7 +128,7 @@ class Cutter(object):
                 f'{self._downsamples()}'
             )
         self.threshold, self._tissue_mask = tissue_mask(
-            image=self._thumbnail,
+            image=self.thumbnail,
             threshold=self.threshold,
             return_threshold=True
         )
@@ -200,9 +209,9 @@ class Cutter(object):
         Returns:
             Image.Image: Thumbnail.
         """
-        return resize(self._thumbnail, max_pixels)
+        return resize(self.thumbnail, max_pixels)
 
-    def plot_tissue_mask(self, max_pixels: int = 1_000_000) -> Image.Image:
+    def get_tissue_mask(self, max_pixels: int = 1_000_000) -> Image.Image:
         """
         Returns an Pillow Image of the tissue mask for inspection.
 
@@ -224,7 +233,7 @@ class Cutter(object):
         out_dir = join(output_dir, self.slide_name)
         # Save paths.
         self._meta_path = join(out_dir, 'metadata.csv')
-        self._thumb_path = join(out_dir, 'thumbnail.jpeg')
+        self._thumb_path = join(out_dir, f'thumbnail_{self.downsample}.jpeg')
         self._annotated_path = join(out_dir, 'thumbnail_annotated.jpeg')
         self._param_path = join(out_dir, 'parameters.p')
         self._summary_path = join(out_dir, 'summary.txt')
@@ -235,7 +244,7 @@ class Cutter(object):
 
     def _annotate(self) -> None:
         # Draw tiles to the thumbnail.
-        self._annotated_thumbnail = self._thumbnail.copy()
+        self._annotated_thumbnail = self.thumbnail.copy()
         annotated = ImageDraw.Draw(self._annotated_thumbnail)
         w = h = int(self.width/self.downsample)
         for (x, y), __ in self.filtered_coordinates:
@@ -265,7 +274,7 @@ class Cutter(object):
         Returns:
             Image.Image: [description]
         """
-        return try_thresholds(thumbnail=self._thumbnail, thresholds=thresholds)
+        return try_thresholds(thumbnail=self.thumbnail, thresholds=thresholds)
 
     def save(
         self,
@@ -317,11 +326,10 @@ class Cutter(object):
         elif exists(self._meta_path) and overwrite:
             # Remove all previous files.
             os.remove(self._annotated_path)
-            os.remove(self._thumb_path)
             os.remove(self._meta_path)
             remove_images(self._image_dir)
         # Save both thumbnails.
-        self._thumbnail.save(self._thumb_path, quality=95)
+        self.thumbnail.save(self._thumb_path, quality=95)
         self._annotated_thumbnail.save(self._annotated_path, quality=95)
         # Save used parameters. NOTE: Can't remember where I would need these...
         # self._save_parameters()
@@ -354,9 +362,9 @@ class Cutter(object):
             print(f'No tiles saved from slide {self.slide_path}!')
             return
         # Save metadata.
-        metadata = pd.DataFrame(metadata)
-        metadata.to_csv(self._meta_path, index=False)
-        return metadata
+        self.metadata = pd.DataFrame(metadata)
+        self.metadata.to_csv(self._meta_path, index=False)
+        return self.metadata
 
     def _get_all_coordinates(self):
         """Return tile coordinates over the whole slide."""

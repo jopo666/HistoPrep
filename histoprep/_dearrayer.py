@@ -312,7 +312,7 @@ class Dearrayer(object):
     def _prepare_directories(self, parent_dir: str) -> None:
         out_dir = join(parent_dir, self.slide_name)
         # Save paths.
-        self._thumb_path = join(out_dir, 'thumbnail.jpeg')
+        self._thumb_path = join(out_dir, f'thumbnail_{self.downsample}.jpeg')
         self._annotated_path = join(out_dir, 'thumbnail_annotated.jpeg')
         self._spot_meta_path = join(out_dir, 'spot_metadata.csv')
         self._tile_meta_path = join(out_dir, 'metadata.csv')
@@ -356,13 +356,16 @@ class Dearrayer(object):
         self._prepare_directories(parent_dir)
         # Check if slide has been cut before.
         if exists(self._thumb_path) and not overwrite:
-            print('Slide has already been cut! Please set overwrite=True')
+            print(
+                'Spots have already been cut! Please set overwrite=True if you '
+                'wish to save them again.'
+                )
             self.spot_metadata = pd.read_csv(self._spot_meta_path)
             self._spots_saved = True
             return self.spot_metadata
         elif exists(self._thumb_path) and overwrite:
             # Remove all previous files.
-            os.remove(self._thumb_path)
+            os.remove(self._annotated_path)
             remove_images(self._image_dir)
         # Save text summary.
         with open(self._summary_path, "w") as f:
@@ -445,7 +448,7 @@ class Dearrayer(object):
                 f'{self._tile_dir} already exists! If you want to save tiles '
                 'again please set overwrite=True.'
             )
-            return pd.read_csv(self._spot_meta_path)
+            return pd.read_csv(self._tile_meta_path)
         else:
             # Create the tiles directory
             os.makedirs(self._tile_dir, exist_ok=True)
