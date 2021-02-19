@@ -74,19 +74,22 @@ class OpenSlideCzi(object):
 
     def get_tiles_with_data(self, width, overlap):
         coords, __ = self._get_all_coordinates(self.bboxes, width, overlap)
+        # Wrap function.
+        func = partial(check_tile, **{
+            'data_mask': self.data_mask,
+            'region_mask': self.region_mask,
+        })
+        # Load tiles.
         filtered = []
-        for x, y in coords:
-            tile = Polygon([
-                [x, y],
-                [x+width, y],
-                [x+width, y+width],
-                [x, y+width],
-                [x, y]
-            ])
-            d_perc = tile.intersection(self.data_mask).area/tile.area
-            r_perc = tile.intersection(self.region_mask).area/tile.area
-            if d_perc == 1 and r_perc == 1:
-                filtered.append((x, y))
+        with mp.Pool(processes=os.cpu_count() - 1) as p:
+            for result in tqdm(
+                p.imap(func, coords),
+                total=len(coords),
+                desc='Filtering tiles',
+                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
+            ):
+                filtered.append(result)
+        filtered = list(filter(None, filtered))
         return filtered
 
     def read_region(self, location, scale, size):
@@ -192,6 +195,21 @@ def polygon_to_mask(poly, x, y, width, downsample):
         ImageDraw.Draw(mask).polygon(coords, outline=1, fill=1)
     mask = np.array(mask)
     return mask
+
+def check_tile(xy, data_mask, region_mask):
+    tile = Polygon([
+        [x, y],
+        [x+width, y],
+        [x+width, y+width],
+        [x, y+width],
+        [x, y]
+    ])
+    d_perc = tile.intersection(data_mask).area/tile.area
+    r_perc = tile.intersection(region_mask).area/tile.area
+    if d_perc == 1 and r_perc == 1:
+        return xy
+    else:
+        return None
 
 
 def load_tile(coords, slide_path, data_mask,
