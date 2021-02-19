@@ -21,6 +21,7 @@ from ._functional import (
     resize
 )
 from .preprocess.functional import preprocess, tissue_mask
+from ._czi_reader import OpenSlideCzi
 from ._helpers import (
     remove_extension,
     remove_images,
@@ -87,26 +88,36 @@ class Cutter(object):
             create_thumbnail: bool = False,
             thumbnail_path: str = None):
         super().__init__()
-        # Define openslide reader.
+        # Define slide reader.
         if not exists(slide_path):
             raise IOError(f'{slide_path} not found.')
-        self.openslide_reader = OpenSlide(slide_path)
+        if slide_path.endswith('czi'):
+            warnings.warn(
+                "Support for czi-files is in alpha phase! If "
+                "you run into errors, please submit an issue to "
+                "https://github.com/jopo666/HistoPrep/issues."
+            )
+            self.reader = OpenSlideCzi(slide_path)
+            self._czi = True
+        else:
+            self.reader = OpenSlide(slide_path)
+            self._czi = False
         # Assing basic stuff that user can see/check.
         self.slide_path = slide_path
         self.slide_name = remove_extension(basename(slide_path))
-        self.dimensions = self.openslide_reader.dimensions
+        self.dimensions = self.reader.dimensions
         self.downsample = downsample
         self.width = width
         self.overlap = overlap
         self.threshold = threshold
         # Warn about Otsu's thresholding.
-        if self.threshold is None:
-            warnings.warn(
-                "No threshold defined for tissue detection! Otsu's method will "
-                "be used to select a threshold which is not always optimal. "
-                "Different thresholds can be easily tried with the "
-                "Cutter.try_tresholds() command."
-            )
+        # if self.threshold is None:
+        #     warnings.warn(
+        #         "No threshold defined for tissue detection! Otsu's method will "
+        #         "be used to select a threshold which is not always optimal. "
+        #         "Different thresholds can be easily tried with the "
+        #         "Cutter.try_tresholds() command."
+        #     )
         self.max_background = max_background
         self.all_coordinates = self._get_all_coordinates()
         # Filter coordinates.
@@ -150,7 +161,10 @@ class Cutter(object):
 
     def _downsamples(self):
         string = 'Downsample  Dimensions'
-        d = get_downsamples(self.slide_path)
+        if self._czi:
+            d = {1: self.dimensions}
+        else:
+            d = get_downsamples(self.slide_path)
         for item, val in d.items():
             string += f'\n{str(item).ljust(12)}{val}'
         return string
@@ -170,19 +184,6 @@ class Cutter(object):
             f"\n  Total number of tiles: {len(self.all_coordinates)}"
             f"\n  After background filtering: {len(self.filtered_coordinates)}"
         )
-
-    # def _save_parameters(self):
-    #     save_data(
-    #         data={
-    #             'slide_path': self.slide_path,
-    #             'width': self.width,
-    #             'overlap': self.overlap,
-    #             'downsample': self.downsample,
-    #             'threshold': self.threshold,
-    #             'max_background': self.max_background
-    #         },
-    #         path=self._param_path
-    #     )
 
     def get_annotated_thumbnail(self,
                                 max_pixels: int = 1_000_000) -> Image.Image:

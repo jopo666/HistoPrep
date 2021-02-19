@@ -13,6 +13,7 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 
 from .preprocess.functional import tissue_mask, PIL_to_array
+from ._czi_reader import OpenSlideCzi
 
 
 ########################
@@ -33,19 +34,25 @@ def get_thumbnail(
     create_thumbnail: bool = False
 ) -> Image.Image:
     """Return thumbnail by using openslide or by creating a new one."""
-    reader = OpenSlide(slide_path)
-    level_downsamples = [round(x) for x in reader.level_downsamples]
-    if downsample is None:
-        downsample = max(level_downsamples)
-    if downsample in level_downsamples:
-        level = level_downsamples.index(downsample)
-        dims = reader.level_dimensions[level]
-        thumbnail = reader.get_thumbnail(dims)
-    elif create_thumbnail:
-        thumbnail = generate_thumbnail(slide_path, downsample)
+    if slide_path.endswith('czi'):
+        if create_thumbnail:
+            return generate_thumbnail(slide_path, downsample)
+        else:
+            return None
     else:
-        thumbnail = None
-    return thumbnail
+        reader = OpenSlide(slide_path)
+        level_downsamples = [round(x) for x in reader.level_downsamples]
+        if downsample is None:
+            downsample = max(level_downsamples)
+        if downsample in level_downsamples:
+            level = level_downsamples.index(downsample)
+            dims = reader.level_dimensions[level]
+            thumbnail = reader.get_thumbnail(dims)
+        elif create_thumbnail:
+            thumbnail = generate_thumbnail(slide_path, downsample)
+        else:
+            thumbnail = None
+        return thumbnail
 
 
 def generate_thumbnail(
@@ -54,47 +61,50 @@ def generate_thumbnail(
     width: int = 4096
 ) -> Image.Image:
     """Generate thumbnail for a slide."""
-    # Save reader as global for multiprocessing
-    reader = OpenSlide(slide_path)
-    dims = reader.dimensions
-    blocks = (
-        int(dims[0]/width) + 1,
-        int(dims[1]/width) + 1
-    )
-    x = (i*width for i in range(blocks[0]))
-    y = (i*width for i in range(blocks[1]))
-    coords = list(enumerate(itertools.product(x, y)))
-    # Multiprocessing to make things speedier.
-    with mp.Pool(processes=os.cpu_count()) as p:
-        func = partial(load_tile, slide_path, width, downsample)
-        tiles = []
-        for result in tqdm(
-            p.imap(func, coords),
-            total=len(coords),
-            desc='Generating thumbnail',
-            bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-        ):
-            tiles.append(result)
-    # Collect each column seperately and mash them together.
-    all_columns = []
-    col = []
-    for i, tile in tiles:
-        if i % blocks[1] == 0 and i != 0:
-            all_columns.append(np.vstack(col))
-            col = []
-        col.append(np.array(tile))
-    thumbnail = np.hstack(all_columns)
-    # Turn into into pillow image.
-    thumbnail = Image.fromarray(thumbnail.astype(np.uint8))
-    return thumbnail
+    if slide_path.endswith('czi'):
+        reader = OpenSlideCzi(slide_path)
+        thumbnail = reader.get_thumbnail(downsample, 2048, fast=True)
+        return thumbnail
+    else:
+        reader = OpenSlide(slide_path)
+        dims = reader.dimensions
+        blocks = (
+            int(dims[0]/width) + 1,
+            int(dims[1]/width) + 1
+        )
+        x = (i*width for i in range(blocks[0]))
+        y = (i*width for i in range(blocks[1]))
+        coords = list(enumerate(itertools.product(x, y)))
+        # Multiprocessing to make things speedier.
+        with mp.Pool(processes=os.cpu_count()) as p:
+            func = partial(load_tile, slide_path, width, downsample)
+            tiles = []
+            for result in tqdm(
+                p.imap(func, coords),
+                total=len(coords),
+                desc='Generating thumbnail',
+                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
+            ):
+                tiles.append(result)
+        # Collect each column seperately and mash them together.
+        all_columns = []
+        col = []
+        for i, tile in tiles:
+            if i % blocks[1] == 0 and i != 0:
+                all_columns.append(np.vstack(col))
+                col = []
+            col.append(np.array(tile))
+        thumbnail = np.hstack(all_columns)
+        # Turn into into pillow image.
+        thumbnail = Image.fromarray(thumbnail.astype(np.uint8))
+        return thumbnail
 
 
 def load_tile(
-    slide_path: str,
-    width: int,
-    downscale: int,
-    coords: Tuple[int, Tuple[int, int]]
-):
+        slide_path: str,
+        width: int,
+        downscale: int,
+        coords: Tuple[int, Tuple[int, int]]):
     # Load slide from global.
     reader = OpenSlide(slide_path)
     i, (x, y) = coords
