@@ -146,8 +146,8 @@ class Dearrayer(object):
         """Returns a summary of the dearraying process."""
         print(self._summary())
 
-    def _summary(self):
-        return (
+    def _summary(self, cut=False):
+        summary =  (
             f"{self.slide_name}"
             f"\n  Number of TMA spots: {len(self._bounding_boxes)}"
             f"\n  Downsample: {self.downsample}"
@@ -157,6 +157,13 @@ class Dearrayer(object):
             f"\n  Kernel size: {self.kernel_size}"
             f"\n  Dimensions: {self.dimensions}"
         )
+        if cut:
+            summary += (
+                f"\n  Tile width: {self.width}"
+                f"\n  Tile overlap: {self.overlap}"
+                f"\n  Max background: {self.max_background}"
+            )
+        return summary
 
     def get_thumbnail(self, max_pixels: int = 1_000_000) -> Image.Image:
         """
@@ -316,7 +323,7 @@ class Dearrayer(object):
         self._annotated_path = join(out_dir, 'thumbnail_annotated.jpeg')
         self._spot_meta_path = join(out_dir, 'spot_metadata.csv')
         self._tile_meta_path = join(out_dir, 'metadata.csv')
-        self._image_dir = join(out_dir, 'images')
+        self._image_dir = join(out_dir, 'spots')
         self._tile_dir = join(out_dir, 'tiles')
         self._summary_path = join(out_dir, 'summary.txt')
 
@@ -434,7 +441,6 @@ class Dearrayer(object):
         Returns:
             pd.DataFrame: Metadata.
         """
-
         allowed_formats = ['jpeg', 'png']
         if image_format not in allowed_formats:
             raise ValueError(
@@ -452,6 +458,12 @@ class Dearrayer(object):
         else:
             # Create the tiles directory
             os.makedirs(self._tile_dir, exist_ok=True)
+            # Update summary.txt
+            self.width = width
+            self.overlap = overlap
+            self.max_background = max_background
+            with open(self._summary_path, "w") as f:
+                f.write(self._summary(cut=True))
         # Let's collect all spot paths.
         spot_paths = self.spot_metadata['path'].tolist()
         # Remove nan paths.
@@ -475,7 +487,7 @@ class Dearrayer(object):
             for results in tqdm(
                 p.imap(func, spot_paths),
                 total=len(spot_paths),
-                desc='Cutting TMAs',
+                desc='Cutting tiles',
                 bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
             ):
                 metadata.append(results)

@@ -1,11 +1,13 @@
 import setuptools
 
+exec(open('histoprep/_version.py').read())
+
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="histoprep",
-    version="0.0.1.1",
+    version=__version__,
     author="jopo666",
     author_email="jopo@birdlover.com",
     description="Preprocessing module for large histological images.",

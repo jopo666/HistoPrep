@@ -1,10 +1,6 @@
 What is ``HistoPrep``?
 ================================================================================
 
-``HistoPrep`` can be used to cut and preprocess large histological slides for machine learning.
+``HistoPrep`` is a python module/excecutable that allows you to easily **cut** and **preprocess** large histological slides.
 
-- Cut large slide images into tiles of desired size.
-- Dearray individual tissue microarray spots from a large slide image.
-- **Easily** detect and discard artifacts or blurry images after cutting.
-
-
+.. image:: _static/workflow.jpeg

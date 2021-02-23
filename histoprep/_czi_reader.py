@@ -185,7 +185,7 @@ def polygon_to_mask(poly, x, y, width, downsample):
                     if d['type'] == 'Polygon':
                         coords.append(d['coordinates'])
     else:
-        print(mapp)
+        return mask
     if len(coords) > 1:
         coords = [item for sublist in coords for item in sublist[0]]
     else:

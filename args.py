@@ -9,7 +9,7 @@ TITLE = """ python3 HistoPrep {step} {arguments}
 █  █  █    █  █  █   █ █    █  █ █   █
 █  █  █  ██   █   ███  █    █  █ ███ █
 
-             by Jopo (2021)
+             by Jopo666 (2021)
 """
 
 
@@ -22,7 +22,7 @@ def get_arguments():
         dest='step',
         metavar='')
     cut = subparsers.add_parser('cut',
-                                help='Cut tilesfrom histological slides.',
+                                help='Cut tiles from large histological slides.',
                                 usage='python3 HistoPrep cut input_dir output_dir width {optional arguments}')
     dearray = subparsers.add_parser('dearray',
                                     help='Dearray an tissue microarray (TMA) slide.',

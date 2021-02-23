@@ -238,7 +238,7 @@ class Cutter(object):
         self._annotated_path = join(out_dir, 'thumbnail_annotated.jpeg')
         self._param_path = join(out_dir, 'parameters.p')
         self._summary_path = join(out_dir, 'summary.txt')
-        self._image_dir = join(out_dir, 'images')
+        self._image_dir = join(out_dir, 'tiles')
         # Make dirs.
         os.makedirs(out_dir, exist_ok=True)
         os.makedirs(self._image_dir, exist_ok=True)
