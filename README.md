@@ -74,7 +74,7 @@ Detailed examples can be found in the [docs](https://histoprep.readthedocs.io/en
 
 ## What's new?
 
-#### `0.0.1.2`
+#### `0.0.1.3`
 - Adding support for Zeiss fileformat `czi` (_stored in mosaic tiles_) that are hard/impossible to convert to image formats that are actuslly supported by `OpenSlide`.
 - Make output folder naming more consistent.
 
