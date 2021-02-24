@@ -11,5 +11,4 @@ dist/*
 settings.json
 # Docs.
 _build
-_static
 _templates

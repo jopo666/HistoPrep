@@ -6,3 +6,5 @@ seaborn>=0.11.0
 numpy>=1.19.0
 scikit-learn>0.24
 tqdm>=4.0
+Shapely>=1.7.0
+aicspylibczi>=2.8.0
