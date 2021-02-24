@@ -192,13 +192,12 @@ Now all that is left is to explore your dataframe and find out if some columns h
 
 .. code-block:: python
 
-  metadata.plot.hist(y='hue_0.1', bins=20);
+  metadata.plot.hist(y='hue_0.1', bins=20)
 
 .. image:: _static/hue.jpeg
 
-  width: 500
-
 Above we can see that there are two peaks in the distribution of ``hue_0.1``. The values below 100 are actually all tiles with black pen markings! Now we could remove these rows from ``metadata`` and continue exploring for more outliers.
+
 
 
 The ``preprocess`` module provides functions to help comb through the dataframe for outliers. All available functions can be found from the `API documentation <https://histoprep.readthedocs.io/en/latest/autoapi/histoprep/preprocess/>`_.

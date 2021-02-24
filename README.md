@@ -4,10 +4,23 @@
 Preprocessing large medical images for machine learning made easy!
 
 <p align="center">
+    <a href="#version" alt="Version">
+        <img src="https://img.shields.io/pypi/v/histoprep"/></a>
+    <a href="#licence" alt="Licence">
+        <img src="https://img.shields.io/github/license/jopo666/HistoPrep"/></a>
+    <a href="#docs" alt="Docs">
+        <img src="https://img.shields.io/readthedocs/histoprep"/></a>
+    <a href="#issues" alt="Issues">
+        <img src="https://img.shields.io/github/issues/jopo666/HistoPrep"/></a>
+    <a href="#activity" alt="Activity">
+        <img src="https://img.shields.io/github/last-commit/jopo666/HistoPrep"/></a>
+</p>
+
+<p align="center">
   <a href="#description">Description</a> •
   <a href="#installation">Installation</a> •
+  <a href="https://histoprep.readthedocs.io/en/latest/">Documentation</a> •
   <a href="#how-to-use">How To Use</a> •
-  <a href="#documentation">Documentation</a> •
   <a href="#examples">Examples</a> •
   <a href="#whats-new">What's new?</a> •
   <a href="#whats-coming">What's coming?</a>
@@ -31,7 +44,7 @@ First install `OpenCV` and `OpenSlide` on your system (instructions [here](https
 pip install histoprep
 ```
 
-Detailed installation instructions can be found from `HistoPrep` [docs](https://histoprep.readthedocs.io/en/latest/). 
+Detailed installation instructions can be found from `HistoPrep` [docs](https://histoprep.readthedocs.io/en/latest/install.html). 
 
 ## How To Use
 
@@ -63,10 +76,6 @@ blurry_tiles = all_metadata['sharpness'] < 10
 pen_markings = all_metadata['hue_0.1'] < 120
 weird_blue_shit = all_metadata['blue_0.05'] > 160
 ```
-
-## Documentation
-
-Documentation can be found [here](https://histoprep.readthedocs.io/en/latest/)!
 
 ## Examples
 
