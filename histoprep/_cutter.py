@@ -22,10 +22,10 @@ from ._functional import (
 )
 from .preprocess.functional import preprocess, tissue_mask
 from ._czi_reader import OpenSlideCzi
-from ._helpers import (
+from .helpers._utils import (
     remove_extension,
     remove_images,
-    save_data
+    save_pickle
 )
 
 __all__ = [
@@ -95,7 +95,7 @@ class Cutter(object):
             warnings.warn(
                 "Support for czi-files is in alpha phase! If "
                 "you run into errors, please submit an issue to "
-                "https://github.com/jopo666/HistoPrep/issues."
+                "https://github.com/jopo666/HistoPrep/issues"
             )
             self.reader = OpenSlideCzi(slide_path)
             self._czi = True

@@ -25,7 +25,7 @@ from ._functional import (
     get_theta
 )
 from .preprocess.functional import preprocess, tissue_mask
-from ._helpers import remove_extension, remove_images, flatten
+from .helpers._utils import remove_extension, remove_images, flatten
 
 __all__ = [
     'Dearrayer'

@@ -18,12 +18,14 @@ setuptools.setup(
     install_requires=[
         'opencv-python>=4.2.0',
         'openslide-python>=1.1.2',
-        'pandas>=1.1.0',
+        'pandas>=1.2.1',
         'Pillow>=7.0.0',
         'seaborn>=0.11.0',
         'numpy>=1.19.0',
-        'scikit-learn>0.23',
         'tqdm>=4.0',
+        'aicspylibczi>=2.8.0',
+        'shapely>=1.7.0',
+        'scikit-learn>0.24',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -157,6 +157,8 @@ class OpenSlideCzi(object):
             ):
                 tiles.append(result)
         tiles.sort()
+        # Check tiles...
+        breakpoint()
         # Collect each column seperately and mash them together.
         all_columns = []
         col = []
@@ -237,11 +239,15 @@ def load_tile(coords, slide_path, data_mask,
             tile = reader.read_mosaic(bbox, C=0, scale_factor=1/downsample)
         else:
             tile = reader.read_mosaic(bbox, C=0)
-        tile = np.moveaxis(tile, 0, 2)
-        tile = cv2.resize(tile, out_shape, cv2.INTER_LANCZOS4)
-        if data_perc < 1:
-            mask = polygon_to_mask(intersection, x, y, width, downsample)
-            mask = cv2.resize(mask, out_shape, cv2.INTER_LANCZOS4)
-            tile[mask == 0] = 255
+        if tile.shape[0] == 1:
+            # Something is wrong with the tile...
+            tile = np.ones(out_shape + (3,)) * 255
+        else:
+            tile = np.moveaxis(tile, 0, 2)
+            tile = cv2.resize(tile, out_shape, cv2.INTER_LANCZOS4)
+            if data_perc < 1:
+                mask = polygon_to_mask(intersection, x, y, width, downsample)
+                mask = cv2.resize(mask, out_shape, cv2.INTER_LANCZOS4)
+                tile[mask == 0] = 255
     tile = tile.astype(np.uint8)
     return i, tile

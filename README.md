@@ -83,9 +83,14 @@ Detailed examples can be found in the [docs](https://histoprep.readthedocs.io/en
 
 ## What's new?
 
-#### `0.0.1.3`
+#### `0.0.1.5`
 - Adding support for Zeiss fileformat `czi` (_stored in mosaic tiles_) that are hard/impossible to convert to image formats that are actuslly supported by `OpenSlide`.
 - Make output folder naming more consistent.
+- Add `helpers` submodule (easy to add new helper functions here)
+
+#### `0.0.1.2-4`
+- Problems with dependencies.
+
 
 #### `0.0.1.1`
 - Bug fixes that caused the `dearray` executable to crash.
@@ -102,3 +107,19 @@ Detailed examples can be found in the [docs](https://histoprep.readthedocs.io/en
   - coming in version `0.0.2`.
 - [ ] Add automatic detection of outliers from `metadata`.
   - This could be implemented with dimensionality reduction.
+
+
+## Citation
+
+If you use `HistoPrep` in a publication, please cite the github repository.
+
+```
+@misc{Pohjonen2021,
+  author = {Pohjonen J. and Ariotta. V},
+  title = {HistoPrep: Preprocessing large medical images for machine learning made easy!},
+  year = {2021},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/jopo666/HistoPrep}},
+}
+```

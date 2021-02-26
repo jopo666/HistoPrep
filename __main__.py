@@ -5,7 +5,7 @@ import openslide
 
 from args import get_arguments
 import histoprep as hp
-from histoprep._helpers import remove_extension
+from histoprep.helpers._utils import remove_extension
 
 
 def collect_paths(args):
