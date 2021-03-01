@@ -350,7 +350,7 @@ class Cutter(object):
         })
         # Multiprocessing to speed things up!
         metadata = []
-        with mp.Pool(processes=os.cpu_count()) as p:
+        with mp.Pool(processes=os.cpu_count()-1) as p:
             for result in tqdm(
                 p.imap(func, self.filtered_coordinates),
                 total=len(self.filtered_coordinates),
@@ -410,7 +410,10 @@ def save_tile(
 ) -> dict:
     """Saves a tile and returns metadata (parallizable)."""
     # Load slide as it can't be pickled...
-    reader = OpenSlide(slide_path)
+    if slide_path.endswith('czi'):
+        reader = OpenSlideCzi(slide_path)
+    else:
+        reader = OpenSlide(slide_path)
     (x, y), bg_estimate = coords
     # Prepare filename.
     filepath = join(image_dir, f'{slide_name}_x-{x}_y-{y}')

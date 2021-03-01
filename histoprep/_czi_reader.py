@@ -113,7 +113,8 @@ class OpenSlideCzi(object):
             data_mask=self.data_mask,
             region_mask=self.region_mask,
             width=width,
-            downsample=2**scale
+            downsample=2**scale,
+            fast=False
         )
         return Image.fromarray(tile.astype(np.uint8))
 
@@ -158,7 +159,9 @@ class OpenSlideCzi(object):
                 tiles.append(result)
         tiles.sort()
         # Check tiles...
-        breakpoint()
+        if len(tiles) == 0:
+            print('No tiles found!')
+            return None
         # Collect each column seperately and mash them together.
         all_columns = []
         col = []

@@ -109,8 +109,11 @@ def load_tile(
     reader = OpenSlide(slide_path)
     i, (x, y) = coords
     out_shape = (int(width/downscale), int(width/downscale))
-    tile = reader.read_region((x, y), 0, (width, width)).convert('RGB')
-    tile = cv2.resize(np.array(tile), out_shape, cv2.INTER_LANCZOS4)
+    try:
+        tile = reader.read_region((x, y), 0, (width, width)).convert('RGB')
+        tile = cv2.resize(np.array(tile), out_shape, cv2.INTER_LANCZOS4)
+    except:
+        tile = np.zeros(out_shape).astype(np.uint8)
     return i, tile
 
 

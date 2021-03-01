@@ -316,8 +316,8 @@ class Dearrayer(object):
         mask = Image.fromarray(mask.astype(np.uint8))
         return resize(mask, max_pixels)
 
-    def _prepare_directories(self, parent_dir: str) -> None:
-        out_dir = join(parent_dir, self.slide_name)
+    def _prepare_directories(self, output_dir: str) -> None:
+        out_dir = join(output_dir, self.slide_name)
         # Save paths.
         self._thumb_path = join(out_dir, f'thumbnail_{self.downsample}.jpeg')
         self._annotated_path = join(out_dir, 'thumbnail_annotated.jpeg')
@@ -332,7 +332,7 @@ class Dearrayer(object):
 
     def save_spots(
             self,
-            parent_dir: str,
+            output_dir: str,
             overwrite: bool = False,
             image_format: str = 'jpeg',
             quality: int = 95) -> pd.DataFrame:
@@ -360,7 +360,7 @@ class Dearrayer(object):
                 'Image format {} not allowed. Select from {}'.format(
                     image_format, allowed_formats
                 ))
-        self._prepare_directories(parent_dir)
+        self._prepare_directories(output_dir)
         # Check if slide has been cut before.
         if exists(self._thumb_path) and not overwrite:
             print(
