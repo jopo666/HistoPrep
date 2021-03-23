@@ -1,4 +1,5 @@
 import os
+from os import join, basename
 from typing import Union, List, Tuple
 import warnings
 
@@ -70,6 +71,49 @@ def combine_metadata(
     if csv_path is not None:
         metadata.to_csv(csv_path, index=False)
     return metadata
+
+
+def update_metadata(parent_dir: str):
+    """Rename paths in metadata for all folders with *_RENAME suffix.
+
+    This function can be used if you move around/rename the folder with 
+    metadata etc. In this case all paths saved in metadata.csv will be
+    wrong and have to be updated.
+
+    1. Add suffix _RENAME to folders you moved/renamed.
+    2. Run this command and you're all set!
+
+    Args:
+        `parent_dir` (str): Directory to loop through
+
+    Raises:
+        IOError: ``parent_dir`` does not exists
+    """
+    if not os.path.exists(parent_dir):
+        raise IOError(f'Path {parent_dir} does not exists!')
+    rename = []
+    for f in os.scandir(parent_dir):
+        if 'RENAME' in f.name:
+            rename.append(f)
+    if len(rename) == 0:
+        print('No files with suffix *_RENAME found!')
+        return
+    else:
+        print(f'Updating {len(rename)} entries.')
+    for f in rename:
+        # Prepare new dirname.
+        new_dir = join(f.path.split('_RENAME')[0], 'tiles')
+        # Load meta and change paths
+        meta = pd.read_csv(join(f.path, 'metadata.csv'))
+        new_paths = []
+        for path in meta.path:
+            new_paths.append(join(new_dir, basename(path)))
+        meta['path'] = new_paths
+        meta.to_csv(join(f.path, 'metadata.csv'), index=False)
+        # Finally remove the suffix
+        os.rename(f.path, f.path.split('_RENAME')[0])
+    print('All done!')
+    return
 
 
 def plot_on_thumbnail(

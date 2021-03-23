@@ -416,7 +416,7 @@ def save_tile(
         reader = OpenSlide(slide_path)
     (x, y), bg_estimate = coords
     # Prepare filename.
-    filepath = join(image_dir, f'{slide_name}_x-{x}_y-{y}')
+    filepath = join(image_dir, f'x-{x}_y-{y}')
     if image_format == 'png':
         filepath = filepath + '.png'
     else:

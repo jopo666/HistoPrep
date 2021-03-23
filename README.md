@@ -83,7 +83,7 @@ Detailed examples can be found in the [docs](https://histoprep.readthedocs.io/en
 
 ## What's new?
 
-#### `0.0.1.6`
+#### `0.0.1.6-7`
 - Bug fixes to the czi-reader and the excecutable.
 
 
@@ -107,6 +107,7 @@ Detailed examples can be found in the [docs](https://histoprep.readthedocs.io/en
 #### Requested features:
 
 - [ ] Cutting and preprocessing for multichannel images (currently supports only `RGB`-images).
+ - coming in version `0.0.2`.
 - [x] ``Labeler`` class for easily labeling extracted tiles.
   - coming in version `0.0.2`.
 - [ ] Add automatic detection of outliers from `metadata`.

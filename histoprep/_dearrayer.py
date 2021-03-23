@@ -511,11 +511,10 @@ def save_spot(
     """Saves spot as an image (parallizable)."""
     # Unpack variables
     number, (x, y, w, h) = data
-    slide_name = basename(dirname(image_dir))
     # Load slide as it can't be pickled...
     reader = OpenSlide(slide_path)
     # Prepare filename.
-    filepath = join(image_dir, f'{slide_name}_spot-{number}')
+    filepath = join(image_dir, f'spot-{number}')
     if image_format == 'png':
         filepath = filepath + '.png'
     else:
@@ -563,7 +562,7 @@ def save_tile(
     for (x, y), background in coords:
         tile = Image.fromarray(image[y:y+width, x:x+width, :])
         # Define path.
-        tile_path = join(image_dir, f'{prefix}_x-{x}_y-{y}.{image_format}')
+        tile_path = join(image_dir, f'x-{x}_y-{y}.{image_format}')
         # Collect basic metadata.
         metadata = {
             'path': tile_path,

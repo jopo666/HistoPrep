@@ -69,7 +69,7 @@ def cut_tiles(args):
     total = str(len(slides))
     print(f'HistoPrep will process {total} slides.')
     for i, f in enumerate(slides):
-        print(f'[{str(i).rjust(len(total))}/{total}] - {f.name}', end=' - ')
+        print(f'[{str(i).rjust(len(total))}/{total}] - {f.name}')
         if not check_file(f):
             continue
         # Prepare Cutter.
