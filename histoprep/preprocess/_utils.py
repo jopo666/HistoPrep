@@ -1,5 +1,5 @@
 import os
-from os import join, basename
+from os.path import join, basename
 from typing import Union, List, Tuple
 import warnings
 

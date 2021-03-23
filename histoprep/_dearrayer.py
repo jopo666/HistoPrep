@@ -526,7 +526,8 @@ def save_spot(
         warnings.warn('Broken slide!')
         return
     # Save image.
-    image.save(filepath, quality=quality)
+    if not exists(filepath):
+        image.save(filepath, quality=quality)
     return filepath
 
 

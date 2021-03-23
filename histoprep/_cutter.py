@@ -442,5 +442,6 @@ def save_tile(
     if custom_preprocess is not None:
         metadata.update(custom_preprocess(image))
     # Save image.
-    image.save(filepath, quality=quality)
+    if not exists(filepath):
+        image.save(filepath, quality=quality)
     return metadata

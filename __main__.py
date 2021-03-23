@@ -1,11 +1,13 @@
+import time
 import os
 from os.path import dirname, join, exists, isdir
 
 import openslide
+import numpy as np
 
 from args import get_arguments
 import histoprep as hp
-from histoprep.helpers._utils import remove_extension
+from histoprep.helpers._utils import remove_extension, format_time
 from histoprep._czi_reader import OpenSlideCzi
 
 allowed = [
@@ -21,6 +23,22 @@ allowed = [
     'bif',
     'czi',
 ]
+
+
+def get_etc(times: list, tic: float, num_left: int):
+    """Calculate ETC and return list with all times.
+
+    Args:
+        times (list): List of individual times.
+        tic (float): Start time.
+        num_left (int): Number of iterations left.
+
+    Returns:
+        [type]: [description]
+    """
+    times.append(time.time()-tic)
+    etc = np.mean(times)*num_left
+    return etc, times
 
 
 def collect_paths(args):
@@ -51,6 +69,7 @@ def collect_paths(args):
         paths = not_processed
     return paths
 
+
 def check_file(file):
     try:
         if file.name.endswith('czi'):
@@ -62,14 +81,26 @@ def check_file(file):
         return False
     return True
 
+
 def cut_tiles(args):
     # Collect all slide paths
     slides = collect_paths(args)
     # Loop through each slide and cut.
     total = str(len(slides))
     print(f'HistoPrep will process {total} slides.')
+    # Initialise list of times for ETC
+    times = []
     for i, f in enumerate(slides):
-        print(f'[{str(i).rjust(len(total))}/{total}] - {f.name}')
+        print(f'[{str(i).rjust(len(total))}/{total}] - {f.name}', end=' - ')
+        if i == 0:
+            print('ETC: Inf')
+        else:
+            # Calculate ETC.
+            etc, times = get_etc(
+                times=times, tic=tic, num_left=len(slides)-i-1)
+            print(f'ETC: {format_time(etc)}')
+        # Start time.
+        tic = time.time()
         if not check_file(f):
             continue
         # Prepare Cutter.
@@ -143,4 +174,4 @@ if __name__ == '__main__':
     else:
         raise NotImplemented(
             "I don't know how you did that, but that's not allowed."
-            )
+        )

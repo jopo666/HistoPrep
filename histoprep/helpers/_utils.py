@@ -1,4 +1,5 @@
 import os
+import time
 from typing import List
 import pickle
 import multiprocessing as mp
@@ -84,3 +85,7 @@ def flatten(l):
         return [item for sublist in l for item in sublist]
     else:
         return l
+
+def format_time(seconds):
+    return time.strftime('%Hh:%Mm:%Ss', time.gmtime(seconds))
+
