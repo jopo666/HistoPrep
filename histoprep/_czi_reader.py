@@ -195,11 +195,13 @@ def polygon_to_mask(poly, x, y, width, downsample):
         coords = [item for sublist in coords for item in sublist[0]]
     else:
         coords = coords[0]
-    coords = [((c[0] - x)/downsample, (c[1] - y)/downsample) for c in coords]
-    if len(coords) > 2:
+    if len(coords) > 2 and isinstance(coords[0], tuple):
+        coords = [((c[0] - x)/downsample, (c[1] - y)/downsample)
+                  for c in coords]
         ImageDraw.Draw(mask).polygon(coords, outline=1, fill=1)
     mask = np.array(mask)
     return mask
+
 
 def check_tile(xy, data_mask, region_mask):
     tile = Polygon([

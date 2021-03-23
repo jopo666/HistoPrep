@@ -19,7 +19,7 @@ allowed = [
     'scn',
     'svslide',
     'bif',
-    'czi'
+    'czi',
 ]
 
 
@@ -29,6 +29,12 @@ def collect_paths(args):
         suffix = f.name.split('.')[-1]
         if suffix in allowed:
             paths.append(f)
+    if len(paths) == 0:
+        print(
+            'No slides found! Please check that input_dir '
+            'you defined is correct!'
+        )
+        exit()
     if not args.overwrite:
         # See which slides have been processed before.
         not_processed = []
@@ -47,12 +53,12 @@ def collect_paths(args):
 
 def check_file(file):
     try:
-        if f.name.endswith('czi'):
-            OpenSlideCzi(f.path)
+        if file.name.endswith('czi'):
+            OpenSlideCzi(file.path)
         else:
-            openslide.OpenSlide(f.path)
+            openslide.OpenSlide(file.path)
     except:
-        print(f'Slide broken! Skipping {f.name}')
+        print(f'Slide broken! Skipping {file.name}')
         return False
     return True
 
@@ -64,7 +70,7 @@ def cut_tiles(args):
     print(f'HistoPrep will process {total} slides.')
     for i, f in enumerate(slides):
         print(f'[{str(i).rjust(len(total))}/{total}] - {f.name}', end=' - ')
-        if not check_file:
+        if not check_file(f):
             continue
         # Prepare Cutter.
         cutter = hp.Cutter(
@@ -95,7 +101,7 @@ def dearray(args):
     for i, f in enumerate(tma_arrays):
         print(f'[{str(i).rjust(len(total))}/{total}] - {f.name}', end=' - ')
         # Prepare Dearrayer.
-        if not check_file:
+        if not check_file(f):
             continue
         dearrayer = hp.Dearrayer(
             slide_path=f.path,
