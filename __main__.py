@@ -7,7 +7,7 @@ import numpy as np
 
 from args import get_arguments
 import histoprep as hp
-from histoprep.helpers._utils import remove_extension, format_time
+from histoprep.helpers._utils import remove_extension, format_seconds
 from histoprep._czi_reader import OpenSlideCzi
 
 allowed = [
@@ -26,7 +26,7 @@ allowed = [
 
 
 def get_etc(times: list, tic: float, num_left: int):
-    """Calculate ETC and return list with all times.
+    """Print ETC and return times with new time added.
 
     Args:
         times (list): List of individual times.
@@ -38,7 +38,8 @@ def get_etc(times: list, tic: float, num_left: int):
     """
     times.append(time.time()-tic)
     etc = np.mean(times)*num_left
-    return etc, times
+    print(f'ETC: {format_seconds(etc)}')
+    return times
 
 
 def collect_paths(args):
@@ -92,17 +93,15 @@ def cut_tiles(args):
     times = []
     for i, f in enumerate(slides):
         print(f'[{str(i).rjust(len(total))}/{total}] - {f.name}', end=' - ')
+        if not check_file(f):
+            continue
+        # Calculate ETC.
         if i == 0:
             print('ETC: Inf')
         else:
-            # Calculate ETC.
-            etc, times = get_etc(
-                times=times, tic=tic, num_left=len(slides)-i-1)
-            print(f'ETC: {format_time(etc)}')
+            times = get_etc(times=times, tic=tic, num_left=len(slides)-i-1)
         # Start time.
         tic = time.time()
-        if not check_file(f):
-            continue
         # Prepare Cutter.
         cutter = hp.Cutter(
             slide_path=f.path,
@@ -129,11 +128,19 @@ def dearray(args):
     # Loop through each array and cut.
     total = str(len(tma_arrays))
     print(f'HistoPrep will process {total} TMA arrays.')
+    # Initialise list of times for ETC
+    times = []
     for i, f in enumerate(tma_arrays):
         print(f'[{str(i).rjust(len(total))}/{total}] - {f.name}', end=' - ')
         # Prepare Dearrayer.
         if not check_file(f):
             continue
+        # Calculate ETC
+        if i == 0:
+            print('ETC: Inf')
+        else:
+            # Calculate ETC.
+            times = get_etc(times=times, tic=tic, num_left=len(tma_arrays)-i-1)
         dearrayer = hp.Dearrayer(
             slide_path=f.path,
             threshold=args.threshold,

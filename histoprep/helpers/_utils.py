@@ -86,6 +86,16 @@ def flatten(l):
     else:
         return l
 
-def format_time(seconds):
-    return time.strftime('%Hh:%Mm:%Ss', time.gmtime(seconds))
+def format_seconds(n):
+    days = n // (24 * 3600)
+    n = n % (24 * 3600)
+    hours = n // 3600
+    n %= 3600
+    minutes = n // 60
+    n %= 60
+    seconds = n
+    if days<1:
+        print(f'{hours}h:{minutes}m:{seconds}s')
+    else:
+        print(f'{days}d {hours}h:{minutes}m:{seconds}s')
 
