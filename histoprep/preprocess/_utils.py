@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 
 __all__ = [
     'combine_metadata',
+    'update_metadata',
     'plot_on_thumbnail',
     'plot_tiles',
     'plot_histograms',

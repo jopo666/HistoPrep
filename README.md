@@ -22,7 +22,6 @@ Preprocessing large medical images for machine learning made easy!
   <a href="https://histoprep.readthedocs.io/en/latest/">Documentation</a> •
   <a href="#how-to-use">How To Use</a> •
   <a href="#examples">Examples</a> •
-  <a href="#whats-new">What's new?</a> •
   <a href="#whats-coming">What's coming?</a>
 </p>
 
@@ -32,6 +31,10 @@ Preprocessing large medical images for machine learning made easy!
 ## Description
 
 This module allows you to easily **cut** and **preprocess** large histological slides.
+
+- Cut tiles from large slide images.
+- Dearray TMA spots (and cut tiles from individual spots).
+- Preprocess extracted tiles **easily**.
 
 ![workflow](./docs/_static/workflow.jpeg)
 
@@ -81,25 +84,6 @@ weird_blue_shit = all_metadata['blue_0.05'] > 160
 
 Detailed examples can be found in the [docs](https://histoprep.readthedocs.io/en/latest/) or the [examples](./examples) folder.
 
-## What's new?
-
-#### `0.0.1.6-7`
-- Bug fixes to the czi-reader and the excecutable.
-
-
-#### `0.0.1.5`
-- Adding support for Zeiss fileformat `czi` (_stored in mosaic tiles_) that are hard/impossible to convert to image formats that are actuslly supported by `OpenSlide`.
-- Make output folder naming more consistent.
-- Add `helpers` submodule (easy to add new helper functions here)
-
-#### `0.0.1.2-4`
-- Problems with dependencies.
-
-
-#### `0.0.1.1`
-- Bug fixes that caused the `dearray` executable to crash.
-
-
 ## What's coming?
 
 `HistoPrep` is under constant development. If there are some features you would like to be added, just submit an [issue](https://github.com/jopo666/HistoPrep/issues) and we'll start working on the feature!
@@ -107,7 +91,7 @@ Detailed examples can be found in the [docs](https://histoprep.readthedocs.io/en
 #### Requested features:
 
 - [ ] Cutting and preprocessing for multichannel images (currently supports only `RGB`-images).
- - coming in version `0.0.2`.
+  - coming in version `0.0.2`.
 - [x] ``Labeler`` class for easily labeling extracted tiles.
   - coming in version `0.0.2`.
 - [ ] Add automatic detection of outliers from `metadata`.
@@ -128,3 +112,8 @@ If you use `HistoPrep` in a publication, please cite the github repository.
   howpublished = {\url{https://github.com/jopo666/HistoPrep}},
 }
 ```
+
+
+## Changelog
+
+Can be found [here](CHANGELOG.md).
