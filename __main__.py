@@ -91,12 +91,13 @@ def cut_tiles(args):
     print(f'HistoPrep will process {total} slides.')
     # Initialise list of times for ETC
     times = []
+    tic = None
     for i, f in enumerate(slides):
         print(f'[{str(i).rjust(len(total))}/{total}] - {f.name}', end=' - ')
         if not check_file(f):
             continue
         # Calculate ETC.
-        if i == 0:
+        if tic is None:
             print('ETC: Inf')
         else:
             times = get_etc(times=times, tic=tic, num_left=len(slides)-i-1)
