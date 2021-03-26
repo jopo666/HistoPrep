@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+### `0.0.1.9`
+- Added alpha version of the ``TileLabeler``.
+  - Only supports Shapely masks
+- Bug fixes all around!
+
+
 ### `0.0.1.8`
 - ETC to excecutable.
 - update_metadata() command.
