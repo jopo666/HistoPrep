@@ -87,15 +87,15 @@ def flatten(l):
         return l
 
 def format_seconds(n):
-    days = n // (24 * 3600)
+    days = int(n // (24 * 3600))
     n = n % (24 * 3600)
-    hours = n // 3600
+    hours = int(n // 3600)
     n %= 3600
-    minutes = n // 60
+    minutes = int(n // 60)
     n %= 60
-    seconds = n
-    if days<1:
-        print(f'{hours}h:{minutes}m:{seconds}s')
-    else:
-        print(f'{days}d {hours}h:{minutes}m:{seconds}s')
+    seconds = int(n)
+    strtime = f'{(hours)}h:{minutes}m:{seconds}s'
+    if days>1:
+        strtime = f'{days}d ' + strtime
+    return strtime
 

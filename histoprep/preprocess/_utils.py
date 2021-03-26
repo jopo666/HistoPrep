@@ -102,14 +102,16 @@ def update_metadata(parent_dir: str):
     else:
         print(f'Updating {len(rename)} entries.')
     for f in rename:
-        # Prepare new dirname.
+        # Prepare new names.
         new_dir = join(f.path.split('_RENAME')[0], 'tiles')
+        new_slide_name = f.name.split('_RENAME')[0]
         # Load meta and change paths
         meta = pd.read_csv(join(f.path, 'metadata.csv'))
         new_paths = []
         for path in meta.path:
             new_paths.append(join(new_dir, basename(path)))
         meta['path'] = new_paths
+        meta['slide_name'] = new_slide_name
         meta.to_csv(join(f.path, 'metadata.csv'), index=False)
         # Finally remove the suffix
         os.rename(f.path, f.path.split('_RENAME')[0])
