@@ -561,7 +561,13 @@ def save_tile(
     # Load and save each tile.
     spot_metadata = []
     for (x, y), background in coords:
-        tile = Image.fromarray(image[y:y+width, x:x+width, :])
+        # Init empty image.
+        tile = np.ones((width,width,3)) * 255
+        # Add data (this way we have padding!).
+        tmp = img[y:y+width, x:x+width, :]
+        tile[:tmp.shape[0], :tmp.shape[1]] = tmp
+        # Turn to PIL image.
+        tile = Image.fromarray(tile.astype(np.uint8))
         # Define path.
         tile_path = join(image_dir, f'x-{x}_y-{y}.{image_format}')
         # Collect basic metadata.
