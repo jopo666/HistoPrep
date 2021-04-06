@@ -81,8 +81,30 @@ def combine_metadata(
     return metadata
 
 
+def update_tile_paths(paths: list, data_dir: str, TMA: bool) -> list:
+    new_paths = []
+    for old in paths:
+        filename = basename(old)
+        if TMA:
+            subdir = join(dirname(dirname(old)), dirname(old))
+        else:
+            subdir = 'tiles'
+        new = join(data_dir, subdir, filename)
+        new_paths.append(new)
+    return new_paths
+
+
+def update_spot_paths(paths: list, data_dir: str) -> list:
+    new_paths = []
+    for old in paths:
+        filename = basename(old)
+        new = join(data_dir, 'spots', filename)
+        new_paths.append(new)
+    return new_paths
+
+
 def update_paths(parent_dir: str):
-    """Rename paths in metadata.
+    """Rename all paths in metadata.
 
     This function can be used if you move around/rename the folder with 
     metadata etc. In this case all paths saved in metadata.csv will be
@@ -94,7 +116,6 @@ def update_paths(parent_dir: str):
     Raises:
         IOError: ``parent_dir`` does not exists
     """
-    # Check if path exists.
     if not os.path.exists(parent_dir):
         raise IOError(f'Path {parent_dir} does not exists!')
     # Collect data directories to update.
@@ -104,28 +125,40 @@ def update_paths(parent_dir: str):
             update.append(f)
     if len(update) == 0:
         print(f'No directories found at {parent_dir}!')
-        # return
-    # Loop through all collected dirs.
+        return
     for f in tqdm(update, desc='Updating paths'):
         # Collect metadata paths.
         meta_paths = []
         for x in os.scandir(f.path):
-            if 'metadata' in x.name:
+            if x.name.endswith('metadata.csv'):
                 meta_paths.append(x.path)
         for path in meta_paths:
-            # Update tile and spot paths.
             meta = pd.read_csv(path)
-            new_paths = []
-            idx = ~meta.path.isna()
-            for old in meta.path[idx]:
-                filename = basename(old)
-                if 'spot' in filename:
-                    subdir = 'spots'
-                else:
-                    subdir = 'tiles'
-                new = join(f.path, subdir, filename)
-                new_paths.append(new)
-            meta.loc[idx, 'path'] = new_paths
+            if 'spot_metadata' in path:
+                # Spot metadata
+                idx = ~meta.path.isna()
+                spot_paths = meta.path[idx]
+                new_paths = update_spot_paths(spot_paths, f.path)
+                meta.loc[idx, 'path'] = new_paths
+            elif 'spot_path' in meta.columns:
+                # Tile metadata from a TMA array.
+                # Update tile paths.
+                idx = ~meta.path.isna()
+                tile_paths = meta.path[idx]
+                new_paths = update_tile_paths(tile_paths, f.path, TMA=True)
+                meta.loc[idx, 'path'] = new_paths
+                # Update spot paths.
+                idx = ~meta.spot_path.isna()
+                spot_paths = meta.spot_path[idx]
+                new_paths = update_spot_paths(spot_paths, f.path)
+                meta.loc[idx, 'spot_path'] = new_paths
+            else:
+                # Metadata from a normal slide.
+                idx = ~meta.path.isna()
+                tile_paths = meta.path[idx]
+                new_paths = update_tile_paths(tile_paths, f.path, TMA=False)
+                meta.loc[idx, 'path'] = new_paths
+            # Save updated metadata.
             meta.to_csv(path, index=False)
 
 
