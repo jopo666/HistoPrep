@@ -30,7 +30,6 @@ class TileLabeler():
     def __init__(
         self,
         data_dir: str,
-        create_thumbnail: bool = False,
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -101,7 +100,7 @@ class TileLabeler():
         self,
         mask: Union[Polygon, MultiPolygon],
         prefix: str,
-        threshold: int,
+        threshold: float,
         overwrite: bool = False,
     ) -> None:
         """Add labels and intersection percentages to metadata from a 
@@ -110,8 +109,8 @@ class TileLabeler():
         Args:
             mask (Union[Polygon, MultiPolygon]): Annotation mask.
             prefix (str): Name for the label.
-            threshold (int): How much overlap with mask is required to
-                turn the label to 1.
+            threshold (float): How much overlap with mask is required to
+                turn the label into 1.
             overwrite (bool, optional): Wheter to overwrite labels if 
                 they already exist in the metadata. Defaults to False.
 

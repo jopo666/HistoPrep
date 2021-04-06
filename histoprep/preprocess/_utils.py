@@ -23,17 +23,20 @@ __all__ = [
 def combine_metadata(
         parent_dir: str,
         csv_path: str = None,
-        overwrite: bool = False) -> pd.DataFrame:
+        overwrite: bool = False,
+        tma_spots = False) -> pd.DataFrame:
     """
     Combines all metadata in ``parent_dir`` into a single csv-file.
 
     Args:
         parent_dir (str): Directory with all the processed tiles.
-        csv_path (str, optional): Path for the combined metadata.csv. Doesn't 
-            have to be defined if you just want to return the pandas dataframe.
-            Defaults to None.
-        overwrite (bool, optional): Whether to overwrite if csv_path exists. 
-            Defaults to False.
+        csv_path (str, optional): Path for the combined metadata.csv.
+            Doesn't have to be defined if you just want to return the 
+            pandas dataframe. Defaults to ``None``.
+        overwrite (bool, optional): Whether to overwrite if csv_path 
+            exists. Defaults to ``False``.
+        tma_spots (bool, optional): Wheter to combine spot metadata.
+            Defaults to ``False``.
 
     Raises:
         IOError: ``parent_dir`` does not exist.
@@ -48,13 +51,17 @@ def combine_metadata(
         raise IOError(f'{csv_path} exists and overwrite=False.')
     dataframes = []
     directories = [x.path for x in os.scandir(parent_dir) if x.is_dir()]
+    if tma_spots:
+        meta_name = 'spot_metadata'
+    else:
+        meta_name = 'metadata'
     for directory in tqdm(
             directories,
             total=len(directories),
             desc='Combining metadata',
             bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
     ):
-        metadata_path = os.path.join(directory, 'metadata.csv')
+        metadata_path = os.path.join(directory, meta_name + '.csv')
         # There might be slides that haven't been finished.
         if not os.path.exists(metadata_path):
             warnings.warn(
