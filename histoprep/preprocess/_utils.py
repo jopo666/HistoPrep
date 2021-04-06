@@ -1,5 +1,5 @@
 import os
-from os.path import join, basename
+from os.path import join, basename, dirname, exists
 from typing import Union, List, Tuple
 import warnings
 
@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 __all__ = [
     'combine_metadata',
-    'update_metadata',
+    'update_paths',
     'plot_on_thumbnail',
     'plot_tiles',
     'plot_histograms',
@@ -24,7 +24,7 @@ def combine_metadata(
         parent_dir: str,
         csv_path: str = None,
         overwrite: bool = False,
-        tma_spots = False) -> pd.DataFrame:
+        tma_spots=False) -> pd.DataFrame:
     """
     Combines all metadata in ``parent_dir`` into a single csv-file.
 
@@ -81,15 +81,12 @@ def combine_metadata(
     return metadata
 
 
-def update_metadata(parent_dir: str):
-    """Rename paths in metadata for all folders with *_RENAME suffix.
+def update_paths(parent_dir: str):
+    """Rename paths in metadata.
 
     This function can be used if you move around/rename the folder with 
     metadata etc. In this case all paths saved in metadata.csv will be
     wrong and have to be updated.
-
-    1. Add suffix _RENAME to folders you moved/renamed.
-    2. Run this command and you're all set!
 
     Args:
         `parent_dir` (str): Directory to loop through
@@ -97,33 +94,39 @@ def update_metadata(parent_dir: str):
     Raises:
         IOError: ``parent_dir`` does not exists
     """
+    # Check if path exists.
     if not os.path.exists(parent_dir):
         raise IOError(f'Path {parent_dir} does not exists!')
-    rename = []
+    # Collect data directories to update.
+    update = []
     for f in os.scandir(parent_dir):
-        if 'RENAME' in f.name:
-            rename.append(f)
-    if len(rename) == 0:
-        print('No files with suffix *_RENAME found!')
-        return
-    else:
-        print(f'Updating {len(rename)} entries.')
-    for f in rename:
-        # Prepare new names.
-        new_dir = join(f.path.split('_RENAME')[0], 'tiles')
-        new_slide_name = f.name.split('_RENAME')[0]
-        # Load meta and change paths
-        meta = pd.read_csv(join(f.path, 'metadata.csv'))
-        new_paths = []
-        for path in meta.path:
-            new_paths.append(join(new_dir, basename(path)))
-        meta['path'] = new_paths
-        meta['slide_name'] = new_slide_name
-        meta.to_csv(join(f.path, 'metadata.csv'), index=False)
-        # Finally remove the suffix
-        os.rename(f.path, f.path.split('_RENAME')[0])
-    print('All done!')
-    return
+        if f.is_dir():
+            update.append(f)
+    if len(update) == 0:
+        print(f'No directories found at {parent_dir}!')
+        # return
+    # Loop through all collected dirs.
+    for f in tqdm(update, desc='Updating paths'):
+        # Collect metadata paths.
+        meta_paths = []
+        for x in os.scandir(f.path):
+            if 'metadata' in x.name:
+                meta_paths.append(x.path)
+        for path in meta_paths:
+            # Update tile and spot paths.
+            meta = pd.read_csv(path)
+            new_paths = []
+            idx = ~meta.path.isna()
+            for old in meta.path[idx]:
+                filename = basename(old)
+                if 'spot' in filename:
+                    subdir = 'spots'
+                else:
+                    subdir = 'tiles'
+                new = join(f.path, subdir, filename)
+                new_paths.append(new)
+            meta.loc[idx, 'path'] = new_paths
+            meta.to_csv(path, index=False)
 
 
 def plot_on_thumbnail(
