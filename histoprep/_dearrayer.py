@@ -564,7 +564,7 @@ def save_tile(
         # Init empty image.
         tile = np.ones((width,width,3)) * 255
         # Add data (this way we have padding!).
-        tmp = img[y:y+width, x:x+width, :]
+        tmp = image[y:y+width, x:x+width, :]
         tile[:tmp.shape[0], :tmp.shape[1]] = tmp
         # Turn to PIL image.
         tile = Image.fromarray(tile.astype(np.uint8))
