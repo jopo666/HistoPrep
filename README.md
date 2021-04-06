@@ -75,7 +75,7 @@ from histoprep import preprocess
 
 all_metadata = preprocess.collect_metadata('/path/to/output_folder')
 
-blurry_tiles = all_metadata['sharpness'] < 10
+blurry_tiles = all_metadata['sharpness_max'] < 10
 pen_markings = all_metadata['hue_0.1'] < 120
 weird_blue_shit = all_metadata['blue_0.05'] > 160
 ```
@@ -101,7 +101,7 @@ Detailed examples can be found in the [docs](https://histoprep.readthedocs.io/en
 If you use `HistoPrep` in a publication, please cite the github repository.
 
 ```
-@misc{Pohjonen2021,
+@misc{histoprep2021,
   author = {Pohjonen J. and Ariotta. V},
   title = {HistoPrep: Preprocessing large medical images for machine learning made easy!},
   year = {2021},
@@ -110,7 +110,6 @@ If you use `HistoPrep` in a publication, please cite the github repository.
   howpublished = {\url{https://github.com/jopo666/HistoPrep}},
 }
 ```
-
 
 ## Changelog
 
