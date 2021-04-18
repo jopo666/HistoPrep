@@ -1,2 +1,3 @@
-from ._utils import *
+from ._metadata import *
+from ._visualise import *
 from . import functional

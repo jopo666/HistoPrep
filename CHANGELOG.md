@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+### `0.0.2`
+- `Explore()` function to easily detect outliers in metadata!
+- Reformated all plotting functions.
+
 ### `0.0.1.9`
 - Added alpha version of the ``TileLabeler``.
   - Only supports Shapely masks
