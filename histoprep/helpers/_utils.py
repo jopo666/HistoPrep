@@ -97,6 +97,6 @@ def format_seconds(n: int) -> str:
     n %= 60
     seconds = int(n)
     strtime = f'{(hours)}h:{minutes}m:{seconds}s'
-    if days > 1:
+    if days > 0:
         strtime = f'{days}d ' + strtime
     return strtime
