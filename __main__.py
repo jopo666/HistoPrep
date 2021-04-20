@@ -138,7 +138,7 @@ def dearray(args):
             continue
         # Calculate ETC
         if i == 0:
-            print('ETC: Inf')
+            print('ETC: ...')
         else:
             # Calculate ETC.
             times = get_etc(times=times, tic=tic, num_left=len(tma_arrays)-i-1)
