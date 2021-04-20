@@ -44,12 +44,12 @@ def get_tiles(
     nrows: int = 2,
     ncols: int = 16,
     px: int = 64,
-    to_bytes = True,
+    to_bytes=True,
 ) -> bytes:
     """Return image grid of the tiles from selection."""
     # Collect random sample and tile paths.
     if column is None and x_range is None:
-         paths = df.path
+        paths = df.path
     else:
         paths = df.path[
             (df[column] > x_range[0]) &
@@ -190,9 +190,9 @@ def get_widgets(
             button_style='',
             icon=''
         )
-        #'log_y': widgets.Checkbox(
+        # 'log_y': widgets.Checkbox(
         #    value=False, description='Log scale',
-        #)
+        # )
     }
     if group == 'channels':
         plot_wdgts['dropdown'] = widgets.Dropdown(
@@ -457,8 +457,9 @@ def Explore(
     out = widgets.interactive_output(plot_func, plot_w)
     display(top_ui, out, bottom_ui, t, selection_w)
 
+
 def plot_on_thumbnail(
-    df: pd.DataFrame, 
+    df: pd.DataFrame,
     max_thumbnails: int = 5,
     min_tiles: int = None,
 ) -> dict:
@@ -492,13 +493,14 @@ def plot_on_thumbnail(
                 new_slides.append(slide)
         if len(new_slides) == 0:
             print(f'No slides found with minimum of {min_tiles} tiles!')
-        slides = [x for x in slides if len(df[df.slide_name == x]) >= min_tiles]
+        slides = [x for x in slides if len(
+            df[df.slide_name == x]) >= min_tiles]
     if len(slides) > max_thumbnails:
         slides = np.random.choice(slides, max_thumbnails)
     # Load thumbnails.
     thumbnails = {}
     for slide in slides:
-        tile_path = df[df.slide_name==slide].path.tolist()[0]
+        tile_path = df[df.slide_name == slide].path.tolist()[0]
         data_path = os.path.dirname(tile_path.split('tiles')[0])
         # Find thumbnail and downsample.
         for x in os.scandir(data_path):
@@ -516,14 +518,14 @@ def plot_on_thumbnail(
         annotated = ImageDraw.Draw(annotated_thumbnail)
         # Get tile coords.
         tmp = df[df.slide_name == slide]
-        coords = list(zip(tmp['x'],tmp['y'],tmp['width']))
+        coords = list(zip(tmp['x'], tmp['y'], tmp['width']))
         # Draw.
         for x, y, width in coords:
             w_d = width/downsample
             x_d = x/downsample
             y_d = y/downsample
             annotated.rectangle(
-                [x_d, y_d, x_d+w_d, y_d+w_d], 
+                [x_d, y_d, x_d+w_d, y_d+w_d],
                 outline='blue', width=2
             )
         annotated_thumbnails[slide] = annotated_thumbnail
@@ -598,7 +600,7 @@ def plot_ranges(
                 f'{low} > {high}. Please give list of ranges in format '
                 '[(low,high), (low,high), ...]'
             )
-        tiles = get_tiles(df, column='sat_0.1', x_range=(low,high), 
+        tiles = get_tiles(df, column=column, x_range=(low, high),
                           nrows=nrows, ncols=ncols, px=px, to_bytes=False)
         range_tiles[f'{low}-{high}'] = tiles
     return range_tiles
