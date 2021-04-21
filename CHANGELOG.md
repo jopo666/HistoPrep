@@ -2,8 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-### `0.0.2.1-2`
-- Bug fixes.
+### `0.0.2.1-3`
+- Bug fixes and problems with dependencies.
 
 ### `0.0.2.0`
 - `Explore()` function to easily detect outliers in metadata!
