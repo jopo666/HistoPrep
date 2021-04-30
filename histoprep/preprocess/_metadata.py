@@ -82,7 +82,8 @@ def update_tile_paths(paths: list, data_dir: str, TMA: bool) -> list:
     for old in paths:
         filename = basename(old)
         if TMA:
-            subdir = join(dirname(dirname(old)), dirname(old))
+            spot_dir = basename(dirname(old))
+            subdir = join('tiles', spot_dir)
         else:
             subdir = 'tiles'
         new = join(data_dir, subdir, filename)
@@ -117,7 +118,7 @@ def update_paths(parent_dir: str):
     # Collect data directories to update.
     update = []
     for f in os.scandir(parent_dir):
-        if f.is_dir():
+        if f.is_dir() and exists(join(f.path, 'metadata.csv')):
             update.append(f)
     if len(update) == 0:
         print(f'No directories found at {parent_dir}!')

@@ -2,6 +2,7 @@
 *__pycache__*
 secret_stuff/*
 *.ipynb
+conda_*
 update_package.sh
 # PyPi.
 project.toml
