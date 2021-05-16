@@ -97,7 +97,6 @@ def get_widgets(
         'red': [x for x in df.columns if 'red_' in x],
         'green': [x for x in df.columns if 'green_' in x],
         'blue': [x for x in df.columns if 'blue_' in x],
-        'gray': [x for x in df.columns if 'gray_' in x],
     }
     # Collect all options.
     col_options = {
@@ -109,7 +108,6 @@ def get_widgets(
         'red': [(x.split('_')[-1], x) for x in columns['red']],
         'green': [(x.split('_')[-1], x) for x in columns['green']],
         'blue': [(x.split('_')[-1], x) for x in columns['blue']],
-        'gray': [(x.split('_')[-1], x) for x in columns['gray']],
     }
     drop_options = [
         ('Hue', 'hue'),
@@ -118,7 +116,6 @@ def get_widgets(
         ('Red', 'red'),
         ('Green', 'green'),
         ('Blue', 'blue'),
-        ('Gray', 'gray'),
     ]
     # Prepare arguments for each plot group.
     args = {
@@ -190,9 +187,6 @@ def get_widgets(
             button_style='',
             icon=''
         )
-        # 'log_y': widgets.Checkbox(
-        #    value=False, description='Log scale',
-        # )
     }
     if group == 'channels':
         plot_wdgts['dropdown'] = widgets.Dropdown(
