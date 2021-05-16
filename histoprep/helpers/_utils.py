@@ -100,6 +100,6 @@ def format_seconds(n: int) -> str:
         strtime = f'{days}d{(hours)}h:{minutes}m:{seconds}s'
     elif hours > 0:
         strtime = f'{(hours)}h:{minutes}m:{seconds}s'
-    elif minutes > 0:
+    else:
         strtime = f'{minutes}m:{seconds}s'
     return strtime
