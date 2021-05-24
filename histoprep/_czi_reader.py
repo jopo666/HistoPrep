@@ -1,9 +1,9 @@
 import os
 import itertools
-import time
 import multiprocessing as mp
 from functools import partial
-from typing import Tuple, List
+from typing import List
+import logging
 
 from tqdm import tqdm
 import cv2
@@ -15,6 +15,10 @@ from shapely.geometry import Polygon, MultiPolygon, mapping
 __all__ = [
     'OpenSlideCzi'
 ]
+
+# Define logger.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class OpenSlideCzi(object):
@@ -160,7 +164,7 @@ class OpenSlideCzi(object):
         tiles.sort()
         # Check tiles...
         if len(tiles) == 0:
-            print('No tiles found!')
+            logger.warn('No tiles found!')
             return None
         # Collect each column seperately and mash them together.
         all_columns = []

@@ -1,19 +1,21 @@
 import os
 from os.path import join, basename, dirname, exists
-from typing import Union, List, Tuple
-import warnings
+from typing import List
+import logging
+import multiprocessing as mp
 
-from PIL import Image, ImageDraw
 import pandas as pd
-import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 
 __all__ = [
     'combine_metadata',
     'update_paths',
 ]
+
+# Define logger.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def combine_metadata(
@@ -45,36 +47,47 @@ def combine_metadata(
         raise IOError(f'{parent_dir} does not exist.')
     if csv_path is not None and os.path.exists(csv_path) and not overwrite:
         raise IOError(f'{csv_path} exists and overwrite=False.')
-    dataframes = []
+    # Collect metadata paths.
     directories = [x.path for x in os.scandir(parent_dir) if x.is_dir()]
     if tma_spots:
         meta_name = 'spot_metadata'
     else:
         meta_name = 'metadata'
-    for directory in tqdm(
-            directories,
-            total=len(directories),
-            desc='Combining metadata',
-            bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-    ):
-        metadata_path = os.path.join(directory, meta_name + '.csv')
-        # There might be slides that haven't been finished.
-        if not os.path.exists(metadata_path):
-            warnings.warn(
-                f'{metadata_path} path not found! This warning might arise '
-                'if you are still cutting slides, some of the slides were '
-                'broken or no tissue was found on the slide.'
-            )
-        # There might be empty files.
-        elif os.path.getsize(metadata_path) > 5:
-            dataframes.append(pd.read_csv(metadata_path))
+    meta_paths = [join(d, f'{meta_name}.csv') for d in directories]
+    # Collect dataframes
+    dataframes = multiprocessing_loop(
+        func=get_metadata,
+        loop_this=meta_paths,
+        desc='Combining metadata',
+        processes=1 if len(meta_paths) < 20 else None,
+    )
+    dataframes = list(filter(lambda x: x is not None, dataframes))
     if len(dataframes) == 0:
-        print('No metadata.csv files found!')
+        logger.info(f'No metadata found at {parent_dir}!')
         return
     metadata = pd.concat(dataframes)
     if csv_path is not None:
+        logger.info(f'Saving combined metadata to {csv_path}.')
         metadata.to_csv(csv_path, index=False)
     return metadata
+
+
+def get_metadata(metadata_path):
+    """Safely load metadata."""
+    if not exists(metadata_path):
+        # There might be slides that haven't been finished.
+        logger.warn(
+            f'{metadata_path} path not found! This warning might arise '
+            'if you are still cutting slides, some of the slides were '
+            'broken or no tissue was found on the slide.'
+        )
+        return None
+    elif os.path.getsize(metadata_path) < 6:
+        # There might be empty files.
+        logger.info(f'{metadata_path} is an empty file.')
+        return None
+    else:
+        return pd.read_csv(metadata_path)
 
 
 def update_tile_paths(paths: list, data_dir: str, TMA: bool) -> list:
@@ -121,7 +134,7 @@ def update_paths(parent_dir: str):
         if f.is_dir() and exists(join(f.path, 'metadata.csv')):
             update.append(f)
     if len(update) == 0:
-        print(f'No directories found at {parent_dir}!')
+        logger.info(f'No directories found at {parent_dir}!')
         return
     for f in tqdm(update, desc='Updating paths'):
         # Collect metadata paths.
@@ -157,3 +170,47 @@ def update_paths(parent_dir: str):
                 meta.loc[idx, 'path'] = new_paths
             # Save updated metadata.
             meta.to_csv(path, index=False)
+
+
+def multiprocessing_loop(func, loop_this, desc=None, processes=None):
+    results = []
+    if processes is None:
+        processes = os.cpu_count() - 1
+    with mp.Pool(processes=processes) as p:
+        for result in tqdm(
+            p.imap(func, loop_this),
+            total=len(loop_this),
+            desc=desc,
+            bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
+        ):
+            results.append(result)
+    return results
+
+
+def check_tiles(metadata: pd.DataFrame):
+    pass
+
+
+def multiprocessing_loop(func, loop_this, desc=None, processes=None):
+    results = []
+    if processes is None:
+        processes = os.cpu_count() - 1
+    with mp.Pool(processes=processes) as p:
+        for result in tqdm(
+            p.imap(func, loop_this),
+            total=len(loop_this),
+            desc=desc,
+            bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
+        ):
+            results.append(result)
+    return results
+
+
+def check_image(path):
+    img = load_image(path)
+    if img is None:
+        logger.warn(f'Not a complete image: {path}')
+        return path, (0, 0, 0, 0)
+    shape = img.shape
+    vals = img.sum()
+    return path, shape + (vals,)

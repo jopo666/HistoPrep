@@ -1,4 +1,3 @@
-import sys
 import os
 from os.path import dirname, join, basename, exists
 from typing import List, Tuple, Callable
@@ -6,6 +5,7 @@ import itertools
 import multiprocessing as mp
 from functools import partial
 import warnings
+import logging
 
 import cv2
 import numpy as np
@@ -30,6 +30,10 @@ from .helpers._utils import remove_extension, remove_images, flatten
 __all__ = [
     'Dearrayer'
 ]
+
+# Define logger.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class Dearrayer(object):
@@ -118,7 +122,7 @@ class Dearrayer(object):
             downsample=self.downsample,
         )
         if self._numbers is None or self._bounding_boxes is None:
-            print(
+            logger.warn(
                 'No spots detected from the slide! Please try and adjust, '
                 'the kernel_size, min_area_multiplier and max_area_multiplier '
                 'parameters using the dearrayer.try_spot_mask() function.'
@@ -128,10 +132,11 @@ class Dearrayer(object):
         else:
             self.spot_metadata = pd.DataFrame(
                 np.hstack((self._numbers.reshape(-1, 1), self._bounding_boxes)))
-            self.spot_metadata.columns = ['number', 'x', 'y', 'width', 'height']
+            self.spot_metadata.columns = [
+                'number', 'x', 'y', 'width', 'height']
             self._annotate()
             if len([x for x in self._numbers if '_' in x]) > 0:
-                print(
+                logger.warn(
                     'Some spots were assinged the same number. Please check the '
                     f'annotated thumbnail for slide {self.slide_name}.'
                 )
@@ -144,10 +149,10 @@ class Dearrayer(object):
 
     def summary(self):
         """Returns a summary of the dearraying process."""
-        print(self._summary())
+        logger.info(self._summary())
 
     def _summary(self, cut=False):
-        summary =  (
+        summary = (
             f"{self.slide_name}"
             f"\n  Number of TMA spots: {len(self._bounding_boxes)}"
             f"\n  Downsample: {self.downsample}"
@@ -363,10 +368,10 @@ class Dearrayer(object):
         self._prepare_directories(output_dir)
         # Check if slide has been cut before.
         if exists(self._thumb_path) and not overwrite:
-            print(
-                'Spots have already been cut! Please set overwrite=True if you '
-                'wish to save them again.'
-                )
+            logger.warn(
+                'Spots have already been cut! Please set overwrite=True if '
+                'you wish to save them again.'
+            )
             self.spot_metadata = pd.read_csv(self._spot_meta_path)
             self._spots_saved = True
             return self.spot_metadata
@@ -450,7 +455,7 @@ class Dearrayer(object):
         if not self._spots_saved:
             raise IOError('Please save the spots first with Dearrayer.save()')
         if exists(self._tile_dir) and overwrite == False:
-            print(
+            logger.warn(
                 f'{self._tile_dir} already exists! If you want to save tiles '
                 'again please set overwrite=True.'
             )
@@ -494,7 +499,7 @@ class Dearrayer(object):
         metadata = list(filter(None, metadata))
         metadata = flatten(metadata)
         if len(metadata) == 0:
-            print(f'No tiles saved from any of the spots!')
+            logger.warn(f'No tiles saved from any of the spots!')
             return None
         # Save metadata.
         self.tile_metadata = pd.DataFrame(metadata)
@@ -562,7 +567,7 @@ def save_tile(
     spot_metadata = []
     for (x, y), background in coords:
         # Init empty image.
-        tile = np.ones((width,width,3)) * 255
+        tile = np.ones((width, width, 3)) * 255
         # Add data (this way we have padding!).
         tmp = image[y:y+width, x:x+width, :]
         tile[:tmp.shape[0], :tmp.shape[1]] = tmp

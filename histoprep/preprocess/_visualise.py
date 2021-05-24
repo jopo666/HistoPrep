@@ -2,6 +2,7 @@ import os
 from os.path import dirname, join
 import multiprocessing as mp
 from typing import Union, List, Dict, Tuple
+import logging
 
 import pandas as pd
 import numpy as np
@@ -19,6 +20,10 @@ __all__ = [
     'plot_tiles',
     'plot_ranges',
 ]
+
+# Define logger.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def split_list(l: list, n: int = 1) -> list:
@@ -486,7 +491,7 @@ def plot_on_thumbnail(
             if occurrences >= min_tiles:
                 new_slides.append(slide)
         if len(new_slides) == 0:
-            print(f'No slides found with minimum of {min_tiles} tiles!')
+            logger.warn(f'No slides found with minimum of {min_tiles} tiles!')
         slides = [x for x in slides if len(
             df[df.slide_name == x]) >= min_tiles]
     if len(slides) > max_thumbnails:
@@ -547,7 +552,7 @@ def plot_tiles(df: pd.DataFrame, nrows: int = 4, ncols: int = 16, px: int = 64) 
             pd.DataFrame, type(df)
         ))
     if len(df) == 0:
-        print('No images.')
+        logger.info('No images.')
         return
     df = df.sample(n=min(len(df), nrows*ncols))
     tiles = get_tiles(df, nrows=nrows, ncols=ncols, px=px, to_bytes=False)

@@ -1,17 +1,18 @@
 import os
-import warnings
 from os.path import join, exists
 from typing import List, Union
+import logging
 
-import cv2
 import numpy as np
 import pandas as pd
-import openslide
 from PIL import Image, ImageDraw
 from shapely.geometry import Polygon, MultiPolygon
 
 from ._functional import resize
-from .helpers._utils import load_pickle
+
+# Define logger.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class TileLabeler():
@@ -71,9 +72,7 @@ class TileLabeler():
 
     def get_annotated_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
         if not self._annotated_thumbnail:
-            print(
-                "You haven't created any labels yet!"
-            )
+            logger.warn("You haven't created any labels yet!")
         else:
             return resize(self._annotated_thumbnail, max_pixels)
 
@@ -125,7 +124,7 @@ class TileLabeler():
             any(f'{prefix}_label' in x for x in self.metadata.columns)
             and not overwrite
         ):
-            print(
+            logger.warn(
                 'This dataset has already been labeled with '
                 f'prefix={prefix}! To overwrite, set overwrite=True.'
             )

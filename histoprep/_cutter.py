@@ -6,6 +6,7 @@ import itertools
 import multiprocessing as mp
 from functools import partial
 import warnings
+import logging
 
 import cv2
 import numpy as np
@@ -32,6 +33,11 @@ __all__ = [
     'Cutter',
     'TMACutter'
 ]
+
+# Define logger.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 
 class Cutter(object):
@@ -111,13 +117,13 @@ class Cutter(object):
         self.overlap = overlap
         self.threshold = threshold
         # Warn about Otsu's thresholding.
-        # if self.threshold is None:
-        #     warnings.warn(
-        #         "No threshold defined for tissue detection! Otsu's method will "
-        #         "be used to select a threshold which is not always optimal. "
-        #         "Different thresholds can be easily tried with the "
-        #         "Cutter.try_tresholds() command."
-        #     )
+        if self.threshold is None:
+            logger.warn(
+                "No threshold defined for tissue detection! Using Otsu's "
+                "method which is not always optimal. "
+                "Different thresholds can be easily tried with the "
+                "Cutter.try_tresholds() command."
+            )
         self.max_background = max_background
         self.all_coordinates = self._get_all_coordinates()
         # Filter coordinates.
@@ -157,7 +163,7 @@ class Cutter(object):
         """
         Returns available downsamples for the slide.
         """
-        print(self._downsamples())
+        logger.info(self._downsamples())
 
     def _downsamples(self):
         string = 'Downsample  Dimensions'
@@ -171,7 +177,7 @@ class Cutter(object):
 
     def summary(self):
         """Returns a summary of the cutting process."""
-        print(self._summary())
+        logger.info(self._summary())
 
     def _summary(self):
         return (
@@ -322,7 +328,7 @@ class Cutter(object):
         self._prepare_directories(output_dir)
         # Check if slide has been cut before.
         if exists(self._meta_path) and not overwrite:
-            print(f'Slide has already been cut!')
+            logger.info(f'Slide has already been cut!')
             return pd.read_csv(self._meta_path)
         elif exists(self._meta_path) and overwrite:
             # Remove all previous files.
@@ -360,7 +366,7 @@ class Cutter(object):
                 metadata.append(result)
         metadata = list(filter(None, metadata))
         if len(metadata) == 0:
-            print(f'No tiles saved from slide {self.slide_path}!')
+            logger.info(f'No tiles saved from slide {self.slide_path}!')
             return
         # Save metadata.
         self.metadata = pd.DataFrame(metadata)

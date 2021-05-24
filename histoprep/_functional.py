@@ -3,6 +3,7 @@ import itertools
 import multiprocessing as mp
 from functools import partial
 from typing import Tuple, List, Callable, Union
+import logging
 
 import cv2
 from openslide import OpenSlide
@@ -15,10 +16,13 @@ from sklearn.metrics import silhouette_score
 from .preprocess.functional import tissue_mask, PIL_to_array
 from ._czi_reader import OpenSlideCzi
 
-
 ########################
 ### Common functions ###
 ########################
+
+# Define logger.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def get_downsamples(slide_path: str) -> dict:
@@ -161,10 +165,9 @@ def try_thresholds(
         rows.append(np.hstack(row))
     summary = Image.fromarray(np.vstack(rows).astype('uint8'))
     l = ['original'] + thresholds
-    print('Thresholds:\n')
+    logger.info('Thresholds:\n')
     for row in [l[i:i + 4] for i in range(0, len(l), 4)]:
-        [print(str(x).center(8), end='') for x in row]
-        print()
+        [logger.info(str(x).center(8), end='') for x in row]
     return resize(summary, max_pixels)
 
 
