@@ -94,7 +94,7 @@ class OpenSlideCzi(object):
                 bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
             ):
                 filtered.append(result)
-        filtered = list(filter(None, filtered))
+        filtered = list(filter(lambda x: x is not None, filtered))
         return filtered
 
     def read_region(self, location, scale, size):
@@ -209,7 +209,7 @@ def polygon_to_mask(poly, x, y, width, downsample):
 
 
 def check_tile(xy, data_mask, region_mask, width):
-    x, y = xy 
+    __, (x, y) = xy 
     tile = Polygon([
         [x, y],
         [x+width, y],
