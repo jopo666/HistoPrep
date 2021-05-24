@@ -82,6 +82,7 @@ class OpenSlideCzi(object):
         func = partial(check_tile, **{
             'data_mask': self.data_mask,
             'region_mask': self.region_mask,
+            'width': width,
         })
         # Load tiles.
         filtered = []
@@ -207,7 +208,8 @@ def polygon_to_mask(poly, x, y, width, downsample):
     return mask
 
 
-def check_tile(xy, data_mask, region_mask):
+def check_tile(xy, data_mask, region_mask, width):
+    x, y = xy 
     tile = Polygon([
         [x, y],
         [x+width, y],
