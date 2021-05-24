@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+### `0.0.2.6`
+- Make metadata operations faster by allowing multiprocessing.
+- Change from `print` to `logging`.
+
 ### `0.0.2.1-5`
 - Bug fixes and problems with dependencies.
 
