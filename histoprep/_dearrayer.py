@@ -528,7 +528,7 @@ def save_spot(
     try:
         image = reader.read_region((x, y), 0, (w, h)).convert('RGB')
     except:
-        warnings.warn('Broken slide!')
+        logger.warn('Broken slide!')
         return
     # Save image.
     if not exists(filepath):

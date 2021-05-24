@@ -5,7 +5,6 @@ from typing import List, Tuple, Callable
 import itertools
 import multiprocessing as mp
 from functools import partial
-import warnings
 import logging
 
 import cv2
@@ -98,7 +97,7 @@ class Cutter(object):
         if not exists(slide_path):
             raise IOError(f'{slide_path} not found.')
         if slide_path.endswith('czi'):
-            warnings.warn(
+            logger.warn(
                 "Support for czi-files is in alpha phase! If "
                 "you run into errors, please submit an issue to "
                 "https://github.com/jopo666/HistoPrep/issues"
@@ -141,7 +140,7 @@ class Cutter(object):
             # Downsample not available.
             raise ValueError(
                 f'Thumbnail not available for downsample {self.downsample}. '
-                'Please set create_thumbnail=True or select downsample from\n\n'
+                'Please set create_thumbnail=True or select downsample from\n'
                 f'{self._downsamples()}'
             )
         self.threshold, self._tissue_mask = tissue_mask(
