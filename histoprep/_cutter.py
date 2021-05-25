@@ -97,7 +97,7 @@ class Cutter(object):
         if not exists(slide_path):
             raise IOError(f'{slide_path} not found.')
         if slide_path.endswith('czi'):
-            logger.warn(
+            logger.warning(
                 "Support for czi-files is in alpha phase! If "
                 "you run into errors, please submit an issue to "
                 "https://github.com/jopo666/HistoPrep/issues"
@@ -117,7 +117,7 @@ class Cutter(object):
         self.threshold = threshold
         # Warn about Otsu's thresholding.
         if self.threshold is None:
-            logger.warn(
+            logger.warning(
                 "No threshold defined for tissue detection! Using Otsu's "
                 "method which is not always optimal. "
                 "Different thresholds can be easily tried with the "
@@ -162,7 +162,7 @@ class Cutter(object):
         """
         Returns available downsamples for the slide.
         """
-        logger.info(self._downsamples())
+        print(self._downsamples())
 
     def _downsamples(self):
         string = 'Downsample  Dimensions'
@@ -327,7 +327,7 @@ class Cutter(object):
         self._prepare_directories(output_dir)
         # Check if slide has been cut before.
         if exists(self._meta_path) and not overwrite:
-            logger.info(f'Slide has already been cut!')
+            logger.warning(f'Slide has already been cut!')
             return pd.read_csv(self._meta_path)
         elif exists(self._meta_path) and overwrite:
             # Remove all previous files.
@@ -365,7 +365,7 @@ class Cutter(object):
                 metadata.append(result)
         metadata = list(filter(None, metadata))
         if len(metadata) == 0:
-            logger.info(f'No tiles saved from slide {self.slide_path}!')
+            logger.warning(f'No tiles saved from slide {self.slide_path}!')
             return
         # Save metadata.
         self.metadata = pd.DataFrame(metadata)

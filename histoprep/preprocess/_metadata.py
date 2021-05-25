@@ -2,7 +2,9 @@ import os
 from os.path import join, basename, dirname, exists
 from typing import List
 import logging
+import time
 import multiprocessing as mp
+from functools import partial
 
 import cv2
 import pandas as pd
@@ -16,9 +18,20 @@ __all__ = [
     'check_tiles'
 ]
 
+
+class TqdmHandler(logging.StreamHandler):
+    def __init__(self):
+        logging.StreamHandler.__init__(self)
+
+    def emit(self, record):
+        msg = self.format(record)
+        tqdm.write(msg)
+
+
 # Define logger.
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
+# logger.addHandler(TqdmHandler())
 
 
 def combine_metadata(
@@ -67,11 +80,11 @@ def combine_metadata(
     )
     dataframes = list(filter(lambda x: x is not None, dataframes))
     if len(dataframes) == 0:
-        logger.info(f'No metadata found at {parent_dir}!')
+        logger.warning(f'No metadata found at {parent_dir}!')
         return
     metadata = pd.concat(dataframes)
     if csv_path is not None:
-        logger.info(f'Saving combined metadata to {csv_path}.')
+        logger.warning(f'Saving combined metadata to {csv_path}.')
         metadata.to_csv(csv_path, index=False)
     return metadata
 
@@ -80,7 +93,7 @@ def get_metadata(metadata_path):
     """Safely load metadata."""
     if not exists(metadata_path):
         # There might be slides that haven't been finished.
-        logger.warn(
+        logger.warning(
             f'{metadata_path} path not found! This warning might arise '
             'if you are still cutting slides, some of the slides were '
             'broken or no tissue was found on the slide.'
@@ -88,7 +101,7 @@ def get_metadata(metadata_path):
         return None
     elif os.path.getsize(metadata_path) < 6:
         # There might be empty files.
-        logger.info(f'{metadata_path} is an empty file.')
+        logger.warning(f'{metadata_path} is an empty file.')
         return None
     else:
         return pd.read_csv(metadata_path)
@@ -115,7 +128,7 @@ def update_paths(parent_dir: str):
         if f.is_dir() and exists(join(f.path, 'metadata.csv')):
             update_paths.append(f.path)
     if len(update_paths) == 0:
-        logger.info(f'No directories found at {parent_dir}!')
+        logger.warning(f'No data directories found at {parent_dir}.')
         return
     multiprocessing_loop(
         func=update_meta,
@@ -199,48 +212,58 @@ def check_tiles(parent_dir: str, overwrite: bool = False) -> pd.DataFrame:
     # Define logger.
     if not os.path.exists(parent_dir):
         raise IOError(f'Path {parent_dir} does not exists!')
-    # Collect metadata to check.
+    # Collect metadata paths to check.
     meta_paths = []
     for f in os.scandir(parent_dir):
         path = join(f.path, 'metadata.csv')
         if f.is_dir() and exists(path):
             meta_paths.append(path)
     if len(meta_paths) == 0:
-        logger.info(f'No metadata dataframes found inside {parent_dir}!')
+        logger.warning(f'No metadata dataframes found inside {parent_dir}!')
         return
-    total = str(len(meta_paths))
+    # Check if metadata has been processed.
+    func = partial(load_meta, **{'overwrite': overwrite})
+    dataframes = multiprocessing_loop(
+        func=func,
+        loop_this=meta_paths,
+        desc='Loading metadata',
+    )
+    dataframes = [x for x in dataframes if x is not None]
+    if len(dataframes) == 0:
+        logger.warning(
+            f'All {len(meta_paths)} metadata dataframes have been processed! '
+            'Please set overwrite=True if you want to re-check images.'
+        )
+        return
+    total = str(len(dataframes))
     combined = []
-    for i, meta_path in enumerate(meta_paths):
+    for i, (meta_path, metadata) in enumerate(dataframes):
         # Define desc and load metadata.
         current = str(i+1).rjust(len(total))
         desc = f'[{current}/{total}] {basename(dirname(meta_path))}'
-        metadata = pd.read_csv(meta_path)
-        if not overwrite and 'corrupted' in metadata.columns:
-            tqdm([1], desc=desc)
-        else:
-            paths = metadata.path.tolist()
-            # Check images.
-            results = multiprocessing_loop(
-                func=check_image,
-                loop_this=paths,
-                desc=desc,
-            )
-            # Unpack results.
-            shapes = []
-            nan_counts = []
-            corruptions = []
-            file_exists = []
-            for d in results:
-                shapes.append(d['shape'])
-                nan_counts.append(d['nan_count'])
-                corruptions.append(d['corrupted'])
-                file_exists.append(d['exists'])
-            # Add to metadata and save!
-            metadata['shape'] = shapes
-            metadata['nan_count'] = nan_counts
-            metadata['corrupted'] = corruptions
-            metadata['exists'] = file_exists
-            metadata.to_csv(meta_path, index=False)
+        paths = metadata.path.tolist()
+        # Check images.
+        results = multiprocessing_loop(
+            func=check_image,
+            loop_this=paths,
+            desc=desc,
+        )
+        # Unpack results.
+        shapes = []
+        nan_counts = []
+        corruptions = []
+        file_exists = []
+        for d in results:
+            shapes.append(d['shape'])
+            nan_counts.append(d['nan_count'])
+            corruptions.append(d['corrupted'])
+            file_exists.append(d['exists'])
+        # Add to metadata and save!
+        metadata['shape'] = shapes
+        metadata['nan_count'] = nan_counts
+        metadata['corrupted'] = corruptions
+        metadata['exists'] = file_exists
+        metadata.to_csv(meta_path, index=False)
         # Add to combined list.
         combined.append(metadata)
         # Log findings to user.
@@ -249,26 +272,31 @@ def check_tiles(parent_dir: str, overwrite: bool = False) -> pd.DataFrame:
         unique_shapes = len(
             metadata['shape'][~metadata['shape'].isna()].unique()
         )
-        if nonexistent> 0:
-            print(f'  Found {sum(~metadata.exists)} tiles that do not exist.')
-        if corrupted>0:
-            print(f'  Found {metadata.corrupted.sum()} corrupted images.')
-        if unique_shapes > 1:
-            print(f'  Found {unique_shapes} unique shapes for images.')
+        if nonexistent > 0 or corrupted > 0 or unique_shapes > 1:
+            logger.warning('')
+            if nonexistent > 0:
+                logger.warning(
+                    f'  Found {sum(~metadata.exists)} tiles that do not exist.')
+            if corrupted > 0:
+                logger.warning(
+                    f'  Found {metadata.corrupted.sum()} corrupted images.')
+            if unique_shapes > 1:
+                logger.warning(
+                    f'  Found {unique_shapes} unique shapes for images.')
+            logger.warning('-'*40)
     # Combine each metadata and return to user.
     if len(combined) > 0:
         combined = pd.concat(combined)
-        unique_shapes = len(
-            combined['shape'][~combined['shape'].isna()].unique()
-        )
-        # Log results.
-        print('SUMMARY:')
-        print(f'  Found {sum(~combined.exists)} tiles that do not exist.')
-        print(f'  Found {combined.corrupted.sum()} corrupted images.')
-        print(f'  Found {unique_shapes} unique shapes for images.')
     else:
         combined = None
     return combined
+
+def load_meta(path, overwrite):
+        metadata = pd.read_csv(path)
+        if not overwrite and 'corrupted' in metadata.columns:
+            return None
+        else:
+            return path, metadata
 
 
 def check_image(path):

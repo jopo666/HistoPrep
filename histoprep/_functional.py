@@ -168,6 +168,7 @@ def try_thresholds(
     print('Thresholds:\n')
     for row in [l[i:i + 4] for i in range(0, len(l), 4)]:
         [print(str(x).center(8), end='') for x in row]
+        print('')
     return resize(summary, max_pixels)
 
 

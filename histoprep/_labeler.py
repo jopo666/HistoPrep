@@ -72,7 +72,7 @@ class TileLabeler():
 
     def get_annotated_thumbnail(self, max_pixels=1_000_000) -> Image.Image:
         if not self._annotated_thumbnail:
-            logger.warn("You haven't created any labels yet!")
+            logger.warning("You haven't created any labels yet!")
         else:
             return resize(self._annotated_thumbnail, max_pixels)
 
@@ -124,7 +124,7 @@ class TileLabeler():
             any(f'{prefix}_label' in x for x in self.metadata.columns)
             and not overwrite
         ):
-            logger.warn(
+            logger.warning(
                 'This dataset has already been labeled with '
                 f'prefix={prefix}! To overwrite, set overwrite=True.'
             )

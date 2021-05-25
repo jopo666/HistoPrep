@@ -122,7 +122,7 @@ class Dearrayer(object):
             downsample=self.downsample,
         )
         if self._numbers is None or self._bounding_boxes is None:
-            logger.warn(
+            logger.warning(
                 'No spots detected from the slide! Please try and adjust, '
                 'the kernel_size, min_area_multiplier and max_area_multiplier '
                 'parameters using the dearrayer.try_spot_mask() function.'
@@ -136,7 +136,7 @@ class Dearrayer(object):
                 'number', 'x', 'y', 'width', 'height']
             self._annotate()
             if len([x for x in self._numbers if '_' in x]) > 0:
-                logger.warn(
+                logger.warning(
                     'Some spots were assinged the same number. Please check the '
                     f'annotated thumbnail for slide {self.slide_name}.'
                 )
@@ -149,7 +149,7 @@ class Dearrayer(object):
 
     def summary(self):
         """Returns a summary of the dearraying process."""
-        logger.info(self._summary())
+        print(self._summary())
 
     def _summary(self, cut=False):
         summary = (
@@ -368,7 +368,7 @@ class Dearrayer(object):
         self._prepare_directories(output_dir)
         # Check if slide has been cut before.
         if exists(self._thumb_path) and not overwrite:
-            logger.warn(
+            logger.warning(
                 'Spots have already been cut! Please set overwrite=True if '
                 'you wish to save them again.'
             )
@@ -455,7 +455,7 @@ class Dearrayer(object):
         if not self._spots_saved:
             raise IOError('Please save the spots first with Dearrayer.save()')
         if exists(self._tile_dir) and overwrite == False:
-            logger.warn(
+            logger.warning(
                 f'{self._tile_dir} already exists! If you want to save tiles '
                 'again please set overwrite=True.'
             )
@@ -499,7 +499,7 @@ class Dearrayer(object):
         metadata = list(filter(None, metadata))
         metadata = flatten(metadata)
         if len(metadata) == 0:
-            logger.warn(f'No tiles saved from any of the spots!')
+            logger.warning(f'No tiles saved from any of the spots!')
             return None
         # Save metadata.
         self.tile_metadata = pd.DataFrame(metadata)
@@ -528,7 +528,7 @@ def save_spot(
     try:
         image = reader.read_region((x, y), 0, (w, h)).convert('RGB')
     except:
-        logger.warn('Broken slide!')
+        logger.warning('Broken slide!')
         return
     # Save image.
     if not exists(filepath):

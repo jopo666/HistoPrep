@@ -165,7 +165,7 @@ class OpenSlideCzi(object):
         tiles.sort()
         # Check tiles...
         if len(tiles) == 0:
-            logger.warn('No tiles found!')
+            logger.warning('No tiles found!')
             return None
         # Collect each column seperately and mash them together.
         all_columns = []
