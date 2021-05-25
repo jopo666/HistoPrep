@@ -165,9 +165,9 @@ def try_thresholds(
         rows.append(np.hstack(row))
     summary = Image.fromarray(np.vstack(rows).astype('uint8'))
     l = ['original'] + thresholds
-    logger.info('Thresholds:\n')
+    print('Thresholds:\n')
     for row in [l[i:i + 4] for i in range(0, len(l), 4)]:
-        [logger.info(str(x).center(8), end='') for x in row]
+        [print(str(x).center(8), end='') for x in row]
     return resize(summary, max_pixels)
 
 

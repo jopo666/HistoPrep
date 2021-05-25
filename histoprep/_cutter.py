@@ -176,7 +176,7 @@ class Cutter(object):
 
     def summary(self):
         """Returns a summary of the cutting process."""
-        logger.info(self._summary())
+        print(self._summary())
 
     def _summary(self):
         return (

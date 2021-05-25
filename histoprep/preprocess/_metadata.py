@@ -216,35 +216,45 @@ def check_tiles(parent_dir: str, overwrite: bool = False) -> pd.DataFrame:
         desc = f'[{current}/{total}] {basename(dirname(meta_path))}'
         metadata = pd.read_csv(meta_path)
         if not overwrite and 'corrupted' in metadata.columns:
-            multiprocessing_loop(lambda x: x, [],
-                                 desc=f'[{current}/{total}] Already checked')
-            combined.append(metadata)
-            continue
-        paths = metadata.path.tolist()
-        # Check images.
-        results = multiprocessing_loop(
-            func=check_image,
-            loop_this=paths,
-            desc=desc,
-        )
-        # Unpack results.
-        shapes = []
-        nan_counts = []
-        corruptions = []
-        file_exists = []
-        for d in results:
-            shapes.append(d['shape'])
-            nan_counts.append(d['nan_count'])
-            corruptions.append(d['corrupted'])
-            file_exists.append(d['exists'])
-        # Add to metadata and save!
-        metadata['shape'] = shapes
-        metadata['nan_count'] = nan_counts
-        metadata['corrupted'] = corruptions
-        metadata['exists'] = file_exists
-        metadata.to_csv(meta_path, index=False)
+            tqdm([1], desc=desc)
+        else:
+            paths = metadata.path.tolist()
+            # Check images.
+            results = multiprocessing_loop(
+                func=check_image,
+                loop_this=paths,
+                desc=desc,
+            )
+            # Unpack results.
+            shapes = []
+            nan_counts = []
+            corruptions = []
+            file_exists = []
+            for d in results:
+                shapes.append(d['shape'])
+                nan_counts.append(d['nan_count'])
+                corruptions.append(d['corrupted'])
+                file_exists.append(d['exists'])
+            # Add to metadata and save!
+            metadata['shape'] = shapes
+            metadata['nan_count'] = nan_counts
+            metadata['corrupted'] = corruptions
+            metadata['exists'] = file_exists
+            metadata.to_csv(meta_path, index=False)
         # Add to combined list.
         combined.append(metadata)
+        # Log findings to user.
+        nonexistent = sum(~metadata.exists)
+        corrupted = metadata.corrupted.sum()
+        unique_shapes = len(
+            metadata['shape'][~metadata['shape'].isna()].unique()
+        )
+        if nonexistent> 0:
+            print(f'  Found {sum(~metadata.exists)} tiles that do not exist.')
+        if corrupted>0:
+            print(f'  Found {metadata.corrupted.sum()} corrupted images.')
+        if unique_shapes > 1:
+            print(f'  Found {unique_shapes} unique shapes for images.')
     # Combine each metadata and return to user.
     if len(combined) > 0:
         combined = pd.concat(combined)
@@ -252,9 +262,10 @@ def check_tiles(parent_dir: str, overwrite: bool = False) -> pd.DataFrame:
             combined['shape'][~combined['shape'].isna()].unique()
         )
         # Log results.
-        print(f'Found {sum(~combined.exists)} tiles that do not exist.')
-        print(f'Found {combined.corrupted.sum()} corrupted images.')
-        print(f'Found {unique_shapes} unique shapes for images.')
+        print('SUMMARY:')
+        print(f'  Found {sum(~combined.exists)} tiles that do not exist.')
+        print(f'  Found {combined.corrupted.sum()} corrupted images.')
+        print(f'  Found {unique_shapes} unique shapes for images.')
     else:
         combined = None
     return combined
