@@ -503,6 +503,7 @@ class Dearrayer(object):
             return None
         # Save metadata.
         self.tile_metadata = pd.DataFrame(metadata)
+        self.tile_metadata['slide_name'] = self.slide_name
         self.tile_metadata.to_csv(self._tile_meta_path, index=False)
         return self.tile_metadata
 

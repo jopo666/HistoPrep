@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+### `0.0.2.7-8`
+- Fix `plot_on_thumbnail` to work with TMA arrays.
+- Bug fixes to the excecutable.
+- Bug fix to thumbnail generator.
+- Bug fixes to `logging` (does not work well with `tqdm`...).
+
 ### `0.0.2.6`
 - Make metadata operations faster by allowing multiprocessing.
 - Change from `print` to `logging`.

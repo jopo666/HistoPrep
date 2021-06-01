@@ -117,7 +117,7 @@ def load_tile(
         tile = reader.read_region((x, y), 0, (width, width)).convert('RGB')
         tile = cv2.resize(np.array(tile), out_shape, cv2.INTER_LANCZOS4)
     except:
-        tile = np.zeros(out_shape).astype(np.uint8)
+        tile = np.zeros(out_shape + (3,)).astype(np.uint8)
     return i, tile
 
 

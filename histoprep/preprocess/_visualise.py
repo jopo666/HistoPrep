@@ -491,11 +491,12 @@ def plot_on_thumbnail(
             if occurrences >= min_tiles:
                 new_slides.append(slide)
         if len(new_slides) == 0:
-            logger.warning(f'No slides found with minimum of {min_tiles} tiles!')
+            logger.warning(
+                f'No slides found with minimum of {min_tiles} tiles!')
         slides = [x for x in slides if len(
             df[df.slide_name == x]) >= min_tiles]
     if len(slides) > max_thumbnails:
-        slides = np.random.choice(slides, max_thumbnails)
+        slides = np.random.choice(slides, max_thumbnails, replace=False)
     # Load thumbnails.
     thumbnails = {}
     for slide in slides:
@@ -517,7 +518,23 @@ def plot_on_thumbnail(
         annotated = ImageDraw.Draw(annotated_thumbnail)
         # Get tile coords.
         tmp = df[df.slide_name == slide]
-        coords = list(zip(tmp['x'], tmp['y'], tmp['width']))
+        width = tmp['width']
+        x = tmp['x']
+        y = tmp['y']
+        if 'spot_path' in tmp.columns:
+            # Try to load spot metadata.
+            data_path = os.path.dirname(tile_path.split('tiles')[0])
+            spot_meta_path = os.path.join(data_path, 'spot_metadata.csv')
+            try:
+                spot_meta = pd.read_csv(spot_meta_path)
+            except Exception as e:
+                raise IOError(f'Could not load {spot_meta_path}.')
+            # Merge with tmp so we can add spot coords to tile coords.
+            tmp = pd.merge(
+                tmp, spot_meta, left_on='spot_path', right_on='path')
+            x += tmp['x_y']
+            y += tmp['y_y']
+        coords = list(zip(x, y, width))
         # Draw.
         for x, y, width in coords:
             w_d = width/downsample

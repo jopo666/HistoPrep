@@ -1,4 +1,6 @@
 import time
+import logging
+import sys
 import os
 from os.path import dirname, join, exists, isdir
 
@@ -23,6 +25,10 @@ allowed = [
     'bif',
     'czi',
 ]
+
+# Define logger.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def get_etc(times: list, tic: float, num_left: int):
@@ -49,11 +55,11 @@ def collect_paths(args):
         if suffix in allowed:
             paths.append(f)
     if len(paths) == 0:
-        print(
+        logger.warning(
             'No slides found! Please check that input_dir '
             'you defined is correct!'
         )
-        exit()
+        sys.exit()
     if not args.overwrite:
         # See which slides have been processed before.
         not_processed = []
@@ -63,7 +69,7 @@ def collect_paths(args):
                 not_processed.append(f)
         if len(not_processed) == 0:
             print('All slides have been cut!')
-            exit()
+            sys.exit()
         num_cut = len(paths)-len(not_processed)
         if num_cut != 0:
             print(f'{num_cut} slide(s) had been cut before.')
@@ -78,9 +84,31 @@ def check_file(file):
         else:
             openslide.OpenSlide(file.path)
     except:
-        print(f'Slide broken! Skipping {file.name}')
+        logger.warning(f'Slide broken! Skipping {file.name}')
         return False
     return True
+
+
+def check_downsamples(path, downsample):
+    """Check if any close downsamples can be found."""
+    r = openslide.OpenSlide(path)
+    downsamples = [int(x) for x in r.level_downsamples]
+    if downsample in downsamples:
+        return downsample
+    elif int(downsample*2) in downsamples:
+        logger.warning(
+            f'Downsample {downsample} not available, '
+            f'using {int(downsample*2)}.'
+        )
+        return int(downsample*2)
+    elif int(downsample/2) in downsamples:
+        logger.warning(
+            f'Downsample {downsample} not available, '
+            f'using {int(downsample/2)}.'
+        )
+        return int(downsample/2)
+    else:
+        return None
 
 
 def cut_tiles(args):
@@ -98,21 +126,40 @@ def cut_tiles(args):
             continue
         # Calculate ETC.
         if tic is None:
-            print('ETC: Inf')
+            print('ETC: ...')
         else:
             times = get_etc(times=times, tic=tic, num_left=len(slides)-i-1)
         # Start time.
         tic = time.time()
+        # Check downsample.
+        downsample = check_downsamples(f.path, args.downsample)
+        if downsample is None:
+            logger.warning(
+                f'No downsample close to {args.downsample} available, '
+                f'trying to generate a thumbnail image.'
+            )
+            downsample = args.downsample
         # Prepare Cutter.
-        cutter = hp.Cutter(
-            slide_path=f.path,
-            width=args.width,
-            overlap=args.overlap,
-            threshold=args.threshold,
-            downsample=args.downsample,
-            max_background=args.max_bg,
-            create_thumbnail=True,
-        )
+        try:
+            cutter = hp.Cutter(
+                slide_path=f.path,
+                width=args.width,
+                overlap=args.overlap,
+                threshold=args.threshold,
+                downsample=downsample,
+                max_background=args.max_bg,
+                create_thumbnail=True,
+            )
+        except KeyboardInterrupt:
+            logger.warning('KeyboardInterrupt detected. Shutting down.')
+            sys.exit()
+        except Exception as e:
+            logger.warning(
+                f'Something went wrong with error: "{e}"'
+                f'\nSkipping slide {f.name}.'
+            )
+            continue
+        
         # Cut cut cut away!
         cutter.save(
             output_dir=args.output_dir,
@@ -140,8 +187,10 @@ def dearray(args):
         if i == 0:
             print('ETC: ...')
         else:
-            # Calculate ETC.
             times = get_etc(times=times, tic=tic, num_left=len(tma_arrays)-i-1)
+        # Start time.
+        tic = time.time()
+        # Dearray!
         dearrayer = hp.Dearrayer(
             slide_path=f.path,
             threshold=args.threshold,
