@@ -39,19 +39,15 @@ This module allows you to easily **cut** and **preprocess** large histological s
 ![workflow](./docs/_static/workflow.jpeg)
 
 
-## Installation
-
-First install `OpenCV` and `OpenSlide` on your system (instructions [here](https://docs.opencv.org/master/d0/d3d/tutorial_general_install.html) and [here](https://openslide.org/download/)).
+## [Installation](https://histoprep.readthedocs.io/en/latest/install.html). 
 
 ```bash 
 pip install histoprep
 ```
 
-Detailed installation instructions can be found from `HistoPrep` [docs](https://histoprep.readthedocs.io/en/latest/install.html). 
-
 ## How To Use
 
-``HistoPrep`` has a few simple commands that do most of the heavy lifting.
+``HistoPrep`` can be used programmatically and from the CLI to prepare medical slide images for machine learning tasks.
 
 ```python
 import histoprep as hp
@@ -61,24 +57,24 @@ cutter = hp.Cutter('/path/to/slide', width=512, overlap=0.25, max_background=0.7
 metadata = cutter.save('/path/to/output_folder')
 ```
 
-If you have many slides to process, you can also use `HistoPrep` as an excecutable for easy cutting.
-
 ```bash
-python3 path/to/HistoPrep cut ./input_dir ./output_dir --width 512 --overlap 0.25 --img_type jpeg
+jopo666@MacbookM1:~$ HistoPrep cut ./input_dir ./output_dir --width 512 --overlap 0.25 --img_type jpeg
 ```
 
-
-After the tiles have been saved, preprocessing is just a simple outlier detection from the preprocessing metrics saved in `metadata`!
+After the tiles have been saved, preprocessing is just a simple outlier detection from the preprocessing metrics saved in `metadata.csv`!
 
 ```python
 from histoprep import preprocess
 
-all_metadata = preprocess.collect_metadata('/path/to/output_folder')
+metadata = preprocess.collect_metadata('/path/to/output_folder')
 
 blurry_tiles = all_metadata['sharpness_max'] < 10
 pen_markings = all_metadata['hue_0.1'] < 120
 weird_blue_shit = all_metadata['blue_0.05'] > 160
+
+preprocess.Explore(metadata, channels=True)
 ```
+![explore](./docs/_static/explore.png)
 
 ## Examples
 
@@ -90,8 +86,8 @@ Detailed examples can be found in the [docs](https://histoprep.readthedocs.io/en
 
 #### Requested features:
 
-- [ ] Cutting and preprocessing for multichannel images (currently supports only `RGB`-images).
-- [ ] Add automatic detection of outliers from `metadata`.
+- Cutting and preprocessing for multichannel images (currently supports only `RGB`-images).
+- Add automatic detection of outliers from `metadata`.
   - This could be implemented with dimensionality reduction.
 
 

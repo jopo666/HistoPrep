@@ -9,6 +9,7 @@ setuptools.setup(
     name="histoprep",
     version=__version__,
     author="jopo666",
+    scripts=['HistoPrep'],
     author_email="jopo@birdlover.com",
     description="Preprocessing module for large histological images.",
     long_description=long_description,

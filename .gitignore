@@ -3,7 +3,7 @@
 secret_stuff/*
 *.ipynb
 conda_*
-update_package.sh
+update_package*
 # PyPi.
 project.toml
 *.egg-info/*

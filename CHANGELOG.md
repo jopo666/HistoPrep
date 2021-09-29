@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+### `0.0.2.10`
+- PyPi now installs `HistoPrep` exceutable for easy use!
+
 ### `0.0.2.9`
 - Use a multiplier with Otsu's thresholding. This way user rarely has to select a threshold for tissue detection by themselves!
 
