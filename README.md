@@ -39,27 +39,52 @@ This module allows you to easily **cut** and **preprocess** large histological s
 ![workflow](./docs/_static/workflow.jpeg)
 
 
-## [Installation](https://histoprep.readthedocs.io/en/latest/install.html). 
+## Installation 
 
 ```bash 
 pip install histoprep
 ```
 
+You might also have to install OpenSlide and OpenCV from source. Detailed install instructions can be found [here](https://histoprep.readthedocs.io/en/latest/install.html).
+
 ## How To Use
 
-``HistoPrep`` can be used programmatically and from the CLI to prepare medical slide images for machine learning tasks.
+``HistoPrep`` can be used easily to prepare histologival slide images for machine learning tasks.
+
+You can either use `HistoPrep` as a python module...
 
 ```python
 import histoprep as hp
 
-# Cutting tiles is done with two lines of
+# Cutting tiles is done with two lines of code
 cutter = hp.Cutter('/path/to/slide', width=512, overlap=0.25, max_background=0.7)
 metadata = cutter.save('/path/to/output_folder')
 ```
 
-```bash
-jopo666@MacbookM1:~$ HistoPrep cut ./input_dir ./output_dir --width 512 --overlap 0.25 --img_type jpeg
+or as an excecutable from your command line!
 ```
+jopo666@MacBookM1$ HistoPrep --help
+
+usage:  python3 HistoPrep {step} {arguments}
+
+█  █  █  ██  ███  ███  ███  ███  ███ ███
+█  █  █ █     █  █   █ █  █ █  █ █   █  █
+████  █  ██   █  █   █ ███  ███  ██  ███
+█  █  █    █  █  █   █ █    █  █ █   █
+█  █  █  ██   █   ███  █    █  █ ███ █
+
+             by Jopo666 (2021)
+
+optional arguments:
+  -h, --help  show this help message and exit
+
+Select one of the below:
+  
+    cut       Cut tiles from large histological slides.
+    dearray   Dearray an tissue microarray (TMA) slide.
+```
+
+### Preprocessing
 
 After the tiles have been saved, preprocessing is just a simple outlier detection from the preprocessing metrics saved in `metadata.csv`!
 
@@ -71,7 +96,11 @@ metadata = preprocess.collect_metadata('/path/to/output_folder')
 blurry_tiles = all_metadata['sharpness_max'] < 10
 pen_markings = all_metadata['hue_0.1'] < 120
 weird_blue_shit = all_metadata['blue_0.05'] > 160
+```
 
+If you're not comfortable working with `pandas` dataframes, there's also an `Explore()` function that can be used to easily detect and remove outliers from your data. 
+
+```
 preprocess.Explore(metadata, channels=True)
 ```
 ![explore](./docs/_static/explore.png)

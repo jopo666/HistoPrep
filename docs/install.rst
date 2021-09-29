@@ -30,9 +30,5 @@ Be sure you have installed ``OpenSlide`` and ``OpenCV`` succesfully on your syst
    # upgrade pip
    pip install --upgrade pip
 
-   # install as a module   
+   # install
    pip install histoprep
-
-   # or install as an executable
-   git clone https://github.com/jopo666/HistoPrep
-   pip install -r HistoPrep/requirements.txt
