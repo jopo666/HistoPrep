@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+### `0.0.2.9`
+- Use a multiplier with Otsu's thresholding. This way user rarely has to select a threshold for tissue detection by themselves!
+
 ### `0.0.2.7-8`
 - Fix `plot_on_thumbnail` to work with TMA arrays.
 - Bug fixes to the excecutable.

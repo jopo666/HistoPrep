@@ -88,7 +88,7 @@ def mask_to_PIL(mask: np.ndarray) -> Image.Image:
 
 def tissue_mask(
         image: Union[np.ndarray, Image.Image],
-        threshold: int = None,
+        threshold: Union[int, float] = 1.1,
         blur_kernel: Tuple[int, int] = (5, 5),
         blur_iterations: int = 1,
         return_threshold: bool = False) -> np.ndarray:
@@ -97,22 +97,23 @@ def tissue_mask(
 
     Two methods are implemented.
 
-    Otsu's binarization:
+    Otsu's binarization (threshold is a float):
         Otsu's method is used to find an optimal threshold by minimizing the 
-        weighted within-class variance. Due to this, a relatively high 
+        weighted within-class variance. Due to this, a relatively low 
         threshold for tissue detection is often selected and actual tissue
         is misclassified as background. Binarization is also forced even for 
         tiles with only background, causing the detection of non-existent 
-        tissue.
+        tissue. For this reason the found threshold is then multiplied by the
+        `threshold` input.
 
-    Adaptive gaussian thresholding:
+    Adaptive gaussian thresholding (threshold is an integer)::
         Requires a threshold to be given but performs better than Otsu's method.
         This is automatically implemented if a threshold is given.
 
     Args:
         image (Union[np.ndarray, Image.Image]): Input image.
         threshold (int, optional): Threshold for tissue detection (see the 
-            method explanation above). Defaults to None.
+            method explanation above). Defaults to 'auto'.
         blur_kernel (Tuple[int, int], optional): Kernel to be used in Gaussian 
             Blur. Set to None to disable. Defaults to (5, 5).
         blur_iterations (int, optional): How many iterations to blur with 
@@ -143,25 +144,23 @@ def tissue_mask(
     if blur_kernel is not None:
         gray = cv2.GaussianBlur(gray, blur_kernel, blur_iterations)
     # Then do thresholding.
-    if threshold is None:
-        thresh, mask = cv2.threshold(
-            src=gray,
-            thresh=None,
-            maxval=1,
-            type=cv2.THRESH_BINARY+cv2.THRESH_OTSU
-        )
-        mask = 1 - mask
+    if isinstance(threshold, float):
+        thresh, __ = cv2.threshold(src=gray, thresh=None,maxval=1,
+                                   type=cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        threshold = round(thresh * threshold)
+        if threshold > gray.max():
+            threshold = gray.max() - 1
     else:
         try:
             threshold = int(threshold)
         except:
             raise TypeError(f'Excpected {int} not {type(threshold)}.')
-        thresh, mask = cv2.threshold(
-            src=gray,
-            thresh=threshold,
-            maxval=1,
-            type=cv2.ADAPTIVE_THRESH_GAUSSIAN_C
-        )
+    thresh, mask = cv2.threshold(
+        src=gray,
+        thresh=threshold,
+        maxval=1,
+        type=cv2.ADAPTIVE_THRESH_GAUSSIAN_C
+    )
     if return_threshold:
         return int(thresh), mask
     else:

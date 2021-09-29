@@ -1,7 +1,7 @@
 import sys
 import os
 from os.path import dirname, join, basename, exists
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Union
 import itertools
 import multiprocessing as mp
 from functools import partial
@@ -52,10 +52,19 @@ class Cutter(object):
         width (int): Tile width.
         overlap (float, optional): Overlap between neighbouring tiles. Defaults 
             to 0.0.
-        threshold (int, optional): Threshold value for tissue detection.
-            Can be left undefined, in which case Otsu's binarization is used. 
-            This is not recommended! Values can easily be searched with 
-            Cutter.try_thresholds() function. Defaults to None.
+        threshold (int or float, optional): Threshold value for tissue 
+            detection. Defaults to 1.1.
+
+            If threshold is an integer between [1, 255]:
+                This value will be used as an threshold for tissue detection. 
+                Different thresholds can be easily searched with the
+                Cutter.try_thresholds() function.
+            
+            If threshold is a float:
+                In this case, Otsu's binarization is used and the found 
+                threshold is multiplied by `threshold` as Otsu isn't optimal
+                for histological images.
+
         downsample (int, optional): Downsample used for the thumbnail.
             When a lower downsample is used, the thumbnail-based background 
             detection is more accurate but slower. Good results are achieved 
@@ -87,7 +96,7 @@ class Cutter(object):
             slide_path: str,
             width: int,
             overlap: float = 0.0,
-            threshold: int = None,
+            threshold: Union[int, float] = 1.1,
             downsample: int = 16,
             max_background: float = 0.999,
             create_thumbnail: bool = False,
@@ -115,14 +124,6 @@ class Cutter(object):
         self.width = width
         self.overlap = overlap
         self.threshold = threshold
-        # Warn about Otsu's thresholding.
-        if self.threshold is None:
-            logger.warning(
-                "No threshold defined for tissue detection! Using Otsu's "
-                "method which is not always optimal. "
-                "Different thresholds can be easily tried with the "
-                "Cutter.try_tresholds() command."
-            )
         self.max_background = max_background
         self.all_coordinates = self._get_all_coordinates()
         # Filter coordinates.

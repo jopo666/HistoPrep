@@ -1,6 +1,6 @@
 import os
 from os.path import dirname, join, basename, exists
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Union
 import itertools
 import multiprocessing as mp
 from functools import partial
@@ -43,24 +43,38 @@ class Dearrayer(object):
     Args:
         slide_path (str): Path to the TMA slide array. All formats that are
             supported by openslide can be used.
-        threshold (int, optional): Threshold value for tissue detection.
-            Can be left undefined, in which case Otsu's binarization is used.
-            This is not recommended! Values can easily be searched with
-            Cutter.try_thresholds() function. Defaults to None.
+
+        threshold (int or float, optional): Threshold value for tissue 
+            detection. Defaults to 1.1.
+
+            If threshold is an integer between [0, 255]:
+                This value will be used as an threshold for tissue detection. 
+                Different thresholds can be easily searched with the
+                Cutter.try_thresholds() function.
+            
+            If threshold is a float:
+                In this case, Otsu's binarization is used and the found 
+                threshold is multiplied by `threshold` as Otsu isn't optimal
+                for histological images.
+
         downsample (int, optional): Downsample used for the thumbnail. The user
             might have to tweak this value depending on the magnification of the
             slide. The TMA spot detection method is optimized for downsamlpe=64
             when the magnification is 20x. If no spots are found, try adjusting
             the downsample or tweak the spot detection variables with
             ``Dearrayer.try_spot_mask()`` function.  Defaults to 64.
+
         min_area_multiplier (float, optional): Remove all detected contours that
             have an area smaller than ``median_area*min_area_multiplier``.
             Defaults to 0.2.
+
         max_area_multiplier (float, optional): Remove all detected contours that
             have an area larger than ``median_area*max_area_multiplier``.
             Defaults to None.
+
         kernel_size (Tuple[int], optional): Kernel size used during spot
             detection. Defaults to (8, 8).
+
         create_thumbnail (bool, optional):  Create a thumbnail if downsample is
             not available. Defaults to False.
 
@@ -72,7 +86,7 @@ class Dearrayer(object):
     def __init__(
             self,
             slide_path: str,
-            threshold: int = None,
+            threshold: Union[int, float] = 1.1,
             downsample: int = 64,
             min_area_multiplier: float = 0.2,
             max_area_multiplier: float = None,
