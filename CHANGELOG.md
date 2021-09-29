@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+### `0.0.2.11`
+- Fix bug in the excecutable, which caused crashing with default threshold.
+
 ### `0.0.2.10`
 - PyPi now installs `HistoPrep` exceutable for easy use!
 

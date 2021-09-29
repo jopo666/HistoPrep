@@ -70,7 +70,7 @@ def get_arguments():
                      help='Maximum background percentage for a tile. [Default: %(default)s]')
     cut.add_argument('--downsample', type=int, default=32, metavar='',
                      help='Thumbnail downsample. [Default: %(default)s]')
-    cut.add_argument('--threshold', type=int, default=None, metavar='',
+    cut.add_argument('--threshold', type=float, default=1.1, metavar='',
                      help='Threshold for background detection. [Default: %(default)s]')
     cut.add_argument('--overwrite', action='store_true',
                      help='[Default: %(default)s]')
@@ -87,7 +87,7 @@ def get_arguments():
     dearray.add_argument('--downsample', type=int, default=64, metavar='',
                          help='Thumbnail downsample. [Default: %(default)s]')
     dearray.add_argument('--threshold', type=int, default=1.1, metavar='',
-                         help='Threshold for background detection. [Default: %(default)s]')
+                         help="Threshold multiplier for Otsu's method in tissue detection. [Default: %(default)s]")
     dearray.add_argument('--min_area', type=float, default=0.2, metavar='',
                          help='Minimum area for a spot. [Default: median_area*%(default)s]')
     dearray.add_argument('--max_area', type=float, default=None, metavar='',
