@@ -1,17 +1,14 @@
 import os
+import itertools
 from os.path import dirname, join, basename, exists
 from typing import List, Tuple, Callable, Union
-import itertools
-import multiprocessing as mp
-from functools import partial
-import warnings
-import logging
 
 import cv2
 import numpy as np
+from numpy.lib.npyio import save
 import pandas as pd
 from tqdm import tqdm
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 from openslide import OpenSlide
 
@@ -25,15 +22,14 @@ from ._functional import (
     get_theta
 )
 from .preprocess.functional import preprocess, tissue_mask
-from .helpers._utils import remove_extension, remove_images, flatten
+from .helpers._utils import (
+    remove_extension, remove_images, flatten, multiprocess_map
+)
+from ._logger import logger
 
 __all__ = [
     'Dearrayer'
 ]
-
-# Define logger.
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class Dearrayer(object):
@@ -399,24 +395,20 @@ class Dearrayer(object):
         # Save both thumbnails.
         self._thumbnail.save(self._thumb_path, quality=95)
         self._annotated_thumbnail.save(self._annotated_path, quality=95)
-        # Wrap the saving function so it can be parallized.
-        func = partial(save_spot, **{
-            'slide_path': self.slide_path,
-            'image_dir': self._image_dir,
-            'image_format': image_format,
-            'quality': quality,
-        })
         # Multiprocessing to speed things up!
         data = list(zip(self._numbers, self._bounding_boxes))
-        spot_paths = []
-        with mp.Pool(processes=os.cpu_count()) as p:
-            for filepath in tqdm(
-                p.imap(func, data),
-                total=len(data),
-                desc=self.slide_name,
-                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-            ):
-                spot_paths.append(filepath)
+        spot_paths = multiprocess_map(
+            func=save_spot,
+            func_args={
+                'slide_path': self.slide_path,
+                'image_dir': self._image_dir,
+                'image_format': image_format,
+                'quality': quality,
+            },
+            lst=data,
+            total=len(data),
+            desc=self.slide_name,
+        )
         # Finally save metadata.
         self.spot_metadata['path'] = spot_paths
         self.spot_metadata.to_csv(self._spot_meta_path, index=False)
@@ -490,27 +482,23 @@ class Dearrayer(object):
         if len(spot_paths) == 0:
             raise IOError('No spot paths found!')
         # Wrap the saving function so it can be parallized.
-        func = partial(save_tile, **{
-            'image_dir': self._tile_dir,
-            'width': width,
-            'overlap': overlap,
-            'threshold': self.threshold,
-            'max_background': max_background,
-            'image_format': image_format,
-            'quality': quality,
-            'custom_preprocess': custom_preprocess
-        })
-        # Multiprocessing to speed things up!
-        metadata = []
-        with mp.Pool(processes=os.cpu_count()) as p:
-            for results in tqdm(
-                p.imap(func, spot_paths),
-                total=len(spot_paths),
-                desc='Cutting tiles',
-                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-            ):
-                metadata.append(results)
-        metadata = list(filter(None, metadata))
+        metadata = multiprocess_map(
+            func=save_tile,
+            func_args={
+                'image_dir': self._tile_dir,
+                'width': width,
+                'overlap': overlap,
+                'threshold': self.threshold,
+                'max_background': max_background,
+                'image_format': image_format,
+                'quality': quality,
+                'custom_preprocess': custom_preprocess
+            },
+            lst=spot_paths,
+            total=len(spot_paths),
+            desc='Cutting tiles',
+        )
+        metadata = list(filter(lambda x: x is not None, metadata))
         metadata = flatten(metadata)
         if len(metadata) == 0:
             logger.warning(f'No tiles saved from any of the spots!')

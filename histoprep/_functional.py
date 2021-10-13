@@ -1,9 +1,6 @@
 import os
 import itertools
-import multiprocessing as mp
-from functools import partial
 from typing import Tuple, List, Callable, Union
-import logging
 
 import cv2
 from openslide import OpenSlide
@@ -15,14 +12,12 @@ from sklearn.metrics import silhouette_score
 
 from .preprocess.functional import tissue_mask, PIL_to_array
 from ._czi_reader import OpenSlideCzi
+from ._logger import logger
+from .helpers._utils import multiprocess_map
 
 ########################
 ### Common functions ###
 ########################
-
-# Define logger.
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def get_downsamples(slide_path: str) -> dict:
@@ -80,17 +75,18 @@ def generate_thumbnail(
         y = (i*width for i in range(blocks[1]))
         coords = list(enumerate(itertools.product(x, y)))
         # Multiprocessing to make things speedier.
-        with mp.Pool(processes=os.cpu_count()) as p:
-            func = partial(load_tile, slide_path, width, downsample)
-            tiles = []
-            for result in tqdm(
-                p.imap(func, coords),
-                total=len(coords),
-                desc='Generating thumbnail',
-                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-            ):
-                tiles.append(result)
-        # Collect each column seperately and mash them together.
+        tiles = multiprocess_map(
+            func=load_tile,
+            func_args={
+                "width": width,
+                "slide_path": slide_path,
+                "downsample": downsample,
+            },
+            lst=coords,
+            total=len(coords),
+            desc='Generating thumbnail',
+        )
+        # Collect each columns seperately and mash them together.
         all_columns = []
         col = []
         for i, tile in tiles:

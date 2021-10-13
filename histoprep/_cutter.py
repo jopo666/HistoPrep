@@ -1,13 +1,8 @@
-import sys
 import os
 from os.path import dirname, join, basename, exists
 from typing import List, Tuple, Callable, Union
 import itertools
-import multiprocessing as mp
-from functools import partial
-import logging
 
-import cv2
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -25,18 +20,14 @@ from ._czi_reader import OpenSlideCzi
 from .helpers._utils import (
     remove_extension,
     remove_images,
-    save_pickle
+    multiprocess_map
 )
+from ._logger import logger
 
 __all__ = [
     'Cutter',
     'TMACutter'
 ]
-
-# Define logger.
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
 
 
 class Cutter(object):
@@ -344,7 +335,8 @@ class Cutter(object):
         with open(self._summary_path, "w") as f:
             f.write(self._summary())
         # Wrap the saving function so it can be parallized.
-        func = partial(save_tile, **{
+        save_tile
+        func_args = {
             'slide_path': self.slide_path,
             'slide_name': self.slide_name,
             'image_dir': self._image_dir,
@@ -353,18 +345,15 @@ class Cutter(object):
             'image_format': image_format,
             'quality': quality,
             'custom_preprocess': custom_preprocess,
-        })
+        }
         # Multiprocessing to speed things up!
-        metadata = []
-        with mp.Pool(processes=os.cpu_count()-1) as p:
-            for result in tqdm(
-                p.imap(func, self.filtered_coordinates),
-                total=len(self.filtered_coordinates),
-                desc=self.slide_name,
-                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-            ):
-                metadata.append(result)
-        metadata = list(filter(None, metadata))
+        metadata = multiprocess_map(
+            func=save_tile,
+            lst=self.filtered_coordinates,
+            func_args=func_args,
+            desc=self.slide_name,
+        )
+        metadata = list(filter(lambda x: x is not None, metadata))
         if len(metadata) == 0:
             logger.warning(f'No tiles saved from slide {self.slide_path}!')
             return

@@ -1,16 +1,14 @@
 import os
-import time
-from typing import List
+from typing import Callable, List
 import pickle
 import multiprocessing as mp
+from functools import partial
 
-import numpy as np
-import pandas as pd
-from tqdm import tqdm
+from .._logger import progress_bar
 
 __all__ = [
     'load_pickle',
-    'save_pickle'
+    'save_pickle',
 ]
 
 
@@ -64,14 +62,8 @@ def remove_images(image_dir: str) -> None:
     """
     paths = [x.path for x in os.scandir(image_dir)]
     if len(paths) > 0:
-        with mp.Pool(processes=os.cpu_count()) as p:
-            for __ in tqdm(
-                p.imap(remove, paths),
-                total=len(paths),
-                desc='Removing images',
-                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-            ):
-                continue
+        multiprocess_map(func=remove, lst=paths, total=len(paths),
+                         desc='Removing images')
 
 
 def remove(path: str) -> None:
@@ -103,3 +95,30 @@ def format_seconds(n: int) -> str:
     else:
         strtime = f'{minutes}m:{seconds}s'
     return strtime
+
+
+def multiprocess_map(
+    func: Callable,
+    lst: list,
+    processes: int = None,
+    func_args: dict = {},
+    **kwargs
+):
+    """Map function to a iterable and process with multiple processes."""
+    results = []
+    if processes is None:
+        processes = os.cpu_count() - 1
+    if kwargs.get('total') is None:
+        try:
+            kwargs['total'] = len(lst)
+        except:
+            pass
+    func = partial(func, **func_args)
+    with mp.Pool(processes=processes) as p:
+        if kwargs.get('desc') is None or kwargs.get('desc') == "":
+            loop = p.imap(func, lst)
+        else:
+            loop = progress_bar(p.imap(func, lst), **kwargs)
+        for result in loop:
+            results.append(result)
+    return results

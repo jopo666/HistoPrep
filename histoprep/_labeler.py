@@ -1,7 +1,6 @@
 import os
 from os.path import join, exists
 from typing import List, Union
-import logging
 
 import numpy as np
 import pandas as pd
@@ -9,10 +8,7 @@ from PIL import Image, ImageDraw
 from shapely.geometry import Polygon, MultiPolygon
 
 from ._functional import resize
-
-# Define logger.
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+from ._logger import logger
 
 
 class TileLabeler():

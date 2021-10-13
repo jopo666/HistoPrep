@@ -1,8 +1,6 @@
 import os
-from os.path import dirname, join
 import multiprocessing as mp
-from typing import Union, List, Dict, Tuple
-import logging
+from typing import List, Dict, Tuple
 
 import pandas as pd
 import numpy as np
@@ -11,8 +9,10 @@ from PIL import Image, ImageDraw
 
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
-from ipywidgets import Layout, VBox, HBox
+from ipywidgets import VBox, HBox
 from IPython.display import display
+
+from .._logger import logger
 
 __all__ = [
     'Explore',
@@ -20,11 +20,6 @@ __all__ = [
     'plot_tiles',
     'plot_ranges',
 ]
-
-# Define logger.
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
 
 def split_list(l: list, n: int = 1) -> list:
     """Split list into n parts"""

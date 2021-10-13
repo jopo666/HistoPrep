@@ -1,9 +1,6 @@
 import os
 import itertools
-import multiprocessing as mp
-from functools import partial
 from typing import List
-import logging
 
 from tqdm import tqdm
 import cv2
@@ -12,13 +9,12 @@ from PIL import Image, ImageDraw
 from aicspylibczi import CziFile
 from shapely.geometry import Polygon, MultiPolygon, mapping
 
+from .helpers._utils import multiprocess_map
+from ._logger import logger
+
 __all__ = [
     'OpenSlideCzi'
 ]
-
-# Define logger.
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class OpenSlideCzi(object):
@@ -78,22 +74,17 @@ class OpenSlideCzi(object):
 
     def get_tiles_with_data(self, width, overlap):
         coords, __ = self._get_all_coordinates(self.bboxes, width, overlap)
-        # Wrap function.
-        func = partial(check_tile, **{
-            'data_mask': self.data_mask,
-            'region_mask': self.region_mask,
-            'width': width,
-        })
         # Load tiles.
-        filtered = []
-        with mp.Pool(processes=os.cpu_count() - 1) as p:
-            for result in tqdm(
-                p.imap(func, coords),
-                total=len(coords),
-                desc='Filtering tiles',
-                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-            ):
-                filtered.append(result)
+        filtered = multiprocess_map(
+            func=check_tile,
+            lst=coords,
+            func_args={
+                'data_mask': self.data_mask,
+                'region_mask': self.region_mask,
+                'width': width,
+            },
+            desc='Filtering tiles',
+        )
         filtered = list(filter(lambda x: x is not None, filtered))
         return filtered
 
@@ -143,26 +134,22 @@ class OpenSlideCzi(object):
         # Load ALL coordinates.
         coordinates, blocks = self._get_all_coordinates(self.bboxes, width)
         coordinates = list(enumerate(coordinates))
-        # Wrap function.
-        func = partial(load_tile, **{
-            'slide_path': self.slide_path,
-            'data_mask': self.data_mask,
-            'region_mask': self.region_mask,
-            'width': width,
-            'downsample': downsample,
-            'fast': fast,
-        })
         # Load tiles.
-        tiles = []
-        with mp.Pool(processes=os.cpu_count() - 1) as p:
-            for result in tqdm(
-                p.imap(func, coordinates),
-                total=len(coordinates),
-                desc='Generating thumbnail',
-                bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-            ):
-                tiles.append(result)
-        tiles.sort()
+        tiles = multiprocess_map(
+            func=load_tile,
+            func_args={
+                'slide_path': self.slide_path,
+                'data_mask': self.data_mask,
+                'region_mask': self.region_mask,
+                'width': width,
+                'downsample': downsample,
+                'fast': fast,
+            },
+            lst=coordinates,
+            total=len(coordinates),
+            desc='Generating thumbnail',
+        )
+        tiles = np.sort(tiles)
         # Check tiles...
         if len(tiles) == 0:
             logger.warning('No tiles found!')

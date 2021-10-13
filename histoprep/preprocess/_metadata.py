@@ -1,37 +1,19 @@
 import os
 from os.path import join, basename, dirname, exists
 from typing import List
-import logging
-import time
-import multiprocessing as mp
-from functools import partial
 
 import cv2
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
 
+from ..helpers._utils import multiprocess_map
+from .._logger import logger
 
 __all__ = [
     'combine_metadata',
     'update_paths',
     'check_tiles'
 ]
-
-
-class TqdmHandler(logging.StreamHandler):
-    def __init__(self):
-        logging.StreamHandler.__init__(self)
-
-    def emit(self, record):
-        msg = self.format(record)
-        tqdm.write(msg)
-
-
-# Define logger.
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-# logger.addHandler(TqdmHandler())
 
 
 def combine_metadata(
@@ -72,9 +54,9 @@ def combine_metadata(
         meta_name = 'metadata'
     meta_paths = [join(d, f'{meta_name}.csv') for d in directories]
     # Collect dataframes
-    dataframes = multiprocessing_loop(
+    dataframes = multiprocess_map(
         func=get_metadata,
-        loop_this=meta_paths,
+        lst=meta_paths,
         desc='Combining metadata',
         processes=1 if len(meta_paths) < 20 else None,
     )
@@ -130,9 +112,9 @@ def update_paths(parent_dir: str):
     if len(update_paths) == 0:
         logger.warning(f'No data directories found at {parent_dir}.')
         return
-    multiprocessing_loop(
+    multiprocess_map(
         func=update_meta,
-        loop_this=update_paths,
+        lst=update_paths,
         desc='Updating paths',
         processes=1 if len(update_paths) < 20 else None
     )
@@ -222,10 +204,10 @@ def check_tiles(parent_dir: str, overwrite: bool = False) -> pd.DataFrame:
         logger.warning(f'No metadata dataframes found inside {parent_dir}!')
         return
     # Check if metadata has been processed.
-    func = partial(load_meta, **{'overwrite': overwrite})
-    dataframes = multiprocessing_loop(
-        func=func,
-        loop_this=meta_paths,
+    dataframes = multiprocess_map(
+        func=load_meta,
+        lst=meta_paths,
+        func_args={'overwrite': overwrite},
         desc='Loading metadata',
     )
     dataframes = [x for x in dataframes if x is not None]
@@ -243,9 +225,9 @@ def check_tiles(parent_dir: str, overwrite: bool = False) -> pd.DataFrame:
         desc = f'[{current}/{total}] {basename(dirname(meta_path))}'
         paths = metadata.path.tolist()
         # Check images.
-        results = multiprocessing_loop(
+        results = multiprocess_map(
             func=check_image,
-            loop_this=paths,
+            lst=paths,
             desc=desc,
         )
         # Unpack results.
@@ -328,19 +310,3 @@ def check_image(path):
             'corrupted': False,
             'exists': True,
         }
-
-
-def multiprocessing_loop(func, loop_this, desc=None, processes=None):
-    """Use for easy multiprocessing."""
-    results = []
-    if processes is None:
-        processes = os.cpu_count() - 1
-    with mp.Pool(processes=processes) as p:
-        for result in tqdm(
-            p.imap(func, loop_this),
-            total=len(loop_this),
-            desc=desc,
-            bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'
-        ):
-            results.append(result)
-    return results
