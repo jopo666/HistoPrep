@@ -1,15 +1,9 @@
-# Notes and other stuff.
 *__pycache__*
-secret_stuff/*
 *.ipynb
-conda_*
-update_package*
-# PyPi.
-project.toml
-*.egg-info/*
-build/*
-dist/*
-settings.json
-# Docs.
-_build
-_templates
+*.pytest_cache
+*.egg-info
+!.gitkeep
+scripts/*
+website/*
+# Test data.
+test/data/*
