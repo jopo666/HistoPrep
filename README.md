@@ -19,7 +19,7 @@ Preprocessing large medical images for machine learning made easy!
 <p align="center">
   <a href="#description">Description</a> •
   <a href="#installation">Installation</a> •
-  <a href="https://github.io/jopo666/HistoPrep/">Documentation</a> •
+  <a href="https://jopo666.github.io/HistoPrep/">Documentation</a> •
   <a href="#how-to-use">How To Use</a> •
   <a href="#examples">Examples</a> •
   <a href="#whats-coming">What's coming?</a> •
