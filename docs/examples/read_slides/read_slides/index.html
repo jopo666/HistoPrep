@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://jopo666.github.io/histoprep/examples/read_slides/read_slides/" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Reading slides - HistoPrep</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="//use.fontawesome.com/releases/v5.8.1/css/all.css" rel="stylesheet" />
+        <link href="//use.fontawesome.com/releases/v5.8.1/css/v4-shims.css" rel="stylesheet" />
+        <link href="../../../css/mkapi-common.css" rel="stylesheet" />
+        <link href="../../../css/mkapi-readthedocs.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Reading slides";
+        var mkdocs_page_input_path = "examples/read_slides/read_slides.md";
+        var mkdocs_page_url = "/histoprep/examples/read_slides/read_slides/";
+      </script>
+    
+    <script src="../../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> HistoPrep
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../about/install/">Install</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../about/license/">License</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../about/release_notes/">Release notes</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../about/citation/">Citation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Examples</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Reading slides</a>
+    <ul class="current">
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../cut_tiles/cut_tiles/">Saving tiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../dearray/dearray/">Dearraying TMA slides</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../preprocess/preprocess/">Preprocessing saved tile images</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../panda/panda/">Use case: PANDA dataset</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API documentation</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../api/">histoprep</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">HistoPrep</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+          <li>Examples &raquo;</li><li>Reading slides</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="reading-slide-images-with-slidereader">Reading slide images with <code>SlideReader</code></h1>
+<p>Reading large medical images is easy with <code>histoprep.SlideReader</code>. When slide reader loads an image, a thumbnail of the slide and tissue mask are automatically generated for inspection.</p>
+<pre><code class="language-python">from histoprep import SlideReader
+
+# Read slide image.
+reader = SlideReader(slide_path)
+
+# Access thumbnail and tissue mask as attributes.
+display(reader.thumbnail)
+display(reader.tissue_mask)
+</code></pre>
+<p><img alt="png" src="../output_2_0.png" /></p>
+<p><img alt="png" src="../output_2_1.png" /></p>
+<p>It's possible to adjust the threshold for tissue detection or the size of the thumbnail.</p>
+<pre><code class="language-python"># Thumbnail can be adjusted when reading the slide...
+reader = SlideReader(slide_path, preferred_dimension=2048)
+print(reader.thumbnail.size)
+# ... or after the slide has been read!
+reader.get_thumbnail(preferred_dimension=10_000)
+print(reader.thumbnail.size)
+</code></pre>
+<pre><code>(2016, 272)
+(8064, 1088)
+</code></pre>
+<pre><code class="language-python"># Same goes for tissue detection.
+reader = SlideReader(slide_path, threshold_multiplier=1.0)
+display(reader.tissue_mask)
+# Change to a too low threshold.
+reader.detect_tissue(threshold=180)
+display(reader.tissue_mask)
+# Default settings work fine 99% of the time.
+reader.detect_tissue()
+display(reader.tissue_mask)
+</code></pre>
+<p><img alt="png" src="../output_5_0.png" /></p>
+<p><img alt="png" src="../output_5_1.png" /></p>
+<p><img alt="png" src="../output_5_2.png" /></p>
+<p><code>SlideReader</code> object has a <code>__repr__</code> which shows some information about the slide.</p>
+<pre><code class="language-python">print(reader)
+</code></pre>
+<pre><code>biopsy_slide:
+  Dimensions: (4352, 32256)
+  Downsamples: [1, 2, 4]
+  Channel order: XYWH
+  Dimension order: HW
+  Tissue threshold: 221
+  Backend: OPENSLIDE
+</code></pre>
+<p>Often large slide images are divided into different levels with different downsamples.</p>
+<pre><code class="language-python">print(reader.level_dimensions)
+print(reader.level_downsamples)
+</code></pre>
+<pre><code>{0: (4352, 32256), 1: (1088, 8064), 2: (272, 2016)}
+{0: (1.0, 1.0), 1: (4.0, 4.0), 2: (16.0, 16.0)}
+</code></pre>
+<p>You can read individual regions of the slide at different downsamples.</p>
+<pre><code class="language-python"># Read region from full resolution....
+display(reader.read_region(xywh=(2048, 2048, 256, 256)))
+# ... and from downsample 4 (level=1).
+display(reader.read_region(xywh=(2048, 2048, 256, 256), level=1))
+</code></pre>
+<p><img alt="png" src="../output_11_0.png" /></p>
+<p><img alt="png" src="../output_11_1.png" /></p>
+<p>It's also easy to divide the slide into tiles.</p>
+<pre><code class="language-python">coords = reader.get_tile_coordinates(width=256, overlap=0.1, max_background=0.5)
+print(&quot;Cut the slide into {} tiles.&quot;.format(len(coords)))
+# After cutting, an annotated thumbnail can be visualised.
+display(reader.annotated_thumbnail_tiles)
+</code></pre>
+<pre><code>Cut the slide into 741 tiles.
+</code></pre>
+<p><img alt="png" src="../output_13_1.png" /></p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../../about/citation/" class="btn btn-neutral float-left" title="Citation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../cut_tiles/cut_tiles/" class="btn btn-neutral float-right" title="Saving tiles">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../../../about/citation/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../cut_tiles/cut_tiles/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../../..';</script>
+    <script src="../../../js/theme_extra.js" defer></script>
+    <script src="../../../js/theme.js" defer></script>
+      <script src="../../../js/mkapi.js" defer></script>
+      <script src="../../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

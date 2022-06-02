@@ -19,10 +19,11 @@ Preprocessing large medical images for machine learning made easy!
 <p align="center">
   <a href="#description">Description</a> •
   <a href="#installation">Installation</a> •
-  <a href="https://histoprep.readthedocs.io/en/latest/">Documentation</a> •
+  <a href="https://github.io/jopo666/HistoPrep/">Documentation</a> •
   <a href="#how-to-use">How To Use</a> •
   <a href="#examples">Examples</a> •
-  <a href="#whats-coming">What's coming?</a>
+  <a href="#whats-coming">What's coming?</a> •
+  <a href="#citation">Citation</a>
 </p>
 
 </div>
@@ -34,10 +35,7 @@ This module allows you to easily **cut** and **preprocess** large histological s
 
 - Cut tiles from large slide images.
 - Dearray TMA spots (and cut tiles from individual spots).
-- Preprocess extracted tiles **easily**.
-
-![workflow](./docs/_static/workflow.jpeg)
-
+- Preprocess extracted tiles **automatically**.
 
 ## Installation 
 
@@ -45,80 +43,63 @@ This module allows you to easily **cut** and **preprocess** large histological s
 pip install histoprep
 ```
 
-You might also have to install OpenSlide and OpenCV from source. Detailed install instructions can be found [here](https://histoprep.readthedocs.io/en/latest/install.html).
+## Cutting slide into tiles
 
-## How To Use
-
-``HistoPrep`` can be used easily to prepare histologival slide images for machine learning tasks.
+``HistoPrep`` can be used easily to prepare histological slide images for machine learning tasks.
 
 You can either use `HistoPrep` as a python module...
 
 ```python
-import histoprep as hp
+import histoprep
 
-# Cutting tiles is done with two lines of code
-cutter = hp.Cutter('/path/to/slide', width=512, overlap=0.25, max_background=0.7)
-metadata = cutter.save('/path/to/output_folder')
+# Cutting tiles is super easy!
+reader = histoprep.SlideReader('/path/to/slide')
+metadata = reader.save_tiles(
+    '/path/to/output_folder',
+    coordinates=reader.get_tile_coordinates(
+        width=512, 
+        overlap=0.1, 
+        max_background=0.96
+    ),
+)
 ```
-
 or as an excecutable from your command line!
-```
-jopo666@MacBookM1$ HistoPrep --help
 
-usage:  python3 HistoPrep {step} {arguments}
-
-█  █  █  ██  ███  ███  ███  ███  ███ ███
-█  █  █ █     █  █   █ █  █ █  █ █   █  █
-████  █  ██   █  █   █ ███  ███  ██  ███
-█  █  █    █  █  █   █ █    █  █ █   █
-█  █  █  ██   █   ███  █    █  █ ███ █
-
-             by Jopo666 (2021)
-
-optional arguments:
-  -h, --help  show this help message and exit
-
-Select one of the below:
-  
-    cut       Cut tiles from large histological slides.
-    dearray   Dearray an tissue microarray (TMA) slide.
+```bash
+jopo666@MacBookM1$ HistoPrep input_dir output_dir width {optional arguments}
 ```
 
 ### Preprocessing
 
-After the tiles have been saved, preprocessing is just a simple outlier detection from the preprocessing metrics saved in `metadata.csv`!
+After the tiles have been saved, preprocessing is just a simple outlier detection from the preprocessing metrics saved in `tile_metadata.csv`!
 
 ```python
-from histoprep import preprocess
+from histoprep import OutlierDetector
+from histoprep.helpers import combine metadata
 
-metadata = preprocess.collect_metadata('/path/to/output_folder')
+# Let's combine all metadata from the cut slides
+metadata = collect_metadata("/path/to/output_folder", "tile_metadata.csv")
+metadata["outlier"] = False 
+# Then mark any outlying values!
+metadata.loc[metadata['sharpness_max'] < 5, "outlier"] = True     # blurry
+metadata.loc[metadata['black_pixels'] > 0.05, "outlier"] = True   # data loss
+metadata.loc[metadata['saturation_mean'] > 230, "outlier"] = True # weird blue shit
 
-blurry_tiles = all_metadata['sharpness_max'] < 10
-pen_markings = all_metadata['hue_0.1'] < 120
-weird_blue_shit = all_metadata['blue_0.05'] > 160
+# This can also be done automatically!
+detector = OutlierDetector(metadata, num_clusters=10)
+# Plot clusters from most likely outlier to least likely outlier
+detector.plot_clusters()
+# After visual inspection we can discard some clusters as outliers.
+metadata.loc[detector.clusters < 2, "outlier"] = True 
 ```
-
-If you're not comfortable working with `pandas` dataframes, there's also an `Explore()` function that can be used to easily detect and remove outliers from your data. 
-
-```
-preprocess.Explore(metadata, channels=True)
-```
-![explore](./docs/_static/explore.png)
 
 ## Examples
 
-Detailed examples can be found in the [docs](https://histoprep.readthedocs.io/en/latest/) or the [examples](./examples) folder.
+Examples can be found in the [docs](https://github.io/jopo666/HistoPrep/).
 
 ## What's coming?
 
 `HistoPrep` is under constant development. If there are some features you would like to be added, just submit an [issue](https://github.com/jopo666/HistoPrep/issues) and we'll start working on the feature!
-
-#### Requested features:
-
-- Cutting and preprocessing for multichannel images (currently supports only `RGB`-images).
-- Add automatic detection of outliers from `metadata`.
-  - This could be implemented with dimensionality reduction.
-
 
 ## Citation
 
@@ -128,13 +109,9 @@ If you use `HistoPrep` in a publication, please cite the github repository.
 @misc{histoprep2021,
   author = {Pohjonen J. and Ariotta. V},
   title = {HistoPrep: Preprocessing large medical images for machine learning made easy!},
-  year = {2021},
+  year = {2022},
   publisher = {GitHub},
   journal = {GitHub repository},
   howpublished = {\url{https://github.com/jopo666/HistoPrep}},
 }
 ```
-
-## Changelog
-
-Can be found [here](CHANGELOG.md).
