@@ -113,7 +113,7 @@
 
 # Let's start by combining all tile_metadata.csv files.
 combined = combine_metadata(&quot;./PANDA/tiles&quot;, &quot;tile_metadata.csv&quot;)
-print(&quot;PANDA dataset has {:.1f} tiles.&quot;.format(len(combined)))
+print(&quot;PANDA dataset has {:.1f} million tiles.&quot;.format(len(combined) / 1e6))
 </code></pre>
 <pre><code>Combining metadata: 10615it [05:31]
 PANDA dataset has 2.8 million tiles.

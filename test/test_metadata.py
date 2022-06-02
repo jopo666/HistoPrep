@@ -17,6 +17,13 @@ def test_strip_metrics():
         "h",
         "path",
         "background",
+        "gray_mean",
+        "red_mean",
+        "green_mean",
+        "blue_mean",
+        "hue_mean",
+        "saturation_mean",
+        "brightness_mean",
         "gray_std",
         "red_std",
         "green_std",
@@ -57,7 +64,6 @@ def test_strip_metrics():
         "brightness_q=0.5",
         "brightness_q=0.9",
         "brightness_q=0.95",
-        "scanner",
     ]
     assert strip_metric_colums(meta).columns.tolist() == [
         "slide_name",
@@ -67,7 +73,6 @@ def test_strip_metrics():
         "h",
         "path",
         "background",
-        "scanner",
     ]
 
 
