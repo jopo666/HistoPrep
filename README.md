@@ -8,8 +8,6 @@ Preprocessing large medical images for machine learning made easy!
         <img src="https://img.shields.io/pypi/v/histoprep"/></a>
     <a href="#licence" alt="Licence">
         <img src="https://img.shields.io/github/license/jopo666/HistoPrep"/></a>
-    <a href="#docs" alt="Docs">
-        <img src="https://img.shields.io/readthedocs/histoprep"/></a>
     <a href="#issues" alt="Issues">
         <img src="https://img.shields.io/github/issues/jopo666/HistoPrep"/></a>
     <a href="#activity" alt="Activity">
