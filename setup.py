@@ -5,12 +5,6 @@ exec(open("histoprep/_version.py").read())
 with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
-requirements = []
-with open("requirements.txt", "r") as f:
-    for line in f.readlines():
-        requirements.append(line.rstrip("\n"))
-
-
 setuptools.setup(
     name="histoprep",
     version=__version__,
@@ -32,5 +26,14 @@ setuptools.setup(
     ],
     keywords="image-analysis preprocessing histology openslide pathology",
     python_requires=">=3.8",
-    install_requires=requirements,
+    install_requires=[
+        "aicspylibczi==3.0.5",
+        "numpy==1.22",
+        "pandas==1.4",
+        "Pillow==9.0",
+        "openslide-python==1.1.2",
+        "opencv-python==4.5",
+        "scikit-learn==1.1",
+        "matplotlib==3.5",
+    ],
 )
