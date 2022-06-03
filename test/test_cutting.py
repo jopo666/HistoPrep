@@ -33,4 +33,12 @@ def test_cutting_tiles():
         assert (
             reader.save_tiles(TMP_DIR, coordinates=coordinates, num_workers=1) is None
         )
+    # No progress bar.
+    reader.save_tiles(
+        TMP_DIR,
+        coordinates=coordinates,
+        num_workers=1,
+        display_progress=False,
+        overwrite=True,
+    )
     clean_tmp_dir()
