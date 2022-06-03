@@ -29,7 +29,6 @@ def get_arguments():
     parser = argparse.ArgumentParser(
         usage=TITLE,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        # usage="HistoPrep input_dir output_dir width {optional arguments}",
     )
     parser.add_argument("input_dir", help="Directory with slides.")
     parser.add_argument("output_dir", help="For processed slides.")
@@ -62,28 +61,12 @@ def get_arguments():
         default=0,
         help="Slide level for reading tile regions.",
     )
-    add_common_args(parser)
-
-    args = parser.parse_args()
-
-    # Check paths.
-    if not os.path.exists(args.input_dir):
-        raise FileNotFoundError(f"Path {args.input_dir} not found.")
-
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir, exist_ok=True)
-    elif not os.path.isdir(args.output_dir):
-        raise FileExistsError("Output directory exists but it is not a directory.")
-    return args
-
-
-def add_common_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--ext",
         nargs="+",
         default=None,
         metavar="",
-        help=("File extensions to load. If not set, uses all readable extensions."),
+        help="File extensions to load. If not set, uses all readable extensions.",
     )
     parser.add_argument(
         "--num_workers",
@@ -137,19 +120,26 @@ def add_common_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--depth",
         type=int,
-        default=1,
+        default=0,
         metavar="",
         help="Depth for recursively finding slide images from the input_dir.",
     )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="More verbose output.",
-    )
+
+    args = parser.parse_args()
+
+    # Check paths.
+    if not os.path.exists(args.input_dir):
+        raise FileNotFoundError(f"Path {args.input_dir} not found.")
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir, exist_ok=True)
+    elif not os.path.isdir(args.output_dir):
+        raise FileExistsError("Output directory exists but it is not a directory.")
+    return args
 
 
 def find_files(parent_dir: str, extensions: Tuple[str], depth: int = 0):
-    """Find all files matching the passed extensions."""                                 
+    """Find all files matching the passed extensions."""
     extensions = tuple(x if x.startswith(".") else "." + x for x in extensions)
     return _list_files(parent_dir, extensions, 0, depth)
 
@@ -190,7 +180,9 @@ def main(args):
     # Collect paths.
     slide_paths = find_files(
         args.input_dir,
-        extension=tuple(histoprep.READABLE_FORMATS) if args.ext is None else tuple(args.ext),
+        extensions=tuple(histoprep.READABLE_FORMATS)
+        if args.ext is None
+        else tuple(args.ext),
         depth=args.depth,
     )
     slide_paths = check_existing_paths(slide_paths, args.output_dir, args.overwrite)
@@ -234,7 +226,7 @@ def cut_slide(info: Tuple[int, str], args: argparse.Namespace, total_slides: int
         print("Detected keyboard interrupt.")
         sys.exit(9)
     except Exception as e:
-        verbose("Could not slide from path {} due to error: {}.".format(path, e))
+        verbose("Could not process slide {} due to error:\n    {}".format(path, e))
         return
     try:
         # Get coordinates.
@@ -243,6 +235,9 @@ def cut_slide(info: Tuple[int, str], args: argparse.Namespace, total_slides: int
             height=args.height,
             level=args.level,
         )
+        if len(coordinates) == 0:
+            verbose("Could not find tiles from {}.".format(reader.slide_name))
+            return
         verbose("Saving {} tiles from {}.".format(len(coordinates), reader.slide_name))
         reader.save_tiles(
             output_dir=args.output_dir,
