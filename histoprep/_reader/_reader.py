@@ -12,25 +12,12 @@ from .. import functional as F
 from ..helpers._files import get_extension, remove_extension
 from ..helpers._multiprocess import multiprocess_loop
 from ..helpers._verbose import progress_bar, verbose_fn
-from ._backend import (
-    OPENSLIDE_READABLE,
-    PILLOW_READABLE,
-    READABLE_FORMATS,
-    ZEISS_READABLE,
-    OpenSlideBackend,
-    PillowBackend,
-    ZeissBackend,
-)
-from ._utils import (
-    annotate_thumbnail,
-    check_level,
-    check_region,
-    find_level,
-    prepare_paths_and_directories,
-    save_spot_worker,
-    save_tile_worker,
-    worker_initializer_fn,
-)
+from ._backend import (OPENSLIDE_READABLE, PILLOW_READABLE, READABLE_FORMATS,
+                       ZEISS_READABLE, OpenSlideBackend, PillowBackend,
+                       ZeissBackend)
+from ._utils import (annotate_thumbnail, check_level, check_region, find_level,
+                     prepare_paths_and_directories, save_spot_worker,
+                     save_tile_worker, worker_initializer_fn)
 
 __all__ = ["SlideReader"]
 
@@ -257,6 +244,8 @@ class SlideReader(object):
             tile_image = slide.read_region(x=0, y=0, w=1024, h=1024)
             ```
         """
+        if isinstance(xywh, numpy.ndarray):
+            xywh = xywh.tolist()
         if any(not isinstance(z, int) for z in xywh if z):
             raise TypeError("XYWH coordinates should be integers.")
         x, y, width, height = xywh

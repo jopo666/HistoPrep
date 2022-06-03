@@ -26,9 +26,14 @@ def progress_bar(
     Yields:
         Iterable output
     """
+    logs = {}
     if suppress:
         for output in iterable:
-            yield output
+            # Return logs still.
+            if log_values:
+                yield logs, output
+            else:
+                yield output
         return
     try:
         total = len(iterable) if total is None else total

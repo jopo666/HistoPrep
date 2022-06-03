@@ -13,13 +13,14 @@ SLIDE_3 = os.path.join(DATA_PATH, "tile.jpeg")
 
 
 def test_cutting_tiles():
-    clean_tmp_dir()
     for path, width in [
         (SLIDE_1, 1024),
         (SLIDE_2, 1024),
         (SLIDE_3, 32),
     ]:
+        clean_tmp_dir()
         reader = histoprep.SlideReader(path)
+        assert reader.annotated_thumbnail_tiles is None
         # Get coords.
         coordinates = reader.get_tile_coordinates(
             width, overlap=0.1, max_background=0.1
@@ -29,10 +30,10 @@ def test_cutting_tiles():
         assert isinstance(reader.tile_metadata, pandas.DataFrame)
         assert isinstance(reader.annotated_thumbnail_tiles, Image.Image)
     # Overwrite is False.
+    reader.save_tiles(TMP_DIR, coordinates=coordinates, num_workers=1)
     with pytest.warns(UserWarning):
-        assert (
-            reader.save_tiles(TMP_DIR, coordinates=coordinates, num_workers=1) is None
-        )
+        meta = reader.save_tiles(TMP_DIR, coordinates=coordinates, num_workers=1)
+    assert meta is None
     # No progress bar.
     reader.save_tiles(
         TMP_DIR,
