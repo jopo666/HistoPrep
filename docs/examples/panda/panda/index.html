@@ -213,11 +213,11 @@ coords, indices = detector.umap_representation(verbose=False, max_samples=200_00
 detector.plot_representation(coords, indices)
 </code></pre>
 <p><img alt="png" src="../output_11_0.png" /></p>
-<p>In the representation, each tile is annotated by it's log(distance) from the origo (the "mean" tile), and thus tiles further from the origo are more likely outliers. We can see that the tiles cluster into bigger groups, which is probably due to the fact that we didn't separate the dataset based on where it originated!</p>
+<p>In the representation, each tile is annotated by it's log(distance) from the origo (the "mean" tile), and thus tiles further from the origo are more likely outliers. We can see that the tiles cluster into three bigger groups, which is due to the fact that the <code>PANDA</code> dataset originates from two different medical centres, and is scanned with three scanners.</p>
 <blockquote>
 <p>Histological images vary widely due to differences in scanning equipment and sample preparation. Thus, preprocessing is easier if it's done in a per-dataset basis.</p>
 </blockquote>
-<p>From here on we'll only process the tiles originating from Radboud University medical centre.</p>
+<p>From here on we'll only process the tiles originating from Radboud University medical centre (only one scanner).</p>
 <pre><code class="language-python">radboud = combined[combined.data_provider == &quot;radboud&quot;]
 print(&quot;There are {:.1f} million tiles from Radboud!&quot;.format(len(radboud) / 1e6))
 
@@ -234,7 +234,11 @@ detector.plot_representation(coords, indices)
 
 # We'll get a warning here as the dataset contains over a million tiles.
 visualizer = OutlierVisualizer(radboud)
-# Plot the 'background' column with example tiles.
+</code></pre>
+<pre><code>/data/jopo/HistoPrep/histoprep/_outliers/_visualize.py:41: UserWarning: Plotting functions may take a while due to size of the data.
+  warnings.warn(
+</code></pre>
+<pre><code class="language-python"># Plot the 'background' column with example tiles.
 visualizer.plot_histogram_with_examples(&quot;background&quot;, log_scale=False)
 </code></pre>
 <p><img alt="png" src="../output_16_0.png" /></p>

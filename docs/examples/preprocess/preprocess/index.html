@@ -112,10 +112,10 @@
 <pre><code class="language-python">from histoprep.helpers import combine_metadata
 
 # Let's start by combining all tile_metadata.csv files.
-combined = combine_metadata(&quot;./PANDA/tiles&quot;, &quot;tile_metadata.csv&quot;)
+combined = combine_metadata(&quot;./PANDA/tiles/&quot;, &quot;tile_metadata.csv&quot;)
 print(&quot;PANDA dataset has {:.1f} million tiles.&quot;.format(len(combined) / 1e6))
 </code></pre>
-<pre><code>Combining metadata: 10615it [05:31]
+<pre><code>Combining metadata: 10615it [00:27]
 PANDA dataset has 2.8 million tiles.
 </code></pre>
 <p>Now we have a combined dataframe of <strong>2.8 million</strong> tiles from 10 615 prostate biopsy slides. There's bound to be at least a few bad tile images there... Luckily finding them with <code>OutlierDetector</code> and <code>OutlierVisualizer</code> is easy!</p>
@@ -123,17 +123,13 @@ PANDA dataset has 2.8 million tiles.
 
 # Let's add an outlier column to the combined metadata.
 combined[&quot;outlier&quot;] = False
-# We'll get a warning due to the size of the data.
-visualizer = OutlierVisualizer(combined)
 
+visualizer = OutlierVisualizer(combined)
 # Let's start by visualising the background column
 visualizer.plot_histogram_with_examples(&quot;background&quot;, num_examples=16)
 </code></pre>
-<pre><code>/data/jopo/HistoPrep/histoprep/_outliers/_visualize.py:41: UserWarning: Plotting functions may take a while due to size of the data.
-  warnings.warn(
-</code></pre>
-<p><img alt="png" src="../output_3_1.png" /></p>
-<p>Here we can see that the amount of background set during saving tiles was a bit too high, luvkily we can mark these tiles as outliers! Let's do that and visualise next the <code>gray_mean</code> column.</p>
+<p><img alt="png" src="../output_3_0.png" /></p>
+<p>Here we can see that the amount of background set during saving tiles was a bit too high, luckily we can mark these tiles as outliers! Let's do that and visualise next the <code>gray_mean</code> column.</p>
 <pre><code class="language-python">combined.loc[combined.background &gt; 0.6, &quot;outlier&quot;] = True
 # Plot the next column.
 visualizer.plot_histogram_with_examples(&quot;gray_mean&quot;)
@@ -172,6 +168,7 @@ coords, indices = detector.umap_representation(verbose=False)
 detector.plot_representation(coords, indices)
 </code></pre>
 <p><img alt="png" src="../output_11_0.png" /></p>
+<p>We can clearly see 3 larger groups, which are due to the fact that the <code>PANDA</code> dataset has been scanned with three different scanners.</p>
               
             </div>
           </div><footer>

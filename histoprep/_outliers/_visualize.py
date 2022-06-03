@@ -16,7 +16,8 @@ __all__ = ["OutlierVisualizer"]
 
 class OutlierVisualizer:
     def __init__(self, metadata: pandas.DataFrame):
-        """Visualise preprocessing metrics to identify outliers.
+        """Visualise preprocessing metrics to identify outliers. Plotting might take a
+        while if metadata contains several million samples.
 
         Args:
             metadata: Metadata with preprocessing metrics.
@@ -37,10 +38,6 @@ class OutlierVisualizer:
         """
         self.__metadata = metadata
         self.__all_paths = metadata["path"].to_numpy()
-        if len(self.__metadata) > 1e6:
-            warnings.warn(
-                "Plotting functions may take a while due to size of the data."
-            )
 
     def plot_rgb_mean(
         self,
