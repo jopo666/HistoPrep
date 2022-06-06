@@ -59,6 +59,25 @@ def test_get_thumbnail():
 #     shutil.rmtree(os.path.join(DATA_PATH, "scratch"))
 
 
+def test_pillow_padding():
+    reader = histoprep.SlideReader(SLIDE_4)
+    assert reader.read_region((0, 128, 224, 224), return_arr=True).shape == (
+        224,
+        224,
+        3,
+    )
+    assert reader.read_region((0, 128, 400, 224), return_arr=True).shape == (
+        224,
+        400,
+        3,
+    )
+    assert reader.read_region((0, 128, 224, 400), return_arr=True).shape == (
+        400,
+        224,
+        3,
+    )
+
+
 def test_properties():
     reader = histoprep.SlideReader(SLIDE_1)
     assert str(reader.backend) == "OPENSLIDE"

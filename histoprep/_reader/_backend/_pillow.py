@@ -58,7 +58,16 @@ class PillowBackend(Backend):
                 fast_resize=True,
             )
         # Read region
-        return numpy.array(self.__level_images[level].crop((y, x, y + h, x + w)))
+        return numpy.array(
+            self.__level_images[level].crop(
+                (
+                    x,
+                    y,
+                    x + w,
+                    y + h,
+                )
+            )
+        )
 
     def __repr__(self):
         return "PILLOW"
