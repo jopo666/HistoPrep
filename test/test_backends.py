@@ -47,7 +47,7 @@ def test_openslide_backend():
         2: (8.000457247370827, 8.003123373243103),
     }
     assert backend.read_region((200, 200, 1, 1), 0).tolist() == [[[246, 248, 245]]]
-    assert backend.read_region((200, 200, 1, 1), 1).tolist() == [[[244, 244, 242]]]
+    assert backend.read_region((200, 200, 1, 1), 1).tolist() == [[[243, 243, 241]]]
     assert backend.get_thumbnail(2).shape == (2187, 1921, 3)
 
 

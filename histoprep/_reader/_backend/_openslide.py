@@ -67,7 +67,11 @@ class OpenSlideBackend(Backend):
     def read_region(self, XYWH: Tuple[int, int, int, int], level: int) -> numpy.ndarray:
         # Unpack.
         x, y, w, h = XYWH
-        # Read region
+        # Adjust x and y based on level.
+        h_d, w_d = self.level_downsamples[level]
+        x = int(x * w_d)
+        y = int(y * h_d)
+        # Read region.
         tile = self.reader.read_region(location=(x, y), level=level, size=(w, h))
         # Convert to array and select only RGB channels (no alpha channel).
         return numpy.array(tile)[..., :3]

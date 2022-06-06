@@ -12,12 +12,25 @@ from .. import functional as F
 from ..helpers._files import get_extension, remove_extension
 from ..helpers._multiprocess import multiprocess_loop
 from ..helpers._verbose import progress_bar, verbose_fn
-from ._backend import (OPENSLIDE_READABLE, PILLOW_READABLE, READABLE_FORMATS,
-                       ZEISS_READABLE, OpenSlideBackend, PillowBackend,
-                       ZeissBackend)
-from ._utils import (annotate_thumbnail, check_level, check_region, find_level,
-                     prepare_paths_and_directories, save_spot_worker,
-                     save_tile_worker, worker_initializer_fn)
+from ._backend import (
+    OPENSLIDE_READABLE,
+    PILLOW_READABLE,
+    READABLE_FORMATS,
+    ZEISS_READABLE,
+    OpenSlideBackend,
+    PillowBackend,
+    ZeissBackend,
+)
+from ._utils import (
+    annotate_thumbnail,
+    check_level,
+    check_region,
+    find_level,
+    prepare_paths_and_directories,
+    save_spot_worker,
+    save_tile_worker,
+    worker_initializer_fn,
+)
 
 __all__ = ["SlideReader"]
 
@@ -257,15 +270,16 @@ class SlideReader(object):
             raise ValueError("Width and height should be above zero.")
         if fill and (not isinstance(fill, int) or not 0 <= fill <= 255):
             raise ValueError("Fill value should be an integer in range [0, 255].")
-        out_of_bounds, padding = check_region(xywh, self.dimensions)
         if level not in self.level_downsamples.keys():
             raise ValueError("Slide does not contain level {}.".format(level))
+        # Check XYWH region.
+        out_of_bounds, padding = check_region(xywh, self.level_dimensions[level])
         if out_of_bounds:
             # Tile goes out-of-bounds.
             if fill is None:
                 raise ValueError(
                     "Region ({}) overbound and fill is None (dimensions: "
-                    "{}).".format((x, y, width, height), self.dimensions)
+                    "{}).".format((x, y, width, height), self.level_dimensions[level])
                 )
             if padding is None:
                 # Empty tile.
@@ -449,23 +463,30 @@ class SlideReader(object):
         """
         if level not in self.level_dimensions.keys():
             raise ValueError("Slide does not contain level {}.".format(level))
-        else:
-            dimensions = self.level_dimensions[level]
+        # Get dimensions and downsample.
+        dimensions = self.level_dimensions[level]
+        h_d, w_d = self.level_downsamples[level]
+        if height is None:
+            height = width
+        # Get coordinates.
         coordinates = F.tile_coordinates(
-            dimensions, width=width, height=height, overlap=overlap
+            dimensions,
+            width=width,
+            height=height,
+            overlap=overlap,
         )
         # Filter tiles.
         if tissue_mask is None:
             # Use cached.
             tissue_mask = self.__tissue_mask
-        # Figure out downsample.
-        downsample = [b / a for a, b in zip(tissue_mask.shape[:2], dimensions)]
+        # Get downsample between mask and coords.
+        mask_downsample = [b / a for a, b in zip(tissue_mask.shape[:2], dimensions)]
         # Filter coordinates.
         filtered = F.filter_coordinates(
             coordinates=coordinates,
             tissue_mask=tissue_mask,
             max_background=max_background,
-            downsample=downsample,
+            downsample=mask_downsample,
         )
         self.__verbose(
             "Detected {} tiles with <= {:.1f}{} background "
@@ -477,12 +498,15 @@ class SlideReader(object):
                 "%",
             )
         )
+        # Get downsample between thumbnail and coords.
+        thumbnail_downsample = [
+            b / a for a, b in zip(self.thumbnail.size[::-1], dimensions)
+        ]
         # Annotate thumbnail and cache it.
         self.__annotated_thumbnail_tiles = annotate_thumbnail(
             thumbnail=self.thumbnail,
-            thumbnail_downsample=self.thumbnail_downsample,
+            downsample=thumbnail_downsample,
             coordinates=filtered,
-            coordinate_downsample=self.level_downsamples[level],
         )
         return filtered
 
@@ -531,9 +555,8 @@ class SlideReader(object):
         # Annotate thumbnail.
         self.__annotated_thumbnail_spots = annotate_thumbnail(
             thumbnail=self.thumbnail,
-            thumbnail_downsample=self.thumbnail_downsample,
+            downsample=self.thumbnail_downsample,
             coordinates=spot_coordinates,
-            coordinate_downsample=(1, 1),
             numbers=spot_numbers,
         )
         # Create metadata.
@@ -832,11 +855,14 @@ class SlideReader(object):
         self.thumbnail.save(output_paths["thumbnail"])
         self.tissue_mask.save(output_paths["tissue_mask"])
         # Save annotated thumbnail.
+        downsample = [
+            b / a
+            for a, b in zip(self.thumbnail.size[::-1], self.level_dimensions[level])
+        ]
         annotate_thumbnail(
             thumbnail=self.thumbnail,
-            thumbnail_downsample=self.thumbnail_downsample,
+            downsample=downsample,
             coordinates=coordinates,
-            coordinate_downsample=self.level_downsamples[level],
         ).save(output_paths["annotated_tiles"])
         # Save images.
         self.__tile_metadata = self.__save_images(

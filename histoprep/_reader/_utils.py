@@ -11,7 +11,9 @@ from PIL import Image, ImageDraw
 from ..helpers import remove_directory
 
 
-def check_region(XYWH: tuple, dimensions: tuple) -> Tuple[bool, Tuple[int]]:
+def check_region(
+    XYWH: tuple, dimensions: Tuple[int, int]
+) -> Tuple[bool, Tuple[int, int]]:
     """Checks if region is out of bounds and calculates padding."""
     x, y, w, h = XYWH
     # Check dimensions.
@@ -23,7 +25,7 @@ def check_region(XYWH: tuple, dimensions: tuple) -> Tuple[bool, Tuple[int]]:
     elif y + h > dimensions[0] or x + w > dimensions[1]:
         # Height or width causes overbound --> read what we can and pad.
         out_of_bounds = True
-        # Get allowed h and w --> padding..
+        # Get allowed h and w --> padding.
         padding = (
             min(dimensions[0] - y, h),
             min(dimensions[1] - x, w),
@@ -144,9 +146,8 @@ def prepare_paths_and_directories(
 
 def annotate_thumbnail(
     thumbnail: Union[Image.Image, numpy.ndarray],
-    thumbnail_downsample: Tuple[float, float],
+    downsample: Tuple[float, float],
     coordinates: List[Tuple[int, int, int, int]],
-    coordinate_downsample: Tuple[float, float],
     numbers: numpy.ndarray = None,
 ) -> Image.Image:
     """Annotate thumbnail with tile coordinates."""
@@ -156,10 +157,6 @@ def annotate_thumbnail(
     # Make a copy.
     thumbnail = thumbnail.copy()
     annotated = ImageDraw.Draw(thumbnail)
-    # Get downsample.
-    downsample = tuple(
-        a / b for a, b in zip(thumbnail_downsample, coordinate_downsample)
-    )
     # Start drawing.
     for x, y, w, h in coordinates:
         y_d = round(y / downsample[0])
