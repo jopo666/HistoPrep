@@ -227,7 +227,7 @@ class OutlierVisualizer:
         self,
         column: str,
         bins: int = 30,
-        num_examples: int = 16,
+        num_examples: int = 14,
         log_scale: bool = True,
         figsize: Tuple[float, float] = (FIGURE_WIDTH * 2, FIGURE_HEIGHT * 2),
     ):
