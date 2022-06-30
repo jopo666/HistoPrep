@@ -28,12 +28,12 @@ setuptools.setup(
     python_requires=">=3.8",
     install_requires=[
         "aicspylibczi==3.0.5",
-        "numpy==1.22",
-        "pandas==1.4",
-        "Pillow==9.1.1",
+        "numpy>=1.22",
+        "pandas>=1.4",
+        "Pillow>=9.1.1",
         "openslide-python==1.1.2",
         "opencv-python==4.5.5.64",
-        "scikit-learn==1.1",
-        "matplotlib==3.5",
+        "scikit-learn>=1.1",
+        "matplotlib>=3.5",
     ],
 )
