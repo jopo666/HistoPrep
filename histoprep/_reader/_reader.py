@@ -649,7 +649,7 @@ class SlideReader(object):
             if isinstance(meta, Exception):
                 # Region couldn't be read, preprocessed or saved.
                 logging.debug("Region ({}) raised exception: {}".format(info[:4], meta))
-                failed_regions.append((info[:4], meta))
+                failed_regions.append((info, meta))
                 logs["failed"] = len(failed_regions)
                 continue
             # Append to metadata.
