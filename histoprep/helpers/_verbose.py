@@ -37,6 +37,8 @@ def progress_bar(
         return
     try:
         total = len(iterable) if total is None else total
+        if total == 0:
+            total = None
     except TypeError:
         total = None
     tic = time.perf_counter()
