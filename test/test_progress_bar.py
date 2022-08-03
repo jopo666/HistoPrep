@@ -28,9 +28,15 @@ def test_progress_bar():
         "test |##########| 2/2 [00:00<00:00, dog=good_boi]",
     ]
 
+
 def test_progress_bar_logs_suppress():
     # Progress bar should still return logs!
     with CaptureStdout() as output:
-        for logs, i in progress_bar(range(10),suppress=True, log_values=True):
+        for logs, i in progress_bar(range(10), suppress=True, log_values=True):
             pass
     assert output == []
+
+
+def test_progress_bar_empty_iterable():
+    for x in progress_bar([]):
+        pass
