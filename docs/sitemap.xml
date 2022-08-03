@@ -2,57 +2,57 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://jopo666.github.io/histoprep/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://jopo666.github.io/histoprep/api/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://jopo666.github.io/histoprep/about/citation/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://jopo666.github.io/histoprep/about/install/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://jopo666.github.io/histoprep/about/license/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://jopo666.github.io/histoprep/about/release_notes/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://jopo666.github.io/histoprep/examples/cut_tiles/cut_tiles/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://jopo666.github.io/histoprep/examples/dearray/dearray/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://jopo666.github.io/histoprep/examples/panda/panda/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://jopo666.github.io/histoprep/examples/preprocess/preprocess/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://jopo666.github.io/histoprep/examples/read_slides/read_slides/</loc>
-         <lastmod>2022-06-06</lastmod>
+         <lastmod>2022-08-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
