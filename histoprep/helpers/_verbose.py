@@ -42,27 +42,25 @@ def progress_bar(
     tic = time.perf_counter()
     tic_out = time.perf_counter()
     logs = {}
-    try:
-        bar = __get_bar(0, tic, total, desc=desc, logs=logs)
-        last_length = len(bar)
-        print(bar, end="\r")
-        for step, output in enumerate(iterable):
-            if step == 0 or (
-                (step + 1) % log_interval == 0 and time.perf_counter() - tic_out > 0.05
-            ):
-                bar = __get_bar(step + 1, tic, total, desc=desc, logs=logs)
-                print(" " * last_length, end="\r")
-                print(bar, end="\r")
-                last_length = len(bar)
-                tic_out = time.perf_counter()
-            if log_values:
-                yield logs, output
-            else:
-                yield output
-        print(" " * last_length, end="\r")
-        print(__get_bar(step + 1, tic, total, desc=desc, final=True, logs=logs))
-    except KeyboardInterrupt:
-        print("\n Keyboard interruption detected.")
+    bar = __get_bar(0, tic, total, desc=desc, logs=logs)
+    last_length = len(bar)
+    print(bar, end="\r")
+    step = 0
+    for step, output in enumerate(iterable):
+        if step == 0 or (
+            (step + 1) % log_interval == 0 and time.perf_counter() - tic_out > 0.05
+        ):
+            bar = __get_bar(step + 1, tic, total, desc=desc, logs=logs)
+            print(" " * last_length, end="\r")
+            print(bar, end="\r")
+            last_length = len(bar)
+            tic_out = time.perf_counter()
+        if log_values:
+            yield logs, output
+        else:
+            yield output
+    print(" " * last_length, end="\r")
+    print(__get_bar(step + 1, tic, total, desc=desc, final=True, logs=logs))
 
 
 def __get_bar(
