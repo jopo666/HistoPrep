@@ -104,8 +104,8 @@ Examples can be found in the [docs](https://github.io/jopo666/HistoPrep/).
 If you use `HistoPrep` in a publication, please cite the github repository.
 
 ```
-@misc{histoprep2021,
-  author = {Pohjonen J. and Ariotta. V},
+@misc{histoprep,
+  author = {Pohjonen, Joona and Ariotta, Valeria},
   title = {HistoPrep: Preprocessing large medical images for machine learning made easy!},
   year = {2022},
   publisher = {GitHub},
