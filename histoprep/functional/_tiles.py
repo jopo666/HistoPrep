@@ -1,0 +1,73 @@
+__all__ = [
+    "get_tile_coordinates",
+    "downsample_xywh",
+]
+
+import itertools
+from typing import Optional, Union
+
+OVERLAP_LIMIT = 1.0
+ERROR_NON_INTEGER_SHAPE = "Tile {} should be and integer, not {}."
+ERROR_NON_POSITIVE_SHAPE = "Tile {} ({}) should positive non-zero integer."
+ERROR_SHAPE_LARGER_THAN_DIM = "Tile {} ({}) is larger than image {} ({})."
+ERROR_OVERLAP = "Overlap ({}) should be in range [0, 1)."
+
+
+def get_tile_coordinates(
+    dimensions: tuple[int, int],
+    width: int,
+    *,
+    height: Optional[int] = None,
+    overlap: float = 0.0,
+    allow_out_of_bounds: bool = False,
+) -> list[tuple[int, int, int, int]]:
+    """Create tile coordinates (xywh).
+
+    Args:
+        dimensions: Image dimensions (height, width).
+        width: Tile width.
+        height: Height of a tile. If None, will be set to `width`. Defaults to None.
+        overlap: Overlap between neighbouring tiles. Defaults to 0.0.
+        allow_out_of_bounds: Allow tiles to go out of image bounds. Defaults to False.
+
+    Returns:
+        List of xywh-coordinates.
+    """
+    # Check arguments.
+    if height is None:
+        height = width
+    for idx, (name, val) in enumerate([("height", height), ("width", width)]):
+        if not isinstance(val, int):
+            raise TypeError(ERROR_NON_INTEGER_SHAPE.format(name, type(val)))
+        if not val > 0:
+            raise ValueError(ERROR_NON_POSITIVE_SHAPE.format(name, val))
+        if val > dimensions[idx]:
+            raise ValueError(
+                ERROR_SHAPE_LARGER_THAN_DIM.format(name, val, name, dimensions[idx])
+            )
+    if not 0 <= overlap < OVERLAP_LIMIT:
+        raise ValueError(ERROR_OVERLAP.format(overlap))
+    # Collect xy-coordinates.
+    level_height, level_width = dimensions
+    width_step = max(width - round(width * overlap), 1)
+    height_step = max(height - round(height * overlap), 1)
+    x_coords = range(0, level_width, width_step)
+    y_coords = range(0, level_height, height_step)
+    # Filter out of bounds coordinates.
+    if not allow_out_of_bounds and max(x_coords) + width > level_width:
+        x_coords = x_coords[:-1]
+    if not allow_out_of_bounds and max(y_coords) + height > level_height:
+        y_coords = y_coords[:-1]
+    # Take product and add width and height.
+    return [(x, y, width, height) for y, x in itertools.product(y_coords, x_coords)]
+
+
+def downsample_xywh(
+    xywh: tuple[int, int, int, int], downsample: Union[float, tuple[float, float]]
+) -> tuple[int, int, int, int]:
+    """Downsample xywh-coordinates with downsample."""
+    if not isinstance(downsample, (tuple, list)):
+        downsample = (downsample, downsample)
+    w_d, h_d = downsample
+    x, y, w, h = xywh
+    return round(x / w_d), round(y / h_d), round(w / w_d), round(h / h_d)

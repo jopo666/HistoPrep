@@ -1,21 +1,32 @@
-from typing import Union
-
-import numpy
-from PIL import Image
-
-from ._functional import _gaussian_blur, _thresholding, _to_grayscale
-from ._helpers import _to_array
-
 __all__ = ["detect_tissue"]
 
 
+from typing import Optional, Union
+
+import cv2
+import numpy as np
+from PIL import Image
+
+from ._check import GRAYSCALE_NDIM, check_image
+
+ERROR_INVALID_THRESHOLD = "Threshold should be an integer in range [0, 255]"
+ERROR_INVALID_MULTIPLIER = "Threshold multiplier should be a non-zero positive number."
+ERROR_SIGMA = "Sigma should be a positive number."
+MAX_THRESHOLD = 255
+WHITE_PIXEL = 255
+BLACK_PIXEL = 0
+SIGMA_NO_OP = 0.0
+
+
 def detect_tissue(
-    image: Union[numpy.ndarray, Image.Image],
-    threshold: int = None,
+    image: Union[Image.Image, np.ndarray],
+    *,
+    threshold: Optional[int] = None,
     multiplier: float = 1.0,
     sigma: float = 1.0,
-    remove_white: bool = False,
-) -> numpy.ndarray:
+    ignore_white: bool = True,
+    ignore_black: bool = True,
+) -> tuple[int, np.ndarray]:
     """Detect tissue from image.
 
     Args:
@@ -25,44 +36,69 @@ def detect_tissue(
             a threshold. Defaults to None.
         multiplier: Otsu's method is used to find an optimal threshold by
             minimizing the weighted within-class variance. This threshold is
-            then multiplied with `multiplier`. Used only if `threshold` is None.
+            then multiplied with `multiplier`. Ignored if `threshold` is not None.
             Defaults to 1.0.
         sigma: Sigma for gaussian blurring. Defaults to 1.0.
-        remove_white: Does not consider white pixels with Otsu's method. Useful
+        ignore_white: Does not consider white pixels with Otsu's method. Useful
             for slide images where large areas are artificially set to white.
-            Defaults to False.
+            Defaults to True.
+        ignore_white: Does not consider black pixels with Otsu's method. Useful
+            for slide images where large areas are artificially set to black.
+            Defaults to True.
 
     Returns:
-        Binary mask with 0=background and 1=tissue.
-
-    Example:
-        ```python
-        import histoprep.functional as F
-        from histoprep.helpers import read_image
-
-        image = read_image("path/to/image.jpeg")
-        tissue_mask = F.detect_tissue(image)
-        ```
+        Tuple with `threshold` and `tissue_mask` (0=background and 1=tissue).
     """
-    if threshold is not None and (
-        not isinstance(threshold, int) or not 0 <= threshold <= 255
-    ):
-        raise TypeError("Threshold should be an integer in range [0, 255]")
-    if not isinstance(multiplier, float) or multiplier <= 0:
-        raise TypeError("Threshold multiplier should be a float over 0.")
-    if not isinstance(sigma, (float, int)) or sigma < 0:
-        raise TypeError("Sigma should be a positive float.")
     # Check image and convert to array.
-    image = _to_array(image)
-    # To grayscale.
-    gray = _to_grayscale(image)
-    if sigma > 0.0:
-        # Gaussian blurring.
-        gray = _gaussian_blur(gray, sigma)
-    # Global thresholding.
-    return _thresholding(
-        gray=gray,
-        threshold=threshold,
-        multiplier=multiplier,
-        remove_white=remove_white,
+    image = check_image(image)
+    # Check arguments.
+    if threshold is not None and not 0 <= threshold <= MAX_THRESHOLD:
+        raise ValueError(ERROR_INVALID_THRESHOLD)
+    if multiplier <= 0:
+        raise ValueError(ERROR_INVALID_MULTIPLIER)
+    if sigma < 0:
+        raise ValueError(ERROR_SIGMA)
+    # Convert to grayscale.
+    gray = (
+        image
+        if image.ndim == GRAYSCALE_NDIM
+        else cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     )
+    # Gaussian blurring.
+    blur = gaussian_blur(image=gray, sigma=sigma, truncate=3.5)
+    # Get threshold.
+    if threshold is None:
+        threshold = otsu_threshold(
+            gray=blur, ignore_white=ignore_white, ignore_black=ignore_black
+        )
+        threshold = max(min(255, int(threshold * multiplier + 0.5)), 0)
+    # Global thresholding.
+    thrsh, mask = cv2.threshold(blur, threshold, 1, cv2.THRESH_BINARY_INV)
+    return int(thrsh), mask
+
+
+def otsu_threshold(*, gray: np.ndarray, ignore_white: bool, ignore_black: bool) -> int:
+    """Helper function to calculate Otsu's thresold from a grayscale image."""
+    # Collect values for Otsu's method.
+    values = gray.flatten()
+    if ignore_white:
+        values = values[values != WHITE_PIXEL]
+    if ignore_black:
+        values = values[values != BLACK_PIXEL]
+    # Get threshold.
+    threshold, __ = cv2.threshold(
+        values, None, 1, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+    )
+    return threshold
+
+
+def gaussian_blur(
+    *, image: np.ndarray, sigma: float, truncate: float = 3.5
+) -> np.ndarray:
+    """Apply gaussian blurring."""
+    if sigma == SIGMA_NO_OP:
+        return image
+    ksize = int(truncate * sigma + 0.5)
+    if ksize % 2 == 0:
+        ksize += 1
+    return cv2.GaussianBlur(image, ksize=(ksize, ksize), sigmaX=sigma, sigmaY=sigma)

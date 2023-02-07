@@ -1,4 +1,2 @@
-from . import functional, helpers
-from ._outliers import *
+"""HistoPrep: Preprocessing large medical images for machine learning made easy!"""  # noqa
 from ._reader import *
-from ._version import __version__
