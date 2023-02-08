@@ -1,4 +1,4 @@
-__all__ = ["OpenSlideReader", "OPENSLIDE_READABLE"]
+__all__ = ["OpenSlideReader"]
 
 import numpy as np
 

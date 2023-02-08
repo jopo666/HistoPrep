@@ -6,11 +6,10 @@ authors = ["jopo666 <jopo@birdlover.com>"]
 readme = "README.md"
 
 [tool.poetry.scripts]
-HistoPrep-cut = 'histoprep.cli._run:cut'
+HistoPrep = 'histoprep.cli._cut:cut_slides'
 
 [tool.poetry.dependencies]
 aicspylibczi = "^3"
-click = "^8"
 matplotlib = "*"
 numpy = "*"
 opencv-python-headless = "^4.7.0.68"
@@ -20,6 +19,7 @@ python = "^3.9"
 tqdm = "*"
 mpire = "^2.6.0"
 polars = "^0.16.2"
+rich-click = "^1.6.1"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "*"

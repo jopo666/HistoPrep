@@ -4,13 +4,10 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Union
 
+import histoprep.functional as F
 import numpy as np
 import polars as pl
 import tqdm
-from mpire import WorkerPool
-from PIL import Image
-
-import histoprep.functional as F
 from histoprep.data import (
     Properties,
     TileCoordinate,
@@ -18,6 +15,8 @@ from histoprep.data import (
     TileImage,
     TissueMask,
 )
+from mpire import WorkerPool
+from PIL import Image
 
 from ._exceptions import TileReadingError
 
@@ -152,7 +151,7 @@ class BaseReader(ABC):
         self,
         *,
         level: Optional[int] = None,
-        level_dim: int = 4096,
+        max_dimension: int = 4096,
         threshold: Optional[int] = None,
         multiplier: float = 1.0,
         sigma: float = 1.0,
@@ -163,10 +162,10 @@ class BaseReader(ABC):
 
         Args:
             level: Slide level to use for tissue detection. If None, attempts to select
-                level based on the `level_dim` argument. Defaults to None.
-            level_dim: Selects the first slide level, where both dimensions are below
-                `level_dim`. If such level doesn not exist, selects the smallest level
-                (-1). Ignored if `level` is not None. Defaults to 4096.
+                level based on the `max_dimension` argument. Defaults to None.
+            max_dimension: Selects the first slide level, where both dimensions are
+                below `max_dimension`. If such level doesn not exist, selects the
+                smallest level (-1). Ignored if `level` is not None. Defaults to 4096.
             threshold: Threshold for tissue detection. If set, will detect tissue by
                 global thresholding, and otherwise Otsu's method is used to find
                 a threshold. Defaults to None.
@@ -186,7 +185,7 @@ class BaseReader(ABC):
             `TissueMask` instance.
         """
         if level is None:
-            level = self.__level_from_dimension(maximum=level_dim)
+            level = self.__level_from_dimension(maximum=max_dimension)
         level = self._check_and_format_level(level)
         # Detect tissue.
         threshold, tissue_mask = F.detect_tissue(
@@ -207,26 +206,25 @@ class BaseReader(ABC):
 
     def get_tile_coordinates(
         self,
-        width: int,
         tissue_mask: TissueMask,
+        width: int,
         *,
         height: Optional[int] = None,
         overlap: float = 0.0,
         level: int = 0,
-        allow_out_of_bounds: bool = False,
+        out_of_bounds: bool = True,
         max_background: float = 0.95,
     ) -> TileCoordinates:
         """Generate tile coordinates.
 
         Args:
-            width: Width of a tile.
             tissue_mask: `TissueMask` for background percentage calculation.
+            width: Width of a tile.
             height: Height of a tile. If None, will be set to `width`. Defaults to None.
             overlap: Overlap between neighbouring tiles. Defaults to 0.0.
             level: Pyramid level for the tiles. Defaults to 0.
-            tissue_mask: Tissue mask for background percentage calculation.
-            allow_out_of_bounds: Keep tiles which contain regions outside of the image.
-                Defaults to False.
+            out_of_bounds: Keep tiles which contain regions outside of the image.
+                Defaults to True.
             max_background: Maximum amount of background in tiles. Defaults to 0.95.
 
         Returns:
@@ -244,7 +242,7 @@ class BaseReader(ABC):
             width=width,
             height=height,
             overlap=overlap,
-            allow_out_of_bounds=allow_out_of_bounds,
+            out_of_bounds=out_of_bounds,
         )
         # Collect tile coordinates.
         tile_coordinates = []
@@ -352,7 +350,7 @@ class BaseReader(ABC):
             save_paths: Adds file paths to `metadata.parquet`. Defaults to True.
             save_metrics: Save image metrics to `metadata.parquet`. Defaults to True.
             save_masks: Save tissue masks as `png` images. Defaults to False.
-            overwrite: Overwrite everything if `parent_dir/{slide_name}/` exists.
+            overwrite: Overwrite everything in `parent_dir/{slide_name}/` if it exists.
                 Defaults to False.
             raise_exception: Whether to raise an `Exception`, or continue saving tiles
                 if there are problems with reading tile regions. Defaults to True.
@@ -368,6 +366,7 @@ class BaseReader(ABC):
             slide_name=self.slide_name,
             suffix=format,
             overwrite=overwrite,
+            overwrite_unfinished=overwrite_unfinished,
             save_masks=save_masks,
         )
         # Save summary images and properties.
@@ -530,4 +529,12 @@ def read_tile_safe(
     except Exception as e:  # noqa
         if raise_exception:
             raise TileReadingError from e
+        return None
+        raise KeyboardInterrupt from None
+    except Exception as e:  # noqa
+        if raise_exception:
+            raise TileReadingError from e
+        return None
+        return None
+        return None
         return None

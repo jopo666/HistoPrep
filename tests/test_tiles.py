@@ -21,7 +21,7 @@ def test_tile_coordinates():
         (40, 60, 40, 30),
     ]
     # Out-of-bounds.
-    assert F.get_tile_coordinates(**kwargs, allow_out_of_bounds=True) == [
+    assert F.get_tile_coordinates(**kwargs, out_of_bounds=True) == [
         (0, 0, 40, 30),
         (40, 0, 40, 30),
         (0, 30, 40, 30),

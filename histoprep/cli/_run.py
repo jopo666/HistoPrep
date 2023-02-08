@@ -6,7 +6,6 @@ from typing import Optional
 
 import click
 import mpire
-
 from histoprep import ReaderBackend
 
 from ._cut import cut_slide
@@ -273,7 +272,7 @@ def cut(
         height=height,
         overlap=overlap,
         level=level,
-        allow_out_of_bounds=out_of_bounds,
+        out_of_bounds=out_of_bounds,
         max_background=background,
         # Tile saving.
         save_paths=save_paths,

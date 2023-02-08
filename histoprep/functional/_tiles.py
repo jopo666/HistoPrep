@@ -19,7 +19,7 @@ def get_tile_coordinates(
     *,
     height: Optional[int] = None,
     overlap: float = 0.0,
-    allow_out_of_bounds: bool = False,
+    out_of_bounds: bool = False,
 ) -> list[tuple[int, int, int, int]]:
     """Create tile coordinates (xywh).
 
@@ -28,7 +28,7 @@ def get_tile_coordinates(
         width: Tile width.
         height: Height of a tile. If None, will be set to `width`. Defaults to None.
         overlap: Overlap between neighbouring tiles. Defaults to 0.0.
-        allow_out_of_bounds: Allow tiles to go out of image bounds. Defaults to False.
+        out_of_bounds: Allow tiles to go out of image bounds. Defaults to False.
 
     Returns:
         List of xywh-coordinates.
@@ -54,9 +54,9 @@ def get_tile_coordinates(
     x_coords = range(0, level_width, width_step)
     y_coords = range(0, level_height, height_step)
     # Filter out of bounds coordinates.
-    if not allow_out_of_bounds and max(x_coords) + width > level_width:
+    if not out_of_bounds and max(x_coords) + width > level_width:
         x_coords = x_coords[:-1]
-    if not allow_out_of_bounds and max(y_coords) + height > level_height:
+    if not out_of_bounds and max(y_coords) + height > level_height:
         y_coords = y_coords[:-1]
     # Take product and add width and height.
     return [(x, y, width, height) for y, x in itertools.product(y_coords, x_coords)]
