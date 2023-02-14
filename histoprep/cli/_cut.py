@@ -12,6 +12,15 @@ from histoprep.backend import CziReader, OpenSlideReader, PillowReader
 from ._verbose import error, info, warning
 
 SlideReaderBackend = Union[CziReader, OpenSlideReader, PillowReader]
+LOGO = """
+██╗  ██╗██╗███████╗████████╗ ██████╗ ██████╗ ██████╗ ███████╗██████╗
+██║  ██║██║██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗
+███████║██║███████╗   ██║   ██║   ██║██████╔╝██████╔╝█████╗  ██████╔╝
+██╔══██║██║╚════██║   ██║   ██║   ██║██╔═══╝ ██╔══██╗██╔══╝  ██╔═══╝
+██║  ██║██║███████║   ██║   ╚██████╔╝██║     ██║  ██║███████╗██║
+╚═╝  ╚═╝╚═╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝
+                        by jopo666 (2023)
+"""
 NAME_TO_BACKEND = {
     "CZI": CziReader,
     "OPENSLIDE": OpenSlideReader,
@@ -20,7 +29,8 @@ NAME_TO_BACKEND = {
 # Rich-click options.
 click.rich_click.USE_RICH_MARKUP = True
 click.rich_click.RANGE_STRING = ""
-click.rich_click.HEADER_TEXT = "LOGO"
+click.rich_click.HEADER_TEXT = LOGO
+click.rich_click.STYLE_HEADER_TEXT = "dim"
 click.rich_click.MAX_WIDTH = 120
 click.rich_click.SHOW_METAVARS_COLUMN = False
 click.rich_click.APPEND_METAVARS_HELP = True
@@ -294,7 +304,7 @@ def cut_slides(
     quality: int = 80,
     num_workers: Optional[int] = None,
 ) -> None:
-    """Extract tiles from multiple slides."""
+    """Extract tile images from histological slide images."""
     # Glob slide paths.
     all_paths = glob_pattern(pattern=pattern)
     # Filter slide paths.
