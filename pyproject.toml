@@ -11,15 +11,16 @@ HistoPrep = 'histoprep.cli._cut:cut_slides'
 [tool.poetry.dependencies]
 aicspylibczi = "^3"
 matplotlib = "*"
+mpire = "^2.6"
 numpy = "*"
 opencv-python-headless = "^4.7.0.68"
 openslide-python = "^1.2"
 pillow = "^9"
+polars = "^0.16"
 python = "^3.9"
+rich-click = "^1.6"
+scikit-learn = "^1"
 tqdm = "*"
-mpire = "^2.6.0"
-polars = "^0.16.2"
-rich-click = "^1.6.1"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "*"
