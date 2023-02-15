@@ -2,8 +2,6 @@ __all__ = ["OpenSlideReader"]
 
 import numpy as np
 
-from histoprep import functional as F
-
 from ._base import BaseReader
 from ._exceptions import SlideReadingError
 
@@ -91,9 +89,10 @@ class OpenSlideReader(BaseReader):
         return np.array(self.__reader.get_thumbnail(size=(level_w, level_h)))
 
     def _read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        # Unpack.
-        x, y, w, h = F.downsample_xywh(xywh, downsample=self.level_downsamples[level])
-        # Read region.
-        tile = self.__reader.read_region(location=(x, y), level=level, size=(w, h))
-        # Get only RGB channels (no alpha).
-        return np.array(tile)[..., :3]
+        # Only width and height have to be adjusted for the level.
+        x, y, w, h = xywh
+        h_d, w_d = self.level_downsamples[level]
+        tile = self.__reader.read_region(
+            location=(x, y), level=level, size=(round(w / w_d), round(h / h_d))
+        )
+        return np.array(tile)[..., :3]  # only rgb channels

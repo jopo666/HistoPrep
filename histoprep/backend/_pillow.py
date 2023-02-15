@@ -3,6 +3,8 @@ __all__ = ["PillowReader"]
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
+from histoprep.functional import multiply_xywh
+
 from ._base import BaseReader
 from ._exceptions import SlideReadingError
 
@@ -68,16 +70,13 @@ class PillowReader(BaseReader):
         return np.array(self.__pyramid[level])
 
     def _read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        # Lazy load pyramid.
         self.__lazy_load(level)
-        # Unpack.
-        (x, y, w, h) = xywh
-        # Read region.
+        # Everything has to be downsampled for the level.
+        x, y, w, h = multiply_xywh(xywh, self.level_downsamples[level])
         return np.array(self.__pyramid[level].crop((x, y, x + w, y + h)))
 
     def __lazy_load(self, level: int) -> None:
-        """Helper method to load level if it does not exist. loaded."""
-        # Load levels lazily.
+        """Helper method to load level if it does not exist."""
         if level not in self.__pyramid:
             height, width = self.level_dimensions[level]
             self.__pyramid[level] = self.__pyramid[0].resize(

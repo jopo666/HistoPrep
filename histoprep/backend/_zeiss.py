@@ -1,5 +1,7 @@
 __all__ = ["CziReader"]
 
+import warnings
+
 import cv2
 import numpy as np
 from aicspylibczi import CziFile
@@ -7,6 +9,10 @@ from aicspylibczi import CziFile
 from ._base import BaseReader
 
 ERROR_NON_MOSAIC = "HistoPrep does not support reading non-mosaic czi-files."
+WARN_NONZERO_LEVEL = (
+    "Reading regions from non-zero slide level(s) is not stable "
+    "due to a bug in the underlying libCZI implementation."
+)
 DOWNSAMPLES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
 BACKGROUND_COLOR = (1.0, 1.0, 1.0)
 
@@ -32,6 +38,8 @@ class CziReader(BaseReader):
                 self.__dimensions[0] / level_h,
                 self.__dimensions[1] / level_w,
             )
+        # Set warning flag.
+        self.__warn_about_nonzero_level = True
 
     @property
     def backend(self) -> CziFile:
@@ -66,8 +74,9 @@ class CziReader(BaseReader):
         return self._read_region(xywh=(0, 0, level_w, level_h), level=level)
 
     def _read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        # Check level.
-        level = self._check_and_format_level(level)
+        if level > 0 and self.__warn_about_nonzero_level:
+            warnings.warn(WARN_NONZERO_LEVEL)
+            self.__warn_about_nonzero_level = False
         downsample = 2**level
         # Adjust coordinates.
         x, y, w, h = xywh
@@ -86,7 +95,7 @@ class CziReader(BaseReader):
         )[0]
         region_h, region_w = region_data.shape[:2]
         if region_h != h or region_w != w:
-            # Resize to actually match (w, h) because Zeiss's libCZI is buggy.
+            # Resize to actually match (w, h) because Zeiss's libCZI is bugggggggy.
             region_data = cv2.resize(
                 region_data, dsize=(w, h), interpolation=cv2.INTER_NEAREST
             )
