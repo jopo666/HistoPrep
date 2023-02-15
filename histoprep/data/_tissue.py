@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from histoprep.functional import downsample_xywh
+from histoprep.functional import multiply_xywh
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ class TissueMask:
         Returns:
             Tissue mask.
         """
-        x_d, y_d, w_d, h_d = downsample_xywh(xywh, self.level_downsample)
+        x_d, y_d, w_d, h_d = multiply_xywh(xywh, self.level_downsample)
         tile_mask = self.mask[y_d : y_d + h_d, x_d : x_d + w_d]
         if shape is not None:
             return cv2.resize(

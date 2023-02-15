@@ -1,26 +1,31 @@
 import functools
-import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Union
 
-import histoprep.functional as F
 import numpy as np
 import polars as pl
 import tqdm
-from histoprep.data import (
-    Properties,
-    TileCoordinate,
-    TileCoordinates,
-    TileImage,
-    TissueMask,
-)
 from mpire import WorkerPool
 from PIL import Image
 
-from ._exceptions import TileReadingError
+import histoprep.functional as F
+from histoprep.data import TileCoordinates, TissueMask, TMASpotCoordinates
+
+from ._save import prepare_output_dir, worker_init, worker_save_region
+
+
+class SlideReadingError(Exception):
+    """Exception class for failures during slide reading."""
+
 
 ERROR_BACKGROUND_PERCENTAGE = "Background percentage should be between [0, 1]."
+ERROR_NO_TISSUE_MASK = (
+    "Background percentage requires that `tissue_mask` is defined. "
+    "If you wish not to filter coordinates based on background percentage, "
+    "set `max_backgroud=None`"
+)
+ERROR_WRONG_TYPE = "Expected '{}' to be of type {}, not {}."
 ERROR_TILECOORDS_EMPTY = "Could not save tiles as tile coordinates is empty."
 ERROR_OUTPUT_DIR_IS_FILE = "Output directory exists but it is a file."
 ERROR_CANNOT_OVERWRITE = "Output directory exists, but `overwrite=False`."
@@ -129,36 +134,35 @@ class BaseReader(ABC):
         """
         # Check that level exists.
         level = self._check_and_format_level(level)
-        level_height, level_width = self.level_dimensions[level]
+        slide_height, slide_width = self.level_dimensions[level]
         # Check allowed width and height.
         x, y, w, h = xywh
-        if y > level_height and x > level_width:
+        if y > slide_height and x > slide_width:
             # Both out of bounds, return empty image.
             return np.zeros((h, w), dtype=np.uint8) + 255
-        if y + h > level_height or x + w > level_width:
+        if y + h > slide_height or x + w > slide_width:
             # Either w or h goes out of bounds, read allowed area.
-            allowed_h = min(level_height - y, h)
-            allowed_w = min(level_width - x, h)
+            allowed_h = max(0, min(slide_height - y, h))
+            allowed_w = max(0, min(slide_width - x, w))
             data = self._read_region(xywh=(x, y, allowed_w, allowed_h), level=level)
             # Pad image to requested size.
-            shape = (h, w, *data.shape[2:])
-            image = np.zeros(shape, dtype=np.uint8) + 255
+            image = np.zeros((h, w, *data.shape[2:]), dtype=np.uint8) + 255
             image[:allowed_h, :allowed_w] = data
             return image
         return self._read_region(xywh=(x, y, w, h), level=level)
 
-    def detect_tissue(
+    def get_tissue_mask(
         self,
         *,
         level: Optional[int] = None,
         max_dimension: int = 4096,
         threshold: Optional[int] = None,
-        multiplier: float = 1.0,
-        sigma: float = 1.0,
+        multiplier: float = 1.05,
+        sigma: float = 0.0,
         ignore_white: bool = True,
         ignore_black: bool = True,
     ) -> TissueMask:
-        """Detect tissue from image.
+        """Detect tissue from slide level image.
 
         Args:
             level: Slide level to use for tissue detection. If None, attempts to select
@@ -173,7 +177,7 @@ class BaseReader(ABC):
                 minimizing the weighted within-class variance. This threshold is
                 then multiplied with `multiplier`. Ignored if `threshold` is not None.
                 Defaults to 1.0.
-            sigma: Sigma for gaussian blurring. Defaults to 1.0.
+            sigma: Sigma for gaussian blurring. Defaults to 0.0.
             ignore_white: Does not consider white pixels with Otsu's method. Useful
                 for slide images where large areas are artificially set to white.
                 Defaults to True.
@@ -211,330 +215,313 @@ class BaseReader(ABC):
         *,
         height: Optional[int] = None,
         overlap: float = 0.0,
-        level: int = 0,
-        out_of_bounds: bool = True,
         max_background: float = 0.95,
+        out_of_bounds: bool = True,
     ) -> TileCoordinates:
         """Generate tile coordinates.
 
         Args:
-            tissue_mask: `TissueMask` for background percentage calculation.
+            tissue_mask: `TissueMask` for filtering tiles with too much background.
             width: Width of a tile.
             height: Height of a tile. If None, will be set to `width`. Defaults to None.
             overlap: Overlap between neighbouring tiles. Defaults to 0.0.
-            level: Pyramid level for the tiles. Defaults to 0.
+            max_background: Maximum amount of background in tiles. Defaults to 0.95.
             out_of_bounds: Keep tiles which contain regions outside of the image.
                 Defaults to True.
-            max_background: Maximum amount of background in tiles. Defaults to 0.95.
 
         Returns:
             `TileCoordinates` instance.
         """
-        # Check that level exists and get level downsample.
-        level = self._check_and_format_level(level)
-        level_downsample = self.level_downsamples[level]
-        # Check background percentage.
+        # Check arguments.
+        if not isinstance(tissue_mask, TissueMask):
+            raise TypeError(
+                ERROR_WRONG_TYPE.format("tissue_mask", TissueMask, type(tissue_mask))
+            )
         if not 0 <= max_background <= 1:
             raise ValueError(ERROR_BACKGROUND_PERCENTAGE)
-        # Get xywh-coordinates.
-        coordinates = F.get_tile_coordinates(
-            dimensions=self.level_dimensions[level],
+        # Filter tiles based on background.
+        tile_coords = []
+        for xywh in F.get_tile_coordinates(
+            dimensions=self.dimensions,
             width=width,
             height=height,
             overlap=overlap,
             out_of_bounds=out_of_bounds,
-        )
-        # Collect tile coordinates.
-        tile_coordinates = []
-        for xywh in coordinates:
-            tile_mask = tissue_mask.read_region(xywh=xywh)
-            background_perc = (tile_mask == 0).sum() / tile_mask.size
-            # Filter tiles with too much background.
-            if background_perc >= max_background:
-                continue
-            tile_coordinates.append(
-                TileCoordinate(
-                    xywh=xywh,
-                    level=level,
-                    level_xywh=F.downsample_xywh(xywh, level_downsample),
-                    level_downsample=self.level_downsamples[level],
-                    tissue_threshold=tissue_mask.threshold,
-                    tissue_sigma=tissue_mask.sigma,
-                    background_percentage=round(background_perc, 3),
-                )
+        ):
+            tile_mask = tissue_mask.read_region(
+                xywh=F.multiply_xywh(xywh, tissue_mask.level_downsample)
             )
-        # Create thumbnail image from tissue mask level.
-        thumbnail_pil = Image.fromarray(self.read_level(level=tissue_mask.level))
-        # Annotate tiles to the thumbnail.
-        thumbnail_tiles_pil = F.draw_tiles(
-            thumbnail_pil,
-            coordinates=[x.xywh for x in tile_coordinates],
+            if (
+                tile_mask.size > 0
+                or (tile_mask == 0).sum() / tile_mask.size <= max_background
+            ):
+                tile_coords.append(xywh)
+        # Create thumbnails.
+        thumbnail = Image.fromarray(self.read_level(tissue_mask.level))
+        thumbnail_tiles = F.draw_tiles(
+            image=thumbnail,
+            coordinates=tile_coords,
             downsample=self.level_downsamples[tissue_mask.level],
-            rectangle_outline="red",
-            rectangle_fill=None,
-            rectangle_width=2,
             highlight_first=True,
-            highlight_outline="blue",
         )
         return TileCoordinates(
-            tile_coordinates=tile_coordinates,
-            num_tiles=len(tile_coordinates),
+            coordinates=tile_coords,
             width=width,
             height=width if height is None else height,
             overlap=overlap,
             max_background=max_background,
-            tissue_threshold=tissue_mask.threshold,
-            thumbnail=thumbnail_pil,
-            thumbnail_tiles=thumbnail_tiles_pil,
+            tissue_mask=tissue_mask,
+            thumbnail=thumbnail,
+            thumbnail_tiles=thumbnail_tiles,
             thumbnail_tissue=tissue_mask.to_pil(),
         )
 
-    def read_tile(
-        self, tile: TileCoordinate, *, skip_metrics: bool = False
-    ) -> TileImage:
-        """Read tile region, detect tissue and calculate image metrics.
+    def get_spot_coordinates(
+        self, tissue_mask: TissueMask, min_area: float = 0.2, max_area: float = 2.0
+    ) -> TMASpotCoordinates:
+        """Dearray tissue microarray -spots based on a tissue mask of the spots.
+
+        Tissue mask can be obtained with `get_tissue_mask` method and by increasing the
+        sigma value removes most of the unwanted tissue fragements/artifacts. Rest
+        can be handled with `min_area` and `max_area` arguments.
 
         Args:
-            tile: Tile region defined by `TileCoordinate`.
-            skip_metrics: Skip image metrics calculation. Defaults to False.
+            tissue_mask: Tissue mask of TMA-slide.
+            min_area: Minimum contour area, defined by `median(areas) * min_area`.
+                Defaults to 0.2.
+            max_area: Maximum contour area, defined by `median(areas) * max_area`.
+                Defaults to 2.0.
 
         Returns:
-            `TileImage` instance.
+            `TMASpotCoordinates` instance.
         """
-        # Read region.
-        tile_image = self.read_region(xywh=tile.xywh, level=tile.level)
-        # Detect tissue.
-        __, tile_mask = F.detect_tissue(
-            tile_image, threshold=tile.tissue_threshold, sigma=tile.tissue_sigma
+        # Get spot info.
+        spot_info = F.dearray_tma(
+            tissue_mask.mask, min_area=min_area, max_area=max_area
         )
-        # Calculate image metrics.
-        tile_metrics = (
-            {"background": (tile_mask == 1).sum() / tile_mask.size}
-            if skip_metrics
-            else F.calculate_metrics(image=tile_image, tissue_mask=tile_mask)
+        spot_names = list(spot_info.keys())
+        # Generate thumbnails.
+        thumbnail = Image.fromarray(self.read_level(level=tissue_mask.level))
+        thumbnail_spots = F.draw_tiles(
+            image=thumbnail,
+            coordinates=list(spot_info.values()),
+            text_items=spot_names,
+            downsample=tissue_mask.level_downsample,
         )
-        return TileImage(
-            image=tile_image,
-            xywh=tile.xywh,
-            level=tile.level,
-            level_downsample=tile.level_downsample,
-            level_xywh=tile.level_xywh,
-            tissue_mask=tile_mask,
-            tissue_threshold=tile.tissue_threshold,
-            tissue_sigma=tile.tissue_sigma,
-            image_metrics=tile_metrics,
+        thumbnail_tissue = tissue_mask.to_pil()
+        # Upsample coords to get lvl zero xywh.
+        lvl_upsample = [1 / x for x in tissue_mask.level_downsample]
+        lvl_zero_coords = [F.multiply_xywh(x, lvl_upsample) for x in spot_info.values()]
+        return TMASpotCoordinates(
+            num_spots=len(spot_info),
+            coordinates=lvl_zero_coords,
+            names=spot_names,
+            tissue_threshold=tissue_mask.threshold,
+            tissue_sigma=tissue_mask.sigma,
+            thumbnail=thumbnail,
+            thumbnail_spots=thumbnail_spots,
+            thumbnail_tissue=thumbnail_tissue,
         )
 
     def save_tiles(
         self,
         parent_dir: Union[str, Path],
-        tile_coordinates: TileCoordinates,
+        coordinates: TileCoordinates,
         *,
+        level: int = 0,
+        overwrite: bool = False,
         save_paths: bool = True,
         save_metrics: bool = False,
         save_masks: bool = False,
-        overwrite: bool = False,
-        raise_exception: bool = True,
-        num_workers: int = 1,
-        format: str = "jpeg",  # noqa
+        image_format: str = "jpeg",
         quality: int = 80,
+        use_csv: bool = False,
+        num_workers: int = 1,
+        raise_exception: bool = True,
         verbose: bool = True,
-        **writer_kwargs,
-    ) -> None:
+    ) -> pl.DataFrame:
         """Save `TileCoordinates` and summary images.
 
         Args:
             parent_dir: Parent directory for output. All output is saved to
                 `parent_dir/{slide_name}/`.
-            tile_coordinates: `TileCoordinates` instance.
-            save_paths: Adds file paths to `metadata.parquet`. Defaults to True.
-            save_metrics: Save image metrics to `metadata.parquet`. Defaults to True.
-            save_masks: Save tissue masks as `png` images. Defaults to False.
+            coordinates: `TileCoordinates` instance.
+            level: Slide level for extracting XYWH-regions. Defaults to 0.
             overwrite: Overwrite everything in `parent_dir/{slide_name}/` if it exists.
                 Defaults to False.
+            save_paths: Adds file paths to metadata. Defaults to True.
+            save_metrics: Save image metrics to metadata. Defaults to True.
+            save_masks: Save tissue masks as `png` images. Defaults to False.
+            image_format: File format for `PIL` image writer. Defaults to "jpeg".
+            quality: JPEG compression quality if `format="jpeg"`. Defaults to 80.
+            use_csv: Save metadata to csv-files instead of parquet-files. Defaults to
+                False.
+            num_workers: Number of data saving workers. Defaults to 1.
             raise_exception: Whether to raise an `Exception`, or continue saving tiles
                 if there are problems with reading tile regions. Defaults to True.
-            num_workers: Number of data saving workers. Defaults to 1.
             verbose: Enables `tqdm` progress bar. Defaults to True.
-            format: File format for `PIL` image writer. Defaults to "jpeg".
-            quality: JPEG compression quality if `format="jpeg"`. Defaults to 80.
-            **writer_kwargs: Extra parameters for `PIL` image writer.
+
+        Returns:
+            Polars dataframe with metadata.
         """
-        # Prepare output paths.
-        paths = prepare_output_paths(
+        if not isinstance(coordinates, TileCoordinates):
+            raise TypeError(
+                ERROR_WRONG_TYPE.format(
+                    "coordinates", TileCoordinates, type(coordinates)
+                )
+            )
+        return self.__save_data(
             parent_dir=parent_dir,
-            slide_name=self.slide_name,
-            suffix=format,
+            coordinates=coordinates,
+            level=level,
             overwrite=overwrite,
-            overwrite_unfinished=overwrite_unfinished,
+            save_paths=save_paths,
+            save_metrics=save_metrics,
             save_masks=save_masks,
+            image_format=image_format,
+            quality=quality,
+            use_csv=use_csv,
+            num_workers=num_workers,
+            image_dir="tiles",
+            image_names=None,
+            raise_exception=raise_exception,
+            verbose=verbose,
         )
-        # Save summary images and properties.
-        tile_coordinates.thumbnail.save(paths["thumbnail"])
-        tile_coordinates.thumbnail_tiles.save(paths["thumbnail_tiles"])
-        tile_coordinates.thumbnail_tissue.save(paths["thumbnail_tissue"])
-        Properties.from_tile_coordinates(tile_coordinates).to_json(paths["properties"])
-        # Define worker initialization and tile saving function.
+
+    def save_spots(
+        self,
+        parent_dir: Union[str, Path],
+        coordinates: TMASpotCoordinates,
+        *,
+        level: int = 0,
+        overwrite: bool = False,
+        save_paths: bool = True,
+        save_metrics: bool = False,
+        save_masks: bool = False,
+        image_format: str = "jpeg",
+        quality: int = 80,
+        use_csv: bool = False,
+        num_workers: int = 1,
+        raise_exception: bool = True,
+        verbose: bool = True,
+    ) -> pl.DataFrame:
+        """Save `TileCoordinates` and summary images.
+
+        Args:
+            parent_dir: Parent directory for output. All output is saved to
+                `parent_dir/{slide_name}/`.
+            coordinates: `TMASpotCoordinates` instance.
+            level: Slide level for extracting XYWH-regions. Defaults to 0.
+            overwrite: Overwrite everything in `parent_dir/{slide_name}/` if it exists.
+                Defaults to False.
+            save_paths: Adds file paths to metadata. Defaults to True.
+            save_metrics: Save image metrics to metadata. Defaults to True.
+            save_masks: Save tissue masks as `png` images. Defaults to False.
+            image_format: File format for `PIL` image writer. Defaults to "jpeg".
+            quality: JPEG compression quality if `format="jpeg"`. Defaults to 80.
+            use_csv: Save metadata to csv-files instead of parquet-files. Defaults to
+                False.
+            num_workers: Number of data saving workers. Defaults to 1.
+            raise_exception: Whether to raise an `Exception`, or continue saving tiles
+                if there are problems with reading tile regions. Defaults to True.
+            verbose: Enables `tqdm` progress bar. Defaults to True.
+
+        Returns:
+            Polars dataframe with metadata.
+        """
+        if not isinstance(coordinates, TMASpotCoordinates):
+            raise TypeError(
+                ERROR_WRONG_TYPE.format(
+                    "coordinates", TMASpotCoordinates, type(coordinates)
+                )
+            )
+        return self.__save_data(
+            parent_dir=parent_dir,
+            coordinates=coordinates,
+            level=level,
+            overwrite=overwrite,
+            save_paths=save_paths,
+            save_metrics=save_metrics,
+            save_masks=save_masks,
+            image_format=image_format,
+            quality=quality,
+            use_csv=use_csv,
+            num_workers=num_workers,
+            image_dir="spots",
+            image_names=coordinates.names,
+            raise_exception=raise_exception,
+            verbose=verbose,
+        )
+
+    def __save_data(
+        self,
+        parent_dir: Union[str, Path],
+        coordinates: Union[TileCoordinates, TMASpotCoordinates],
+        *,
+        level: int,
+        overwrite: bool,
+        save_paths: bool,
+        save_metrics: bool,
+        save_masks: bool,
+        image_format: str,
+        quality: int,
+        use_csv: bool,
+        num_workers: int,
+        image_dir: str,
+        image_names: Optional[list[str]],
+        raise_exception: bool,
+        verbose: bool,
+    ) -> pl.DataFrame:
+        """Internal helper function to save regions from slide."""
+        # Prepare output dir and save thumbnails & property.
+        level = self._check_and_format_level(level)
+        output_dir = prepare_output_dir(parent_dir, self.slide_name, overwrite)
+        coordinates.save_thumbnails(output_dir)
+        coordinates.save_properties(output_dir, level, self.level_downsamples[level])
+        # Prepare init and worker functions.
         init_fn = functools.partial(
             worker_init, reader_class=self.__class__, path=self.path
         )
         save_fn = functools.partial(
-            worker_save_tile,
-            paths=paths,
+            worker_save_region,
+            output_dir=output_dir,
+            level=level,
+            threshold=coordinates.tissue_mask.threshold,
+            sigma=coordinates.tissue_mask.sigma,
             save_paths=save_paths,
-            save_masks=save_masks,
             save_metrics=save_metrics,
-            format=format,
+            save_masks=save_masks,
+            image_format=image_format,
             quality=quality,
+            image_dir=image_dir,
             raise_exception=raise_exception,
-            **writer_kwargs,
         )
-        # Define iterable.
-        if num_workers > 1:
-            pool = WorkerPool(n_jobs=num_workers, use_worker_state=True)
-            iterable = pool.imap(save_fn, tile_coordinates, worker_init=init_fn)
-        else:
-            iterable = (
-                save_fn(worker_state={"reader": self}, tile_coordinate=x)
-                for x in tile_coordinates
+        # Save regions and collect metadata.
+        with WorkerPool(n_jobs=num_workers, use_worker_state=True) as pool:
+            progbar = tqdm.tqdm(
+                pool.imap(save_fn, coordinates.coordinates, worker_init=init_fn),
+                desc=self.slide_name,
+                disable=not verbose,
+                total=len(coordinates),
             )
-        # Define progress bar.
-        pbar = tqdm.tqdm(
-            iterable,
-            desc=self.slide_name,
-            disable=not verbose,
-            total=len(tile_coordinates),
-        )
-        # Collect metadata.
-        metadata_dicts = []
-        num_failed = 0
-        for result in pbar:
-            if isinstance(result, Exception):
-                num_failed += 1
-                pbar.set_postfix({"failed": num_failed}, refresh=False)
-            else:
-                metadata_dicts.append(result)
-        # Close pool.
-        if num_workers > 1:
-            pool.close()
+            num_failed = 0
+            metadata_dicts = []
+            for idx, result in enumerate(progbar):
+                if isinstance(result, Exception):
+                    num_failed += 1
+                    progbar.set_postfix({"failed": num_failed}, refresh=False)
+                else:
+                    # Add spot name.
+                    if image_names is not None:
+                        result = {"name": image_names[idx], **result}
+                    metadata_dicts.append(result)
         # Save metadata.
-        pl.from_dicts(metadata_dicts).write_parquet(paths["metadata"])
+        metadata = pl.from_dicts(metadata_dicts)
+        if use_csv:
+            metadata.write_csv(output_dir / "metadata.csv")
+        else:
+            metadata.write_parquet(output_dir / "metadata.parquet")
+        return metadata
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(path={self.path})"
-
-
-def prepare_output_paths(
-    *,
-    parent_dir: Union[str, Path],
-    slide_name: str,
-    overwrite: bool,
-    save_masks: bool,
-) -> int:
-    """Prepare output paths for `save_tiles` function."""
-    if not isinstance(parent_dir, Path):
-        parent_dir = Path(parent_dir)
-    # Prepare output directory.
-    output_dir = parent_dir / slide_name
-    if output_dir.exists():
-        if output_dir.is_file():
-            raise NotADirectoryError(ERROR_OUTPUT_DIR_IS_FILE)
-        if not overwrite:
-            raise ValueError(ERROR_CANNOT_OVERWRITE)
-        shutil.rmtree(output_dir)
-    # Define paths.
-    paths = {
-        "tile_dir": output_dir / "tiles",
-        "mask_dir": output_dir / "tissue_masks",
-        "thumbnail": output_dir / "thumbnail.jpeg",
-        "thumbnail_tiles": output_dir / "thumbnail_tiles.jpeg",
-        "thumbnail_tissue": output_dir / "thumbnail_tissue.jpeg",
-        "properties": output_dir / "properties.json",
-        "metadata": output_dir / "metadata.parquet",
-    }
-    # Create output directories.
-    paths["tiles"].mkdir(parents=True, exist_ok=True)
-    if save_masks:
-        paths["masks"].mkdir(parents=True, exist_ok=True)
-    return paths
-
-
-def worker_init(worker_state, reader_class, path: Path) -> None:  # noqa
-    """Worker initialization function for `worker_save_tile`."""
-    worker_state["reader"] = reader_class(path)
-
-
-def worker_save_tile(
-    worker_state: dict,
-    tile_coordinate: TileCoordinate,
-    *,
-    paths: dict[str, Path],
-    save_paths: bool,
-    save_metrics: bool,
-    save_masks: bool,
-    raise_exception: bool,
-    format: str,  # noqa.
-    **writer_kwargs,
-) -> None:
-    """Worker function to save tile and/or tissue mask images.
-
-    Args:
-        worker_state: Worker state containing a separate reader instance.
-        tile_coordinate: TileCoodinate instance.
-        paths: All output paths.
-        save_paths: Save filapaths to metadata.
-        save_metrics: Save metrics to metadata.
-        save_masks: Save tissue masks.
-        format: Format for PIL writer and also file suffix.
-        raise_exception: Whether to raise exeption on error.
-        **writer_kwargs: Keyword arguments for `PIL` writer.
-    """
-    # Read tile.
-    tile = read_tile_safe(
-        reader=worker_state["reader"],
-        tile_coordinate=tile_coordinate,
-        save_metrics=save_metrics,
-        raise_exception=raise_exception,
-    )
-    if tile is None:
-        return None
-    # Save tile.
-    tile_path = tile.save_tile(
-        output_dir=paths["tile_dir"], suffix=format, **writer_kwargs
-    )
-    if save_masks:
-        mask_path = tile.save_mask(output_dir=paths["mask_dir"], **writer_kwargs)
-    # Define metadata.
-    tile_meta = {k: v for k, v in zip("xywh", tile.xywh)}
-    if save_paths:
-        tile_meta["tile_path"] = tile_path
-        if save_masks:
-            tile_meta["mask_path"] = mask_path
-    tile_meta.update(tile.image_metrics)
-    return tile_meta
-
-
-def read_tile_safe(
-    *,
-    reader,  # noqa
-    tile_coordinate: TileCoordinate,
-    save_metrics: bool,
-    raise_exception: bool,
-) -> Optional[TileImage]:
-    """Read tile region."""
-    try:
-        return reader.read_tile(tile_coordinate, skip_metrics=not save_metrics)
-    except KeyboardInterrupt:
-        raise KeyboardInterrupt from None
-    except Exception as e:  # noqa
-        if raise_exception:
-            raise TileReadingError from e
-        return None
-        raise KeyboardInterrupt from None
-    except Exception as e:  # noqa
-        if raise_exception:
-            raise TileReadingError from e
-        return None
-        return None
-        return None
-        return None
