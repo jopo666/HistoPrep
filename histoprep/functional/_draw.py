@@ -7,7 +7,7 @@ from matplotlib.font_manager import fontManager
 from PIL import Image, ImageDraw, ImageFont
 
 from ._check import check_image
-from ._tiles import downsample_xywh
+from ._tiles import multiply_xywh
 
 ERROR_TEXT_ITEM_LENGTH = (
     "Length of text items ({}) does not match length of coordinates ({})."
@@ -26,7 +26,7 @@ def draw_tiles(
     highlight_outline: str = "blue",
     text_items: Optional[list[str]] = None,
     text_color: str = "black",
-    text_proportion: float = 0.8,
+    text_proportion: float = 0.6,
     text_font: str = "monospace",
     alpha: float = 0.0,
 ) -> Image.Image:
@@ -60,17 +60,20 @@ def draw_tiles(
     # Check image and convert to PIL Image.
     image = Image.fromarray(check_image(image)).convert("RGB")
     # Check arguments.
-    if text_items is not None and len(text_items) != len(coordinates):
-        raise ValueError(
-            ERROR_TEXT_ITEM_LENGTH.format(len(text_items), len(coordinates))
-        )
+    if text_items is not None:
+        if len(text_items) != len(coordinates):
+            raise ValueError(
+                ERROR_TEXT_ITEM_LENGTH.format(len(text_items), len(coordinates))
+            )
+    else:
+        text_items = [None] * len(coordinates)
     # Draw tiles.
     font = None
     annotated = image.copy()
     draw = ImageDraw.Draw(annotated)
-    for idx, xywh in enumerate(coordinates):
+    for idx, (xywh, text) in enumerate(zip(coordinates, text_items)):
         # Downscale coordinates.
-        x, y, w, h = downsample_xywh(xywh, downsample)
+        x, y, w, h = multiply_xywh(xywh, downsample)
         # Draw rectangle.
         draw.rectangle(
             ((x, y), (x + w, y + h)),
@@ -78,13 +81,10 @@ def draw_tiles(
             outline=rectangle_outline,
             width=rectangle_width,
         )
-        # Draw text.
-        if text_items is not None:
+        if text is not None:
             # Define font.
             if font is None:
-                # Figure out max length.
                 max_length = max(3, max(len(str(x)) for x in text_items))
-                # Load font path.
                 font_path = fontManager.findfont(text_font)
                 # Figure width coefficient to find correct font size.
                 font_32 = ImageFont.FreeTypeFont(font_path, size=32).getbbox("W")
@@ -103,7 +103,7 @@ def draw_tiles(
             )
     # Highlight first.
     if highlight_first and len(coordinates) > 0:
-        x, y, w, h = downsample_xywh(coordinates[0], downsample)
+        x, y, w, h = multiply_xywh(coordinates[0], downsample)
         draw.rectangle(
             ((x, y), (x + w, y + h)),
             fill=rectangle_fill,
