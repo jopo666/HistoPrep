@@ -1,7 +1,4 @@
-__all__ = [
-    "get_tile_coordinates",
-    "downsample_xywh",
-]
+__all__ = ["get_tile_coordinates", "multiply_xywh"]
 
 import itertools
 from typing import Optional, Union
@@ -62,12 +59,12 @@ def get_tile_coordinates(
     return [(x, y, width, height) for y, x in itertools.product(y_coords, x_coords)]
 
 
-def downsample_xywh(
-    xywh: tuple[int, int, int, int], downsample: Union[float, tuple[float, float]]
+def multiply_xywh(
+    xywh: tuple[int, int, int, int], multiplier: Union[float, tuple[float, float]]
 ) -> tuple[int, int, int, int]:
-    """Downsample xywh-coordinates with downsample."""
-    if not isinstance(downsample, (tuple, list)):
-        downsample = (downsample, downsample)
-    w_d, h_d = downsample
+    """Multiply xywh-coordinates with multiplier(s)."""
+    if not isinstance(multiplier, (tuple, list)):
+        multiplier = (multiplier, multiplier)
+    w_m, h_m = multiplier
     x, y, w, h = xywh
-    return round(x / w_d), round(y / h_d), round(w / w_d), round(h / h_d)
+    return round(x / w_m), round(y / h_m), round(w / w_m), round(h / h_m)
