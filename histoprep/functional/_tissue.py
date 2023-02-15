@@ -77,6 +77,41 @@ def detect_tissue(
     return int(thrsh), mask
 
 
+def clean_tissue_mask(
+    tissue_mask: np.ndarray, min_area: float = 0.2, max_area: float = 2.0
+) -> np.ndarray:
+    """Remove too small/large contours from tissue mask.
+
+    Args:
+        tissue_mask: Tissue mask to be cleaned.
+        min_area: Minimum contour area, calculated by `median(contour_area) * min_area`.
+            Defaults to 0.2.
+        max_area: Maximum contour area, calculated by `median(contour_area) * max_area`.
+            Defaults to 2.0.
+
+    Returns:
+        Cleaned tissue mask.
+    """
+    # Detect contours and get their areas.
+    contours, __ = cv2.findContours(
+        tissue_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
+    )
+    areas = np.array([cv2.contourArea(cnt) for cnt in contours])
+    # Define min and max values.
+    min_area = np.median(areas) * min_area
+    max_area = np.median(areas) * max_area
+    # Initialize new mask.
+    new_mask = np.zeros_like(tissue_mask)
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        # Select only contours that fit into area range.
+        if not min_area <= area <= max_area:
+            continue
+        # Draw to the new map.
+        cv2.drawContours(new_mask, [cnt], -1, 1, -1)
+    return new_mask
+
+
 def otsu_threshold(*, gray: np.ndarray, ignore_white: bool, ignore_black: bool) -> int:
     """Helper function to calculate Otsu's thresold from a grayscale image."""
     # Collect values for Otsu's method.
