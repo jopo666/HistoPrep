@@ -408,9 +408,9 @@ def cut_slide(
 ) -> tuple[Path, Optional[Exception]]:
     try:
         reader = SlideReader(path, backend=backend)
-        tissue_mask = reader.detect_tissue(**tissue_kwargs)
+        tissue_mask = reader.get_tissue_mask(**tissue_kwargs)
         coords = reader.get_tile_coordinates(tissue_mask=tissue_mask, **tile_kwargs)
-        reader.save_tiles(tile_coordinates=coords, **save_kwargs)
+        reader.save_tiles(coordinates=coords, **save_kwargs)
     except Exception as e:  # noqa
         return path, e
     return path, None
