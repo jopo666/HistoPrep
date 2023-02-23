@@ -8,21 +8,12 @@ from PIL import Image
 
 import histoprep.functional as F
 
-
-class TileReadingError(Exception):
-    """Exception class for failures during image reading."""
-
-
-class TileSavingError(Exception):
-    """Exception class for failures during image reading."""
-
-
 ERROR_OUTPUT_DIR_IS_FILE = "Output directory exists but it is a file."
 ERROR_CANNOT_OVERWRITE = "Output directory exists, but `overwrite=False`."
 
 
 @dataclass
-class RegionData:
+class SlideRegionData:
     """Data class representing region data."""
 
     xywh: tuple[int, int, int, int]
@@ -91,8 +82,8 @@ def worker_save_region(
     save_masks: bool,
     image_format: str,
     quality: int,
-    image_dir: str,
     raise_exception: bool,
+    image_dir: str,
 ) -> Optional[dict]:
     """Worker function to read and save images and masks."""
     # Read region.
@@ -133,12 +124,12 @@ def read_region_data(
     sigma: float,
     skip_metrics: bool,
     raise_exception: bool,
-) -> Union[RegionData, Exception]:
+) -> Union[SlideRegionData, Exception]:
     """Read region image, generate mask and get image metrics safely."""
     try:
         x, y, w, h = xywh
         image = reader.read_region(xywh, level=level)
-        mask = F.detect_tissue(image, threshold=threshold, sigma=sigma)
+        __, mask = F.detect_tissue(image, threshold=threshold, sigma=sigma)
         metadata = {"x": x, "y": y, "w": w, "h": h}
         if not skip_metrics:
             metadata.update(F.calculate_metrics(image, mask))
@@ -146,15 +137,15 @@ def read_region_data(
         raise KeyboardInterrupt from None
     except Exception as catched_exception:  # noqa
         if raise_exception:
-            raise TileReadingError from catched_exception
+            raise catched_exception  # noqa
         return catched_exception
-    return RegionData(xywh=xywh, image=image, mask=mask, metadata=metadata)
+    return SlideRegionData(xywh=xywh, image=image, mask=mask, metadata=metadata)
 
 
 def save_region_data(
     *,
     output_dir: Path,
-    region_data: RegionData,
+    region_data: SlideRegionData,
     save_masks: bool,
     image_format: str,
     quality: int,
@@ -175,6 +166,6 @@ def save_region_data(
         raise KeyboardInterrupt from None
     except Exception as catched_exception:  # noqa
         if raise_exception:
-            raise TileSavingError from catched_exception
+            raise catched_exception  # noqa
         return catched_exception
     return output

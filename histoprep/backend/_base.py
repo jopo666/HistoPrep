@@ -10,21 +10,11 @@ from mpire import WorkerPool
 from PIL import Image
 
 import histoprep.functional as F
+from histoprep._errors import LevelNotFoundError
 from histoprep.data import TileCoordinates, TissueMask, TMASpotCoordinates
 
 from ._save import prepare_output_dir, worker_init, worker_save_region
 
-
-class SlideReadingError(Exception):
-    """Exception class for failures during slide reading."""
-
-
-ERROR_BACKGROUND_PERCENTAGE = "Background percentage should be between [0, 1]."
-ERROR_NO_TISSUE_MASK = (
-    "Background percentage requires that `tissue_mask` is defined. "
-    "If you wish not to filter coordinates based on background percentage, "
-    "set `max_backgroud=None`"
-)
 ERROR_WRONG_TYPE = "Expected '{}' to be of type {}, not {}."
 ERROR_TILECOORDS_EMPTY = "Could not save tiles as tile coordinates is empty."
 ERROR_OUTPUT_DIR_IS_FILE = "Output directory exists but it is a file."
@@ -37,21 +27,12 @@ class BaseReader(ABC):
 
         Args:
             path: Path to image file.
-
-        Raises:
-            FileNotFoundError: Path not found.
-            IsADirectoryError: Path is a directory.
         """
-        if not isinstance(path, Path):
-            path = Path(path)
-        if not path.exists():
-            raise FileNotFoundError
-        if path.is_dir():
-            raise IsADirectoryError
-        self.path = path
-        # Define slide name by removing extension from basename.
-        self.slide_name = path.name.rstrip(path.suffix)
+        self.path = path if isinstance(path, Path) else Path(path)
+        self.slide_name = self.path.name.rstrip(self.path.suffix)
+        self._read_slide(path=str(path))
 
+    # === Abstract methods ===
     @property
     @abstractmethod
     def backend(self) -> None:
@@ -60,7 +41,7 @@ class BaseReader(ABC):
     @property
     @abstractmethod
     def data_bounds(self) -> tuple[int, int, int, int]:
-        """XYWH-coordinates at `level=0` defining the area containing data."""
+        """xywh-coordinates at `level=0` defining the area containing data."""
 
     @property
     @abstractmethod
@@ -83,44 +64,31 @@ class BaseReader(ABC):
         """Image downsample factors (height, width) for each level."""
 
     @abstractmethod
+    def _read_slide(self, path: str) -> None:
+        pass
+
+    @abstractmethod
+    def _read_level(self, level: int) -> np.ndarray:
+        pass
+
+    @abstractmethod
+    def _read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
+        pass
+
+    # === Public methods ===
     def read_level(self, level: int) -> np.ndarray:
         """Read image from a given level to memory.
 
         Args:
             level: Image level to read.
 
+        Raises:
+            LevelNotFoundError: Invalid level argument.
+
         Returns:
             Array containing image data for the level.
         """
-
-    @abstractmethod
-    def _read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        pass
-
-    def _check_and_format_level(self, level: int) -> int:
-        """Check if a `level` exists and format it correctly."""
-        available_levels = list(self.level_dimensions.keys())
-        if level < 0:
-            if abs(level) > len(available_levels):
-                error_msg = (
-                    f"Could not find level {level} as there are "
-                    f"only {len(available_levels)} levels."
-                )
-                raise ValueError(error_msg)
-            level = available_levels[level]
-        if level not in available_levels:
-            error_msg = (
-                f"Level {level} does not exist, choose from: {available_levels}."
-            )
-            raise ValueError(error_msg)
-        return level
-
-    def __level_from_dimension(self, maximum: int) -> int:
-        """Get first level where both dimensions are leq to maximum."""
-        for level, (level_h, level_w) in self.level_dimensions.items():
-            if level_h <= maximum and level_w <= maximum:
-                return level
-        return -1
+        return self._read_level(format_level_index(level, list(self.level_dimensions)))
 
     def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
         """Read region based on xywh-coordinates.
@@ -129,47 +97,31 @@ class BaseReader(ABC):
             xywh: Coordinates for the region.
             level: Slide level to read from.
 
+        Raises:
+            LevelNotFoundError: Invalid level argument.
+
         Returns:
             Array containing image data from the region.
         """
-        # Check that level exists.
-        level = self._check_and_format_level(level)
-        slide_height, slide_width = self.level_dimensions[level]
-        # Check allowed width and height.
-        x, y, w, h = xywh
-        if y > slide_height and x > slide_width:
-            # Both out of bounds, return empty image.
-            return np.zeros((h, w), dtype=np.uint8) + 255
-        if y + h > slide_height or x + w > slide_width:
-            # Either w or h goes out of bounds, read allowed area.
-            allowed_h = max(0, min(slide_height - y, h))
-            allowed_w = max(0, min(slide_width - x, w))
-            data = self._read_region(xywh=(x, y, allowed_w, allowed_h), level=level)
-            # Pad image to requested size.
-            image = np.zeros((h, w, *data.shape[2:]), dtype=np.uint8) + 255
-            image[:allowed_h, :allowed_w] = data
-            return image
-        return self._read_region(xywh=(x, y, w, h), level=level)
+        level = format_level_index(level, list(self.level_dimensions))
+        allowed_xywh = F.allowed_xywh(xywh, self.dimensions)
+        tile = self._read_region(xywh=allowed_xywh, level=level)
+        return F.pad_tile(tile, xywh)
 
     def get_tissue_mask(
         self,
         *,
-        level: Optional[int] = None,
-        max_dimension: int = 4096,
         threshold: Optional[int] = None,
         multiplier: float = 1.05,
-        sigma: float = 0.0,
         ignore_white: bool = True,
         ignore_black: bool = True,
+        sigma: float = 0.0,
+        level: Optional[int] = None,
+        max_dimension: int = 4096,
     ) -> TissueMask:
         """Detect tissue from slide level image.
 
         Args:
-            level: Slide level to use for tissue detection. If None, attempts to select
-                level based on the `max_dimension` argument. Defaults to None.
-            max_dimension: Selects the first slide level, where both dimensions are
-                below `max_dimension`. If such level doesn not exist, selects the
-                smallest level (-1). Ignored if `level` is not None. Defaults to 4096.
             threshold: Threshold for tissue detection. If set, will detect tissue by
                 global thresholding, and otherwise Otsu's method is used to find
                 a threshold. Defaults to None.
@@ -177,20 +129,32 @@ class BaseReader(ABC):
                 minimizing the weighted within-class variance. This threshold is
                 then multiplied with `multiplier`. Ignored if `threshold` is not None.
                 Defaults to 1.0.
-            sigma: Sigma for gaussian blurring. Defaults to 0.0.
             ignore_white: Does not consider white pixels with Otsu's method. Useful
                 for slide images where large areas are artificially set to white.
                 Defaults to True.
             ignore_black: Does not consider black pixels with Otsu's method. Useful
                 for slide images where large areas are artificially set to black.
                 Defaults to True.
+            sigma: Sigma for gaussian blurring. Defaults to 0.0.
+            level: Slide level to use for tissue detection. If None, attempts to select
+                level based on the `max_dimension` argument. Defaults to None.
+            max_dimension: Selects the first slide level, where both dimensions are
+                below `max_dimension`. If such level doesn not exist, selects the
+                smallest level (-1). Ignored if `level` is not None. Defaults to 4096.
+
+        Raises:
+            LevelNotFoundError: Invalid level argument.
+            ValueError: Threshold not between 0 and 255.
+            ValueError: Multiplier is negative.
+            ValueError: Sigma is negative.
 
         Returns:
-            `TissueMask` instance.
+            `TissueMask` dataclass.
         """
+        # Check level.
         if level is None:
-            level = self.__level_from_dimension(maximum=max_dimension)
-        level = self._check_and_format_level(level)
+            level = level_from_max_dimension(max_dimension, self.level_dimensions)
+        level = format_level_index(level, list(self.level_dimensions))
         # Detect tissue.
         threshold, tissue_mask = F.detect_tissue(
             image=self.read_level(level),
@@ -225,20 +189,24 @@ class BaseReader(ABC):
             width: Width of a tile.
             height: Height of a tile. If None, will be set to `width`. Defaults to None.
             overlap: Overlap between neighbouring tiles. Defaults to 0.0.
-            max_background: Maximum amount of background in tiles. Defaults to 0.95.
+            max_background: Maximum proportion of background in tiles. Defaults to 0.95.
             out_of_bounds: Keep tiles which contain regions outside of the image.
                 Defaults to True.
 
+        Raises:
+            TypeError: Tissue mask is not a `TissueMask` dataclass instance.
+            ValueError: Height and/or width are not non-zero positive integers.
+            ValueError: Height and/or width is larger than dimensions.
+            ValueError: Overlap is not in range [0, 1).
+
         Returns:
-            `TileCoordinates` instance.
+            `TileCoordinates` dataclass.
         """
         # Check arguments.
         if not isinstance(tissue_mask, TissueMask):
             raise TypeError(
                 ERROR_WRONG_TYPE.format("tissue_mask", TissueMask, type(tissue_mask))
             )
-        if not 0 <= max_background <= 1:
-            raise ValueError(ERROR_BACKGROUND_PERCENTAGE)
         # Filter tiles based on background.
         tile_coords = []
         for xywh in F.get_tile_coordinates(
@@ -248,13 +216,8 @@ class BaseReader(ABC):
             overlap=overlap,
             out_of_bounds=out_of_bounds,
         ):
-            tile_mask = tissue_mask.read_region(
-                xywh=F.multiply_xywh(xywh, tissue_mask.level_downsample)
-            )
-            if (
-                tile_mask.size > 0
-                or (tile_mask == 0).sum() / tile_mask.size <= max_background
-            ):
+            tile_mask = tissue_mask.read_region(xywh=xywh)
+            if (tile_mask == 0).sum() / tile_mask.size <= max_background:
                 tile_coords.append(xywh)
         # Create thumbnails.
         thumbnail = Image.fromarray(self.read_level(tissue_mask.level))
@@ -265,6 +228,7 @@ class BaseReader(ABC):
             highlight_first=True,
         )
         return TileCoordinates(
+            num_tiles=len(tile_coords),
             coordinates=tile_coords,
             width=width,
             height=width if height is None else height,
@@ -310,14 +274,15 @@ class BaseReader(ABC):
         )
         thumbnail_tissue = tissue_mask.to_pil()
         # Upsample coords to get lvl zero xywh.
-        lvl_upsample = [1 / x for x in tissue_mask.level_downsample]
-        lvl_zero_coords = [F.multiply_xywh(x, lvl_upsample) for x in spot_info.values()]
+        level_upsample = [1 / x for x in tissue_mask.level_downsample]
+        level_zero_coords = [
+            F.multiply_xywh(x, level_upsample) for x in spot_info.values()
+        ]
         return TMASpotCoordinates(
             num_spots=len(spot_info),
-            coordinates=lvl_zero_coords,
+            coordinates=level_zero_coords,
             names=spot_names,
-            tissue_threshold=tissue_mask.threshold,
-            tissue_sigma=tissue_mask.sigma,
+            tissue_mask=tissue_mask,
             thumbnail=thumbnail,
             thumbnail_spots=thumbnail_spots,
             thumbnail_tissue=thumbnail_tissue,
@@ -331,7 +296,7 @@ class BaseReader(ABC):
         level: int = 0,
         overwrite: bool = False,
         save_paths: bool = True,
-        save_metrics: bool = False,
+        save_metrics: bool = True,
         save_masks: bool = False,
         image_format: str = "jpeg",
         quality: int = 80,
@@ -346,7 +311,7 @@ class BaseReader(ABC):
             parent_dir: Parent directory for output. All output is saved to
                 `parent_dir/{slide_name}/`.
             coordinates: `TileCoordinates` instance.
-            level: Slide level for extracting XYWH-regions. Defaults to 0.
+            level: Slide level for extracting xywh-regions. Defaults to 0.
             overwrite: Overwrite everything in `parent_dir/{slide_name}/` if it exists.
                 Defaults to False.
             save_paths: Adds file paths to metadata. Defaults to True.
@@ -361,9 +326,14 @@ class BaseReader(ABC):
                 if there are problems with reading tile regions. Defaults to True.
             verbose: Enables `tqdm` progress bar. Defaults to True.
 
+        Raises:
+            TypeError: coordinates is not a `TileCoordinates` dataclass instance.
+            ValueError: Invalid level argument.
+
         Returns:
             Polars dataframe with metadata.
         """
+        # Check arguments.
         if not isinstance(coordinates, TileCoordinates):
             raise TypeError(
                 ERROR_WRONG_TYPE.format(
@@ -396,7 +366,7 @@ class BaseReader(ABC):
         level: int = 0,
         overwrite: bool = False,
         save_paths: bool = True,
-        save_metrics: bool = False,
+        save_metrics: bool = True,
         save_masks: bool = False,
         image_format: str = "jpeg",
         quality: int = 80,
@@ -405,13 +375,13 @@ class BaseReader(ABC):
         raise_exception: bool = True,
         verbose: bool = True,
     ) -> pl.DataFrame:
-        """Save `TileCoordinates` and summary images.
+        """Save `TMASpotCoordinates` and summary images.
 
         Args:
             parent_dir: Parent directory for output. All output is saved to
                 `parent_dir/{slide_name}/`.
             coordinates: `TMASpotCoordinates` instance.
-            level: Slide level for extracting XYWH-regions. Defaults to 0.
+            level: Slide level for extracting xywh-regions. Defaults to 0.
             overwrite: Overwrite everything in `parent_dir/{slide_name}/` if it exists.
                 Defaults to False.
             save_paths: Adds file paths to metadata. Defaults to True.
@@ -426,9 +396,14 @@ class BaseReader(ABC):
                 if there are problems with reading tile regions. Defaults to True.
             verbose: Enables `tqdm` progress bar. Defaults to True.
 
+        Raises:
+            TypeError: coordinates is not a `TMASpotCoordinates` dataclass instance.
+            ValueError: Invalid level argument.
+
         Returns:
             Polars dataframe with metadata.
         """
+        # Check arguments.
         if not isinstance(coordinates, TMASpotCoordinates):
             raise TypeError(
                 ERROR_WRONG_TYPE.format(
@@ -474,8 +449,10 @@ class BaseReader(ABC):
     ) -> pl.DataFrame:
         """Internal helper function to save regions from slide."""
         # Prepare output dir and save thumbnails & property.
-        level = self._check_and_format_level(level)
-        output_dir = prepare_output_dir(parent_dir, self.slide_name, overwrite)
+        level = format_level_index(level, list(self.level_dimensions.keys()))
+        output_dir = prepare_output_dir(
+            parent_dir=parent_dir, slide_name=self.slide_name, overwrite=overwrite
+        )
         coordinates.save_thumbnails(output_dir)
         coordinates.save_properties(output_dir, level, self.level_downsamples[level])
         # Prepare init and worker functions.
@@ -493,30 +470,41 @@ class BaseReader(ABC):
             save_masks=save_masks,
             image_format=image_format,
             quality=quality,
-            image_dir=image_dir,
             raise_exception=raise_exception,
+            image_dir=image_dir,
         )
-        # Save regions and collect metadata.
-        with WorkerPool(n_jobs=num_workers, use_worker_state=True) as pool:
-            progbar = tqdm.tqdm(
-                pool.imap(save_fn, coordinates.coordinates, worker_init=init_fn),
-                desc=self.slide_name,
-                disable=not verbose,
-                total=len(coordinates),
+        # Define tile saving iterable.
+        if num_workers > 1:
+            pool = WorkerPool(n_jobs=num_workers, use_worker_state=True)
+            iterable = pool.imap(
+                func=save_fn,
+                iterable_of_args=((x,) for x in coordinates.coordinates),
+                iterable_len=len(coordinates),
+                worker_init=init_fn,
             )
-            num_failed = 0
-            metadata_dicts = []
-            for idx, result in enumerate(progbar):
-                if isinstance(result, Exception):
-                    num_failed += 1
-                    progbar.set_postfix({"failed": num_failed}, refresh=False)
-                else:
-                    # Add spot name.
-                    if image_names is not None:
-                        result = {"name": image_names[idx], **result}
-                    metadata_dicts.append(result)
+        else:
+            pool = None
+            iterable = (save_fn({"reader": self}, x) for x in coordinates.coordinates)
+        # Save tiles.
+        progbar = tqdm.tqdm(
+            iterable, desc=self.slide_name, disable=not verbose, total=len(coordinates)
+        )
+        num_failed = 0
+        metadata_dicts = []
+        for idx, result in enumerate(progbar):
+            if isinstance(result, Exception):
+                num_failed += 1
+                progbar.set_postfix({"failed": num_failed}, refresh=False)
+            else:
+                # Add spot name.
+                if image_names is not None:
+                    result = {"name": image_names[idx], **result}  # noqa
+                metadata_dicts.append(result)
+        # Close pool.
+        if pool is not None:
+            pool.terminate()
         # Save metadata.
-        metadata = pl.from_dicts(metadata_dicts)
+        metadata = pl.from_dicts(metadata_dicts if len(metadata_dicts) > 0 else [{}])
         if use_csv:
             metadata.write_csv(output_dir / "metadata.csv")
         else:
@@ -525,3 +513,24 @@ class BaseReader(ABC):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(path={self.path})"
+
+
+def format_level_index(index: int, available: list[int]) -> int:
+    """Check if a `index` exists in `available` and format it correctly."""
+    if index < 0:
+        if abs(index) > len(available):
+            raise LevelNotFoundError(index, available)
+        return available[index]
+    if index in available:
+        return index
+    raise LevelNotFoundError(index, available)
+
+
+def level_from_max_dimension(
+    maximum: int, level_dimensions: dict[tuple[float, float]]
+) -> int:
+    """Find level where both dimensions are leq to maximum or the smallest level."""
+    for level, (level_h, level_w) in level_dimensions.items():
+        if level_h <= maximum and level_w <= maximum:
+            return level
+    return -1

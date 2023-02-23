@@ -12,7 +12,7 @@ ERROR_AUTOMATIC_FAILED = "Could not automatically assing reader for path: {}"
 def SlideReader(  # noqa: N802
     path: Union[str, Path],
     backend: Optional[Union[CziReader, OpenSlideReader, PillowReader]] = None,
-) -> Union[PillowReader, OpenSlideReader, CziReader]:
+) -> Union[CziReader, OpenSlideReader, PillowReader]:
     """Reader for histological slides.
 
     Args:

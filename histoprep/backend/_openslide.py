@@ -3,10 +3,10 @@ __all__ = ["OpenSlideReader"]
 import numpy as np
 
 from ._base import BaseReader
-from ._exceptions import SlideReadingError
 
 ERROR_OPENSLIDE_IMPORT = (
-    "Make sure you have OpenSlide installed (https://openslide.org/api/python/)."
+    "Could not import `openslide-python`, make sure `OpenSlide` is installed "
+    "(https://openslide.org/api/python/)."
 )
 OPENSLIDE_READABLE = (
     "svs",
@@ -35,23 +35,6 @@ class OpenSlideReader(BaseReader):
             path: Path to the slide image.
         """
         super().__init__(path)
-        # Read slide with OpenSlide.
-        try:
-            self.__reader = openslide.OpenSlide(path)
-        except openslide.OpenSlideError as e:
-            raise SlideReadingError from e
-        # Openslide has WH dimensions.
-        self.__level_dimensions = {
-            level: (h, w) for level, (w, h) in enumerate(self.__reader.level_dimensions)
-        }
-        # Calculate actual downsamples.
-        self.__level_downsamples = {}
-        slide_height, slide_width = self.dimensions
-        for level, (level_h, level_w) in self.__level_dimensions.items():
-            self.__level_downsamples[level] = (
-                slide_height / level_h,
-                slide_width / level_w,
-            )
 
     @property
     def backend(self) -> openslide.OpenSlide:
@@ -83,8 +66,22 @@ class OpenSlideReader(BaseReader):
     def level_downsamples(self) -> dict[int, tuple[int, int]]:
         return self.__level_downsamples
 
-    def read_level(self, level: int) -> np.ndarray:
-        level = self._check_and_format_level(level)
+    def _read_slide(self, path: str) -> None:
+        self.__reader = openslide.OpenSlide(path)
+        # Openslide has W, H dimensions.
+        self.__level_dimensions = {
+            level: (h, w) for level, (w, h) in enumerate(self.__reader.level_dimensions)
+        }
+        # Calculate actual downsamples and not the estimates...
+        self.__level_downsamples = {}
+        slide_height, slide_width = self.dimensions
+        for level, (level_h, level_w) in self.__level_dimensions.items():
+            self.__level_downsamples[level] = (
+                slide_height / level_h,
+                slide_width / level_w,
+            )
+
+    def _read_level(self, level: int) -> np.ndarray:
         level_h, level_w = self.level_dimensions[level]
         return np.array(self.__reader.get_thumbnail(size=(level_w, level_h)))
 

@@ -1,14 +1,14 @@
 __all__ = ["PillowReader"]
 
 import numpy as np
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 
 from histoprep.functional import multiply_xywh
 
 from ._base import BaseReader
-from ._exceptions import SlideReadingError
 
-MAX_DOWNSAMPLE = 256
+MIN_LEVEL_DIMENSION = 512
+Image.MAX_IMAGE_PIXELS = 15_000 * 15_000
 
 
 class PillowReader(BaseReader):
@@ -19,23 +19,6 @@ class PillowReader(BaseReader):
             path: Path to the slide image.
         """
         super().__init__(path)
-        # Read full image and add downsample/dimensions.
-        try:
-            self.__pyramid = {0: Image.open(path)}
-        except UnidentifiedImageError as e:
-            raise SlideReadingError from e
-        # Generate downsamples.
-        width, height = self.__pyramid[0].size
-        self.__level_dimensions = {0: (height, width)}
-        self.__level_downsamples = {0: (1.0, 1.0)}
-        level = 1
-        while max(width, height) // 2**level >= MAX_DOWNSAMPLE:
-            self.__level_dimensions[level] = (height // 2**level, width // 2**level)
-            self.__level_downsamples[level] = (
-                height / self.__level_dimensions[level][0],
-                width / self.__level_dimensions[level][1],
-            )
-            level += 1
 
     @property
     def backend(self) -> Image.Image:
@@ -55,7 +38,7 @@ class PillowReader(BaseReader):
     @property
     def level_count(self) -> int:
         """Number of slide levels."""
-        return len(self.__pyramid)
+        return len(self.level_dimensions)
 
     @property
     def level_dimensions(self) -> dict[int, tuple[int, int]]:
@@ -65,18 +48,37 @@ class PillowReader(BaseReader):
     def level_downsamples(self) -> dict[int, tuple[float, float]]:
         return self.__level_downsamples
 
-    def read_level(self, level: int) -> np.ndarray:
+    def _read_slide(self, path: str) -> None:
+        """Read full image and generate downsamples."""
+        self.__pyramid = {0: Image.open(path)}
+        self.__level_dimensions = {}
+        self.__level_downsamples = {}
+        level = 0
+        slide_width, slide_height = self.__pyramid[0].size
+        while (
+            level == 0
+            or max(slide_width, slide_height) // 2**level >= MIN_LEVEL_DIMENSION
+        ):
+            self.__level_dimensions[level] = (
+                slide_height // 2**level,
+                slide_width // 2**level,
+            )
+            self.__level_downsamples[level] = (
+                slide_height / self.__level_dimensions[level][0],
+                slide_width / self.__level_dimensions[level][1],
+            )
+            level += 1
+
+    def _read_level(self, level: int) -> np.ndarray:
         self.__lazy_load(level)
         return np.array(self.__pyramid[level])
 
     def _read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
         self.__lazy_load(level)
-        # Everything has to be downsampled for the level.
         x, y, w, h = multiply_xywh(xywh, self.level_downsamples[level])
         return np.array(self.__pyramid[level].crop((x, y, x + w, y + h)))
 
     def __lazy_load(self, level: int) -> None:
-        """Helper method to load level if it does not exist."""
         if level not in self.__pyramid:
             height, width = self.level_dimensions[level]
             self.__pyramid[level] = self.__pyramid[0].resize(
