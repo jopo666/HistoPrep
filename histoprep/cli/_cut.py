@@ -9,7 +9,7 @@ import rich_click as click
 from histoprep import SlideReader
 from histoprep.backend import CziReader, OpenSlideReader, PillowReader
 
-from ._verbose import error, info, warning
+from ._utils import error, info, warning
 
 SlideReaderBackend = Union[CziReader, OpenSlideReader, PillowReader]
 LOGO = """
@@ -22,6 +22,7 @@ LOGO = """
                         by jopo666 (2023)
 """
 NAME_TO_BACKEND = {
+    "NONE": None,
     "CZI": CziReader,
     "OPENSLIDE": OpenSlideReader,
     "PILLOW": PillowReader,
@@ -42,7 +43,7 @@ TILE_OPTIONS = [
     "--width",
     "--height",
     "--overlap",
-    "--background",
+    "--max-background",
     "--out-of-bounds",
 ]
 SAVE_OPTIONS = [
@@ -74,16 +75,28 @@ click.rich_click.OPTION_GROUPS = {
 }
 
 
-@click.command("hi")
+def glob_pattern(*args) -> list[Path]:
+    pattern = args[-1]
+    output = [
+        z for z in (Path(x) for x in glob.glob(pattern, recursive=True)) if z.is_file()
+    ]
+    if len(output) == 0:
+        error(f"Found no files matching pattern '{pattern}'.")
+    info(f"Found {len(output)} files matching pattern '{pattern}'.")
+    return output
+
+
+@click.command()
 # Required.
 @click.option(  # input
     "-i",
     "--input",
-    "pattern",
+    "paths",
+    callback=glob_pattern,
     metavar="PATTERN",
     required=True,
     type=click.STRING,
-    help="Input file pattern to glob.",
+    help="File pattern to glob.",
 )
 @click.option(  # output
     "-o",
@@ -91,6 +104,7 @@ click.rich_click.OPTION_GROUPS = {
     "parent_dir",
     metavar="DIRECTORY",
     required=True,
+    callback=lambda *args: Path(args[-1]),
     type=click.Path(file_okay=False),
     help="Parent directory for all outputs.",
 )
@@ -139,7 +153,7 @@ click.rich_click.OPTION_GROUPS = {
 )
 @click.option(  # background
     "-m",
-    "--background",
+    "--max-background",
     metavar="FLOAT",
     type=click.FloatRange(min=0, max=1, min_open=True, max_open=True),
     default=0.75,
@@ -194,7 +208,7 @@ click.rich_click.OPTION_GROUPS = {
 )
 @click.option(  # format
     "--format",
-    "file_format",
+    "image_format",
     type=click.STRING,
     default="jpeg",
     show_default=True,
@@ -206,7 +220,15 @@ click.rich_click.OPTION_GROUPS = {
     type=click.IntRange(min=0, max=100),
     default=80,
     show_default=True,
-    help="Quality for JPEG-compression.",
+    help="Quality for jpeg-compression.",
+)
+@click.option(  # overwrite_unfinished
+    "-c",
+    "--use_csv",
+    type=click.BOOL,
+    default=False,
+    show_default=True,
+    help="Write metadata to csv-files instead of parquet files.",
 )
 @click.option(  # num_workers
     "-j",
@@ -275,7 +297,7 @@ click.rich_click.OPTION_GROUPS = {
     help="Sigma for gaussian blurring during tissue detection.",
 )
 def cut_slides(
-    pattern: str,
+    paths: list[Union[str, Path]],
     parent_dir: Union[str, Path],
     *,
     backend: Optional[str] = None,
@@ -285,8 +307,8 @@ def cut_slides(
     ignore_white: bool = True,
     ignore_black: bool = True,
     tissue_level: Optional[int] = None,
-    max_dimension: int = 8192,
     sigma: float = 1.0,
+    max_dimension: int = 8192,
     # Tile extraction.
     level: int = 0,
     width: int = 640,
@@ -300,26 +322,25 @@ def cut_slides(
     save_masks: bool = True,
     overwrite: bool = False,
     overwrite_unfinished: bool = False,
-    file_format: str = "jpeg",
+    image_format: str = "jpeg",
     quality: int = 80,
+    use_csv: bool = False,
     num_workers: Optional[int] = None,
 ) -> None:
-    """Extract tile images from histological slide images."""
-    # Glob slide paths.
-    all_paths = glob_pattern(pattern=pattern)
+    """CLI interface to extract tile images from slides."""
     # Filter slide paths.
     paths = filter_slide_paths(
-        all_paths=all_paths,
+        all_paths=[x if isinstance(x, Path) else Path(x) for x in paths],
         parent_dir=parent_dir,
         overwrite=overwrite,
         overwrite_unfinished=overwrite_unfinished,
     )
     # Define kwargs.
-    if backend.upper() not in NAME_TO_BACKEND:
+    if str(backend).upper() not in NAME_TO_BACKEND:
         error(f"Backend {backend} not recognised, choose from: {list(NAME_TO_BACKEND)}")
     # Define cut_slide kwargs.
     cut_slide_kwargs = {
-        "backend": NAME_TO_BACKEND[backend.upper()],
+        "backend": NAME_TO_BACKEND[str(backend).upper()],
         "tissue_kwargs": {
             "level": tissue_level,
             "max_dimension": max_dimension,
@@ -333,27 +354,28 @@ def cut_slides(
             "width": width,
             "height": height,
             "overlap": overlap,
-            "level": level,
             "out_of_bounds": out_of_bounds,
             "max_background": max_background,
         },
         "save_kwargs": {
             "parent_dir": parent_dir,
+            "level": level,
             "save_paths": save_paths,
             "save_metrics": save_metrics,
             "save_masks": save_masks,
-            "num_workers": num_workers,
-            "format": file_format,
+            "image_format": image_format,
             "quality": quality,
+            "use_csv": use_csv,
             "raise_exception": False,  # handled here.
-            "overwrite": True,  # filtered before.
-            "verbose": False,  # common bar.
+            "num_workers": 0,  # slide-per-process.
+            "overwrite": True,  # filtered earlier.
+            "verbose": False,  # common progressbar.
         },
     }
     # Process.
     with mpire.WorkerPool(n_jobs=num_workers) as pool:
         for path, exception in pool.imap(
-            func=functools.partial(cut_slide, cut_slide_kwargs),
+            func=functools.partial(cut_slide, **cut_slide_kwargs),
             iterable_of_args=paths,
             progress_bar=True,
             progress_bar_options={"desc": "Cutting slides"},
@@ -362,24 +384,18 @@ def cut_slides(
                 error(f"Could not process {path} due to exception: {exception}")
 
 
-def glob_pattern(*, pattern: str) -> list[Path]:
-    output = [z for z in (Path(x) for x in glob.glob(pattern)) if z.is_file()]
-    if len(output) == 0:
-        error(f"Found no files matching pattern '{pattern}'.")
-    info(f"Found {len(output)} files matching pattern '{pattern}'.")
-    return output
-
-
 def filter_slide_paths(
     *,
     all_paths: list[Path],
-    parent_dir: str,
+    parent_dir: Path,
     overwrite: bool,
     overwrite_unfinished: bool,
 ) -> list[Path]:
     # Get processed and unprocessed slides.
     output, processed, interrupted = ([], [], [])
     for path in all_paths:
+        if not path.is_file():
+            continue
         output_dir = parent_dir / path.name.rstrip(path.suffix)
         if output_dir.exists():
             if (output_dir / "metadata.parquet").exists():
@@ -390,11 +406,17 @@ def filter_slide_paths(
             output.append(path)
     # Add processed/unfinished to output.
     if overwrite:
-        warning(f"Overwriting {len(processed + interrupted)} slide outputs.")
-        return output + processed + overwrite_unfinished
-    if overwrite_unfinished:
-        warning(f"Overwriting {len(processed + interrupted)} unfinished slide outputs.")
-        return output + interrupted
+        output += processed + interrupted
+        if len(processed + interrupted) > 0:
+            warning(f"Overwriting {len(interrupted)} slide outputs.")
+    elif overwrite_unfinished:
+        output += interrupted
+        if len(interrupted) > 0:
+            warning(f"Overwriting {len(interrupted)} unfinished slide outputs.")
+    # Verbose.
+    if len(output) == 0:
+        error("No slides to process.")
+    info(f"Processing {len(output)} slides.")
     return output
 
 
