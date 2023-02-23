@@ -9,6 +9,7 @@ from PIL import Image
 from ._check import check_image
 
 ERROR_QUANTILES = "Quantiles should be between (0, 1)."
+
 DEFAULT_QUANTILES = (0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95)
 DEFAULT_SHAPE = (64, 64)
 GRAYSCALE_NDIM = 2
@@ -41,15 +42,15 @@ def calculate_metrics(
             (0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95).
         shape: Resize shape for faster channel metric calculation. Defaults to (64, 64).
 
+    Raises:
+        ValueError: Quantiles are not between (0, 1).
+
     Returns:
-        dictionary with image metrics.
+        Dictionary of image metrics.
     """
-    # Check image and convert to array.
     image = check_image(image)
-    # Check arguments.
     if not all(MIN_QUANTILE < x < MAX_QUANTILE for x in quantiles):
         raise ValueError(ERROR_QUANTILES)
-    # Initialize metrics.
     metrics = {}
     # Generate images for metric calculation
     if image.ndim > GRAYSCALE_NDIM:
@@ -57,11 +58,9 @@ def calculate_metrics(
         hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     else:
         gray = image
-    # Background percentage.
-    metrics["background"] = ((1 - tissue_mask).sum() / tissue_mask.size).round(3)
-    # Data loss.
+    # Calculate metrics.
+    metrics["background"] = ((tissue_mask == 0).sum() / tissue_mask.size).round(3)
     metrics.update(get_data_loss(gray))
-    # Laplacian std for sharpness.
     metrics.update(get_laplacian_std(gray))
     # Resize images for quicker channel metrics.
     tissue_mask = cv2.resize(tissue_mask, shape, interpolation=cv2.INTER_NEAREST)

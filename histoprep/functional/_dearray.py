@@ -13,7 +13,7 @@ from ._tissue import clean_tissue_mask
 def dearray_tma(
     tissue_mask: np.ndarray, min_area: float = 0.2, max_area: float = 2.0
 ) -> dict[str, tuple[int, int, int, int]]:
-    """Dearray tissue microarray -spots based on a tissue mask of the spots.
+    """Dearray tissue microarray spots based on a tissue mask of the spots.
 
     Tissue mask can be obtained with `F.detect_tissue` or `SlideReader.detect_tissue()`
     functions and by increasing the sigma value removes most of the unwanted tissue
@@ -27,7 +27,7 @@ def dearray_tma(
             Defaults to 2.0.
 
     Returns:
-        `TMASpots` instance.
+        Dictionary of spot xywh-coordinates.
     """
     # Clean tissue mask.
     spot_mask = clean_tissue_mask(
@@ -36,14 +36,14 @@ def dearray_tma(
     # Detect contours and get their bboxes and centroids.
     bboxes, centroids = contour_bboxes_and_centroids(spot_mask)
     # Detect possible rotation of the image based on centroids.
-    centroids = rotate_coordinates(centroids, detect_rotation(centroids))
+    centroids = _rotate_coordinates(centroids, _detect_rotation(centroids))
     # Detect optimal number of rows and columns and cluster each spot.
     num_cols = optimal_cluster_size(centroids[:, 0].reshape(-1, 1))
     num_rows = optimal_cluster_size(centroids[:, 1].reshape(-1, 1))
-    col_labels = hierachial_clustering(
+    col_labels = _hierachial_clustering(
         centroids[:, 0].reshape(-1, 1), n_clusters=num_cols
     )
-    row_labels = hierachial_clustering(
+    row_labels = _hierachial_clustering(
         centroids[:, 1].reshape(-1, 1), n_clusters=num_rows
     )
     # Change label numbers to correct order (starting from top-left).
@@ -101,7 +101,7 @@ def contour_bboxes_and_centroids(mask: np.ndarray) -> tuple[np.ndarray, np.ndarr
     return np.array(bboxes), np.array(centroids)
 
 
-def detect_rotation(centroids: np.ndarray) -> float:
+def _detect_rotation(centroids: np.ndarray) -> float:
     """Detect rotation from centroid coordinates and return angle in radians."""
     # Calculate angle between each centroid.
     n = len(centroids)
@@ -123,7 +123,7 @@ def detect_rotation(centroids: np.ndarray) -> float:
     return np.radians(theta)
 
 
-def rotate_coordinates(coords: np.ndarray, theta: float) -> np.ndarray:
+def _rotate_coordinates(coords: np.ndarray, theta: float) -> np.ndarray:
     """Rotate coordinates with given theta."""
     c, s = np.cos(theta), np.sin(theta)
     r_matrix = np.array(((c, -s), (s, c)))
@@ -133,15 +133,15 @@ def rotate_coordinates(coords: np.ndarray, theta: float) -> np.ndarray:
 def optimal_cluster_size(data: np.ndarray) -> int:
     """Find optimal cluster size for dataset X."""
     sil = []
-    if data.shape[0] <= 2:
+    if data.shape[0] <= 2:  # noqa
         return 1
     for n in range(2, data.shape[0]):
-        labels = hierachial_clustering(data=data, n_clusters=n)
+        labels = _hierachial_clustering(data=data, n_clusters=n)
         sil.append(silhouette_score(data, labels))
     return np.argmax(sil) + 2
 
 
-def hierachial_clustering(data: np.ndarray, n_clusters: int) -> np.ndarray:
+def _hierachial_clustering(data: np.ndarray, n_clusters: int) -> np.ndarray:
     """Perform hierarchian clustering and get labels."""
     if n_clusters == 1:
         return np.zeros(data.shape[0], dtype=np.int32)

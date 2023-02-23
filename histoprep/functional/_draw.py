@@ -26,7 +26,7 @@ def draw_tiles(
     highlight_outline: str = "blue",
     text_items: Optional[list[str]] = None,
     text_color: str = "black",
-    text_proportion: float = 0.6,
+    text_proportion: float = 0.75,
     text_font: str = "monospace",
     alpha: float = 0.0,
 ) -> Image.Image:
@@ -48,11 +48,14 @@ def draw_tiles(
         text_offset: Offset pixels from the lower left corner. Defaults to 5.
         text_color: Text color. Defaults to "black".
         text_proportion: Proportion of space the text takes in each tile.
-            Defaults to 0.5.
+            Defaults to 0.75.
         text_font: Passed to matplotlib's `fontManager.find_font` function. Defaults to
             "monospace".
         alpha: Alpha value for blending the original image and drawn image.
             Defaults to 0.0.
+
+    Raises:
+        ValueError: Text item length does not match length of coordinates.
 
     Returns:
         Annotated image.
