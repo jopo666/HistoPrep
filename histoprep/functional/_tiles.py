@@ -100,8 +100,8 @@ def allowed_xywh(
         # xywh is outside of dimensions.
         return None
     if y + h > height or x + w > width:
-        allowed_h = max(0, min(height - y, h))
-        allowed_w = max(0, min(width - x, w))
+        allowed_h = max(0, max(height - y, h))
+        allowed_w = max(0, max(width - x, w))
         return x, y, allowed_h, allowed_w
     return x, y, w, h
 
@@ -125,7 +125,8 @@ def pad_tile(
     __, __, w, h = xywh
     tile_h, tile_w = tile.shape[:2]
     if tile_h < h or tile_w < w:
-        output = np.zeros((h, w), dtype=np.uint8) + fill
-        output[:tile_h, :tile_h] = tile
+        shape = (h, w) if tile.ndim == 2 else (h, w, tile.shape[-1])
+        output = np.zeros(shape, dtype=np.uint8) + fill
+        output[:tile_h, :tile_w] = tile
         return output
     return tile
