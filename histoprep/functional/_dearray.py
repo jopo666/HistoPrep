@@ -7,32 +7,17 @@ import numpy as np
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 
-from ._tissue import clean_tissue_mask
 
-
-def dearray_tma(
-    tissue_mask: np.ndarray, min_area: float = 0.2, max_area: float = 2.0
-) -> dict[str, tuple[int, int, int, int]]:
+def dearray_tma(spot_mask: np.ndarray) -> dict[str, tuple[int, int, int, int]]:
     """Dearray tissue microarray spots based on a tissue mask of the spots.
 
-    Tissue mask can be obtained with `F.detect_tissue` or `SlideReader.detect_tissue()`
-    functions and by increasing the sigma value removes most of the unwanted tissue
-    fragements/artifacts. Rest can be handled with `min_area` and `max_area` arguments.
-
     Args:
-        tissue_mask: Tissue mask of TMA-slide.
-        min_area: Minimum contour area, defined by `median(contour_areas) * min_area`.
-            Defaults to 0.2.
-        max_area: Maximum contour area, defined by `median(contour_areas) * max_area`.
-            Defaults to 2.0.
+        spot_mask: Tissue mask of TMA-slide, should only contain TMA spots an no
+            artifacts (see `F.clean_tissue_mask`).
 
     Returns:
         Dictionary of spot xywh-coordinates.
     """
-    # Clean tissue mask.
-    spot_mask = clean_tissue_mask(
-        tissue_mask=tissue_mask, min_area=min_area, max_area=max_area
-    )
     # Detect contours and get their bboxes and centroids.
     bboxes, centroids = contour_bboxes_and_centroids(spot_mask)
     # Detect possible rotation of the image based on centroids.
@@ -83,6 +68,8 @@ def contour_bboxes_and_centroids(mask: np.ndarray) -> tuple[np.ndarray, np.ndarr
     contours, hierarchy = cv2.findContours(
         mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
     )
+    if len(contours) is None:
+        return np.array([]), np.array([])
     bboxes, centroids = [], []
     for cnt, is_parent in zip(contours, hierarchy[0][:, -1] == -1):
         # Skip non-parents and contours without area.

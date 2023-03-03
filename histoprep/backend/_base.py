@@ -246,30 +246,41 @@ class BaseReader(ABC):
         )
 
     def get_spot_coordinates(
-        self, tissue_mask: TissueMask, min_area: float = 0.2, max_area: float = 2.0
+        self,
+        tissue_mask: TissueMask,
+        *,
+        min_area_pixel: int = 10,
+        max_area_pixel: Optional[int] = None,
+        min_area_relative: float = 0.2,
+        max_area_relative: Optional[float] = 2.0,
     ) -> TMASpotCoordinates:
-        """Dearray tissue microarray -spots based on a tissue mask of the spots.
-
-        Tissue mask can be obtained with `get_tissue_mask` method and by increasing the
-        sigma value removes most of the unwanted tissue fragements/artifacts. Rest
-        can be handled with `min_area` and `max_area` arguments.
+        """Detect tissue microarray spots.
 
         Args:
-            tissue_mask: Tissue mask of TMA-slide.
-            min_area: Minimum contour area, defined by `median(areas) * min_area`.
-                Defaults to 0.2.
-            max_area: Maximum contour area, defined by `median(areas) * max_area`.
-                Defaults to 2.0.
+            tissue_mask: Tissue mask of the slide. It's recommended to increase `sigma`
+                value when detecting tissue to remove non-TMA spots from the mask. Rest
+                of the areas can be handled with the following arguments.
+            min_area_pixel: Minimum pixel area for contours. Defaults to 10.
+            max_area_pixel: Maximum pixel area for contours. Defaults to None.
+            min_area_relative: Relative minimum contour area, calculated from the median
+                contour area after filtering contours with `[min,max]_pixel` arguments
+                (`min_area_relative * median(contour_areas)`). Defaults to 0.2.
+            max_area_relative: Relative maximum contour area, calculated from the median
+                contour area after filtering contours with `[min,max]_pixel` arguments
+                (`max_area_relative * median(contour_areas)`). Defaults to 2.0.
 
         Returns:
             `TMASpotCoordinates` instance.
         """
-        # Get spot info.
-        spot_info = F.dearray_tma(
-            tissue_mask.mask, min_area=min_area, max_area=max_area
+        spot_mask = F.clean_tissue_mask(
+            tissue_mask=tissue_mask.mask,
+            min_area_pixel=min_area_pixel,
+            max_area_pixel=max_area_pixel,
+            min_area_relative=min_area_relative,
+            max_area_relative=max_area_relative,
         )
+        spot_info = F.dearray_tma(spot_mask)
         spot_names = list(spot_info.keys())
-        # Generate thumbnails.
         thumbnail = Image.fromarray(self.read_level(level=tissue_mask.level))
         thumbnail_spots = F.draw_tiles(
             image=thumbnail,
