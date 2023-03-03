@@ -47,11 +47,14 @@ class TissueMask:
         """
         # Downsample xywh.
         xywh = multiply_xywh(xywh, self.level_downsample)
-        # Read allowed region.
+        # Read allowed region and pad.
+        output_w, output_h = xywh[2:]
+        
         x, y, w, h = allowed_xywh(xywh, self.mask.shape[:2])
-        tile_mask = self.mask[y : y + h, x : x + w]
-        # Pad and reshape.
-        tile_mask = pad_tile(tile_mask, xywh=xywh, fill=0)
+        tile_mask = pad_tile(
+            tile=self.mask[y : y + h, x : x + w], shape=(output_h, output_w), fill=0
+        )
+        # Reshape.
         if shape is not None:
             return cv2.resize(tile_mask, dsize=shape, interpolation=cv2.INTER_NEAREST)
         return tile_mask
