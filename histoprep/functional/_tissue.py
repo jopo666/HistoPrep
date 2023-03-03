@@ -1,4 +1,4 @@
-__all__ = ["detect_tissue"]
+__all__ = ["get_tissue_mask", "clean_tissue_mask"]
 
 
 from typing import Optional, Union
@@ -20,7 +20,7 @@ SIGMA_NO_OP = 0.0
 GRAY_NDIM = 2
 
 
-def detect_tissue(
+def get_tissue_mask(
     image: Union[Image.Image, np.ndarray],
     *,
     threshold: Optional[int] = None,
@@ -81,37 +81,45 @@ def detect_tissue(
 
 
 def clean_tissue_mask(
-    tissue_mask: np.ndarray, min_area: float = 0.2, max_area: float = 2.0
+    tissue_mask: np.ndarray,
+    min_area_pixel: int = 10,
+    max_area_pixel: Optional[int] = None,
+    min_area_relative: float = 0.2,
+    max_area_relative: Optional[float] = 2.0,
 ) -> np.ndarray:
     """Remove too small/large contours from tissue mask.
 
     Args:
         tissue_mask: Tissue mask to be cleaned.
-        min_area: Minimum contour area, calculated by `median(contour_area) * min_area`.
-            Defaults to 0.2.
-        max_area: Maximum contour area, calculated by `median(contour_area) * max_area`.
-            Defaults to 2.0.
+        min_area_pixel: Minimum pixel area for contours. Defaults to 10.
+        max_area_pixel: Maximum pixel area for contours. Defaults to None.
+        min_area_relative: Relative minimum contour area, calculated from the median
+            contour area after filtering contours with `[min,max]_pixel` arguments
+            (`min_area_relative * median(contour_areas)`). Defaults to 0.2.
+        max_area_relative: Relative maximum contour area, calculated from the median
+            contour area after filtering contours with `[min,max]_pixel` arguments
+            (`max_area_relative * median(contour_areas)`). Defaults to 2.0.
 
     Returns:
-        Cleaned tissue mask.
+        Tissue mask with too small/large contours removed.
     """
-    # Detect contours and get their areas.
     contours, __ = cv2.findContours(
         tissue_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
     )
-    areas = np.array([cv2.contourArea(cnt) for cnt in contours])
-    # Define min and max values.
-    min_area = np.median(areas) * min_area
-    max_area = np.median(areas) * max_area
-    # Initialize new mask.
+    contour_areas = np.array([cv2.contourArea(cnt) for cnt in contours])
+    # Filter based on pixel values.
+    selection = contour_areas >= min_area_pixel
+    if max_area_pixel is not None:
+        selection = selection & (contour_areas <= max_area_pixel)
+    # Define relative min/max values.
+    area_median = np.median(contour_areas[selection])
+    area_min = area_median * min_area_relative
+    area_max = None if max_area_relative is None else area_median * max_area_relative
+    # Draw new mask.
     new_mask = np.zeros_like(tissue_mask)
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        # Select only contours that fit into area range.
-        if not min_area <= area <= max_area:
-            continue
-        # Draw to the new map.
-        cv2.drawContours(new_mask, [cnt], -1, 1, -1)
+    for select, area, cnt in zip(selection, contour_areas, contours):
+        if select and area >= area_min and (area_max is None or area <= area_max):
+            cv2.drawContours(new_mask, [cnt], -1, 1, -1)
     return new_mask
 
 

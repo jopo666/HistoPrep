@@ -129,7 +129,7 @@ def read_region_data(
     try:
         x, y, w, h = xywh
         image = reader.read_region(xywh, level=level)
-        __, mask = F.detect_tissue(image, threshold=threshold, sigma=sigma)
+        __, mask = F.get_tissue_mask(image, threshold=threshold, sigma=sigma)
         metadata = {"x": x, "y": y, "w": w, "h": h}
         if not skip_metrics:
             metadata.update(F.calculate_metrics(image, mask))

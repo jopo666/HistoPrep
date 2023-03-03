@@ -161,7 +161,7 @@ class BaseReader(ABC):
             level = level_from_max_dimension(max_dimension, self.level_dimensions)
         level = format_level_index(level, list(self.level_dimensions))
         # Detect tissue.
-        threshold, tissue_mask = F.detect_tissue(
+        threshold, tissue_mask = F.get_tissue_mask(
             image=self.read_level(level),
             threshold=threshold,
             multiplier=multiplier,
