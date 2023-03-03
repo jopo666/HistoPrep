@@ -6,7 +6,7 @@ from PIL import Image
 
 from histoprep import functional as F
 
-from .utils import DATA_DIR
+from .utils import DATA_DIRECTORY
 
 
 def test_tile_coordinates():
@@ -86,5 +86,30 @@ def test_draw_tiles():
         text_font="monospace",
     )
     arr1 = np.array(img)
-    arr2 = np.array(Image.open(os.path.join(DATA_DIR, "correctly_drawn_tiles.png")))
+    arr2 = np.array(
+        Image.open(os.path.join(DATA_DIRECTORY, "correctly_drawn_tiles.png"))
+    )
     assert (arr1 == arr2).all()
+
+
+def test_multiply():
+    assert F.multiply_xywh((100, 100, 200, 200), 1 / 8) == (800, 800, 1600, 1600)
+    assert F.multiply_xywh((100, 100, 200, 200), 1 / 4) == (400, 400, 800, 800)
+    assert F.multiply_xywh((100, 100, 200, 200), 1 / 2) == (200, 200, 400, 400)
+    assert F.multiply_xywh((100, 100, 200, 200), 1) == (100, 100, 200, 200)
+    assert F.multiply_xywh((100, 100, 200, 200), 2) == (50, 50, 100, 100)
+    assert F.multiply_xywh((100, 100, 200, 200), 4) == (25, 25, 50, 50)
+    assert F.multiply_xywh((100, 100, 200, 200), 8) == (12, 12, 25, 25)
+    assert F.multiply_xywh((100, 100, 200, 200), 16) == (6, 6, 12, 12)
+    assert F.multiply_xywh((100, 100, 200, 200), 32) == (3, 3, 6, 6)
+
+
+def test_allowed():
+    DIMENSIONS = (20, 5)
+    assert F.allowed_xywh((0, 0, 10, 15), DIMENSIONS) == (0, 0, 5, 15)
+    assert F.allowed_xywh((0, 0, 100000, 1000000), DIMENSIONS) == (0, 0, 5, 20)
+    assert F.allowed_xywh((0, 0, 5, 20), DIMENSIONS) == (0, 0, 5, 20)
+    assert F.allowed_xywh((10000, 0, 5, 20), DIMENSIONS) == (10000, 0, 0, 0)
+    assert F.allowed_xywh((5, 20, 10, 10), DIMENSIONS) == (5, 20, 0, 0)
+    assert F.allowed_xywh((5, 19, 10, 10), DIMENSIONS) == (4, 19, 0, 1)
+    assert F.allowed_xywh((4, 20, 10, 10), DIMENSIONS) == (4, 20, 1, 0)
