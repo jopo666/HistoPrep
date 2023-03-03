@@ -105,8 +105,13 @@ class BaseReader(ABC):
         """
         level = format_level_index(level, list(self.level_dimensions))
         allowed_xywh = F.allowed_xywh(xywh, self.dimensions)
-        tile = self._read_region(xywh=allowed_xywh, level=level)
-        return F.pad_tile(tile, xywh)
+        __, __, out_w, out_h = F.multiply_xywh(xywh, self.level_downsamples[level])
+        if out_w == 0 or out_h == 0:
+            return np.zeros((out_h, out_w, 3), dtype=np.uint8)
+        return F.pad_tile(
+            tile=self._read_region(xywh=allowed_xywh, level=level),
+            shape=(out_h, out_w),
+        )
 
     def get_tissue_mask(
         self,

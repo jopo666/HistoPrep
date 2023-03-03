@@ -3,19 +3,24 @@ from aicspylibczi import CziFile
 from openslide import OpenSlide
 from PIL import Image
 
+from histoprep import LevelNotFoundError
 from histoprep.backend import CziReader, OpenSlideReader, PillowReader
 from tests.utils import SLIDE_PATH_CZI, SLIDE_PATH_JPEG, SLIDE_PATH_MRXS, SLIDE_PATH_SVS
 
-tile_width = 256
-
 
 def read_regions_with_reader(reader, tile_width=256) -> None:
-    assert reader.read_region((0, 0, 100, 100), 0).shape[:2] == (100, 100)
+    with pytest.raises(LevelNotFoundError):
+        reader.read_region((0, 0, 10, 10), level=193273645)
+    assert reader.read_region((0, 0, 0, 0), 0).shape == (0, 0, 3)
+    assert reader.read_region((0, 0, 1, 0), 0).shape == (0, 1, 3)
+    if len(reader.level_dimensions) > 1:
+        assert reader.read_region((0, 0, 1, 1), 1).shape == (0, 0, 3)
+    assert reader.read_region((0, 0, 100, 100), 0).shape == (100, 100, 3)
     for level in reader.level_dimensions:
         tile_dims = reader.read_region(
             (0, 0, tile_width, tile_width), level=level
-        ).shape[:2]
-        expected_dims = (tile_width // 2**level, tile_width // 2**level)
+        ).shape
+        expected_dims = (tile_width // 2**level, tile_width // 2**level, 3)
         assert tile_dims == expected_dims
 
 
