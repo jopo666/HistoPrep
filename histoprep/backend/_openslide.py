@@ -1,8 +1,9 @@
-__all__ = ["OpenSlideReader"]
+__all__ = ["OpenSlideBackend", "OPENSLIDE_READABLE"]
 
 import numpy as np
 
-from ._base import BaseReader
+from ._base import BaseBackend
+from ._functional import allowed_dimensions, divide_xywh, format_level, pad_tile
 
 ERROR_OPENSLIDE_IMPORT = (
     "Could not import `openslide-python`, make sure `OpenSlide` is installed "
@@ -27,7 +28,7 @@ except ImportError as e:
     raise ImportError(ERROR_OPENSLIDE_IMPORT) from e
 
 
-class OpenSlideReader(BaseReader):
+class OpenSlideBackend(BaseBackend):
     def __init__(self, path: str) -> None:
         """Slide reader using OpenSlide as a backend.
 
@@ -35,10 +36,20 @@ class OpenSlideReader(BaseReader):
             path: Path to the slide image.
         """
         super().__init__(path)
+        self.__reader = openslide.OpenSlide(path)
+        # Openslide has (width, height) dimensions.
+        self.__level_dimensions = {
+            lvl: (h, w) for lvl, (w, h) in enumerate(self.__reader.level_dimensions)
+        }
+        # Calculate actual downsamples.
+        slide_h, slide_w = self.dimensions
+        self.__level_downsamples = {}
+        for lvl, (level_h, level_w) in self.__level_dimensions.items():
+            self.__level_downsamples[lvl] = (slide_h / level_h, slide_w / level_w)
 
     @property
-    def backend(self) -> openslide.OpenSlide:
-        """`openslide.OpenSlide` instance."""
+    def reader(self) -> openslide.OpenSlide:
+        """OpenSlide instance."""
         return self.__reader
 
     @property
@@ -52,11 +63,11 @@ class OpenSlideReader(BaseReader):
 
     @property
     def dimensions(self) -> tuple[int, int]:
-        return self.backend.dimensions[::-1]
+        return self.level_dimensions[0]
 
     @property
     def level_count(self) -> int:
-        return self.backend.level_count
+        return len(self.level_dimensions)
 
     @property
     def level_dimensions(self) -> dict[int, tuple[int, int]]:
@@ -66,30 +77,21 @@ class OpenSlideReader(BaseReader):
     def level_downsamples(self) -> dict[int, tuple[int, int]]:
         return self.__level_downsamples
 
-    def _read_slide(self, path: str) -> None:
-        self.__reader = openslide.OpenSlide(path)
-        # Openslide has W, H dimensions.
-        self.__level_dimensions = {
-            level: (h, w) for level, (w, h) in enumerate(self.__reader.level_dimensions)
-        }
-        # Calculate actual downsamples and not the estimates...
-        self.__level_downsamples = {}
-        slide_height, slide_width = self.dimensions
-        for level, (level_h, level_w) in self.__level_dimensions.items():
-            self.__level_downsamples[level] = (
-                slide_height / level_h,
-                slide_width / level_w,
-            )
-
-    def _read_level(self, level: int) -> np.ndarray:
+    def read_level(self, level: int) -> np.ndarray:
+        level = format_level(level, available=list(self.level_dimensions))
         level_h, level_w = self.level_dimensions[level]
         return np.array(self.__reader.get_thumbnail(size=(level_w, level_h)))
 
-    def _read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
+    def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
+        level = format_level(level, available=list(self.level_dimensions))
         # Only width and height have to be adjusted for the level.
-        x, y, w, h = xywh
-        h_d, w_d = self.level_downsamples[level]
+        x, y, *__ = xywh
+        *__, w, h = divide_xywh(xywh, self.level_downsamples[level])
+        # Read allowed region.
+        allowed_h, allowed_w = allowed_dimensions((x, y, w, h), self.dimensions)
         tile = self.__reader.read_region(
-            location=(x, y), level=level, size=(round(w / w_d), round(h / h_d))
+            location=(x, y), level=level, size=(allowed_w, allowed_h)
         )
-        return np.array(tile)[..., :3]  # only rgb channels
+        tile = np.array(tile)[..., :3]  # only rgb channels
+        # Pad tile.
+        return pad_tile(tile, shape=(h, w))

@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from histoprep.functional import allowed_xywh, multiply_xywh, pad_tile
+from histoprep.backend._functional import allowed_dimensions, divide_xywh, pad_tile
 
 
 @dataclass(frozen=True)
@@ -46,13 +46,14 @@ class TissueMask:
             Tissue mask for thr region.
         """
         # Downsample xywh.
-        xywh = multiply_xywh(xywh, self.level_downsample)
+        xywh = divide_xywh(xywh, self.level_downsample)
         # Read allowed region and pad.
-        output_w, output_h = xywh[2:]
-        
-        x, y, w, h = allowed_xywh(xywh, self.mask.shape[:2])
+        x, y, output_w, output_h = xywh
+        allowed_h, allowed_w = allowed_dimensions(xywh, dimensions=self.mask.shape[:2])
         tile_mask = pad_tile(
-            tile=self.mask[y : y + h, x : x + w], shape=(output_h, output_w), fill=0
+            tile=self.mask[y : y + allowed_h, x : x + allowed_w],
+            shape=(output_h, output_w),
+            fill=0,
         )
         # Reshape.
         if shape is not None:

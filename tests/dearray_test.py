@@ -7,7 +7,7 @@ import histoprep.functional as F
 from tests.utils import SLIDE_PATH_TMA
 
 
-def test_dearray():
+def test_dearray() -> None:
     reader = hp.SlideReader(SLIDE_PATH_TMA)
     # Good sigma value.
     tissue_mask = reader.get_tissue_mask(sigma=2).mask

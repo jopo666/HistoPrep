@@ -1,7 +1,9 @@
+__all__ = ["worker_func", "worker_init", "prepare_output_dir"]
+
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 from PIL import Image
@@ -38,23 +40,23 @@ class SlideRegionData:
         Image.fromarray(self.image).save(filepath, quality=quality)
         return str(filepath)
 
-    def save_mask(self, output_dir: Union[str, Path], **writer_kwargs) -> str:
+    def save_mask(self, output_dir: Union[str, Path]) -> str:
         """Save mask to output directory."""
         if not isinstance(output_dir, Path):
             output_dir = Path(output_dir)
         filepath = output_dir / "x{}_y{}_w{}_h{}.png".format(*self.xywh)
         filepath.parent.mkdir(exist_ok=True, parents=True)
-        Image.fromarray(self.mask).save(filepath, **writer_kwargs)
+        Image.fromarray(self.mask).save(filepath)
         return str(filepath)
 
 
 def prepare_output_dir(
-    *, parent_dir: Union[str, Path], slide_name: str, overwrite: bool
+    *, parent_dir: Union[str, Path], name: str, overwrite: bool
 ) -> Path:
     """Prepare output directory."""
     if not isinstance(parent_dir, Path):
         parent_dir = Path(parent_dir)
-    output_dir = parent_dir / slide_name
+    output_dir = parent_dir / name
     if output_dir.exists():
         if output_dir.is_file():
             raise NotADirectoryError(ERROR_OUTPUT_DIR_IS_FILE)
@@ -65,11 +67,11 @@ def prepare_output_dir(
 
 
 def worker_init(worker_state, reader_class, path: Path) -> None:  # noqa
-    """Worker initialization function for `worker_save_region`."""
+    """Worker initialization function for `worker_func`."""
     worker_state["reader"] = reader_class(path)
 
 
-def worker_save_region(
+def worker_func(
     worker_state: dict,
     xywh: tuple[int, int, int, int],
     *,
@@ -77,14 +79,13 @@ def worker_save_region(
     level: int,
     threshold: int,
     sigma: float,
-    save_paths: bool,
     save_metrics: bool,
     save_masks: bool,
     image_format: str,
     quality: int,
     raise_exception: bool,
     image_dir: str,
-) -> Optional[dict]:
+) -> Union[dict, Exception]:
     """Worker function to read and save images and masks."""
     # Read region.
     region_data = read_region_data(
@@ -110,9 +111,7 @@ def worker_save_region(
     )
     if isinstance(paths, Exception):
         return paths
-    if save_paths:
-        return {**paths, **region_data.metadata}
-    return region_data.metadata
+    return {**paths, **region_data.metadata}
 
 
 def read_region_data(

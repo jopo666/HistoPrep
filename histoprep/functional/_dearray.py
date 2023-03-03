@@ -9,14 +9,17 @@ from sklearn.metrics import silhouette_score
 
 
 def dearray_tma(spot_mask: np.ndarray) -> dict[str, tuple[int, int, int, int]]:
-    """Dearray tissue microarray spots based on a tissue mask of the spots.
+    """Dearray tissue microarray spots based on a spot mask.
+
+    Numbers each spot from top-left and takes into account missing spots etc in the
+    numbering.
 
     Args:
         spot_mask: Tissue mask of TMA-slide, should only contain TMA spots an no
             artifacts (see `F.clean_tissue_mask`).
 
     Returns:
-        Dictionary of spot xywh-coordinates.
+        Dictionary of spot numbers and xywh-coordinates.
     """
     # Detect contours and get their bboxes and centroids.
     bboxes, centroids = contour_bboxes_and_centroids(spot_mask)

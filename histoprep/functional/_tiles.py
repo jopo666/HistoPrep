@@ -1,9 +1,7 @@
-__all__ = ["get_tile_coordinates", "multiply_xywh", "allowed_xywh", "pad_tile"]
+__all__ = ["get_tile_coordinates"]
 
 import itertools
-from typing import Optional, Union
-
-import numpy as np
+from typing import Optional
 
 ERROR_TYPE = "Tile width and height should be integers, got {} and {}."
 ERROR_NONZERO = (
@@ -13,10 +11,8 @@ ERROR_DIMENSION = (
     "Tile width ({}) and height ({}) should be smaller than image dimensions ({})."
 )
 ERROR_OVERLAP = "Overlap should be in range [0, 1), got {}."
-ERROR_FILL = "Fill value should be between [0, 255], got {}."
 
 OVERLAP_LIMIT = 1.0
-MAX_FILL_VALUE = 255
 
 
 def get_tile_coordinates(
@@ -69,65 +65,3 @@ def get_tile_coordinates(
         y_coords = y_coords[:-1]
     # Take product and add width and height.
     return [(x, y, width, height) for y, x in itertools.product(y_coords, x_coords)]
-
-
-def multiply_xywh(
-    xywh: tuple[int, int, int, int], multiplier: Union[float, tuple[float, float]]
-) -> tuple[int, int, int, int]:
-    """Multiply xywh-coordinates with multiplier(s)."""
-    if not isinstance(multiplier, (tuple, list)):
-        multiplier = (multiplier, multiplier)
-    w_m, h_m = multiplier
-    x, y, w, h = xywh
-    return round(x / w_m), round(y / h_m), round(w / w_m), round(h / h_m)
-
-
-def allowed_xywh(
-    xywh: tuple[int, int, int, int], dimensions: tuple[int, int]
-) -> tuple[int, int, int, int]:
-    """Get allowed xywh coordinates which are inside dimensions.
-
-    Args:
-        xywh: xywh-coordinates to check.
-        dimensions: Allowed dimensions (height, width).
-
-    Returns:
-        xywh-coordinates inside the dimensions.
-    """
-    x, y, w, h = xywh
-    height, width = dimensions
-    if y > height or x > width:
-        # xywh is outside of dimensions.
-        return (x, y, 0, 0)
-    if y + h > height:
-        h = height - y
-    if x + w > width:
-        w = width - x
-    return x, y, w, h
-
-
-def pad_tile(
-    tile: np.ndarray, *, shape: tuple[int, int], fill: int = 255
-) -> np.ndarray:
-    """Pad tile image with fill value to match w and h in xywh.
-
-    Args:
-        tile: Tile image.
-        shape: Output height and width of the tile.
-        fill: Fill value. Defaults to 255.
-
-    Returns:
-        Tile image, padded with fill (right and bottom) if tile size does not match
-        coordinates.
-    """
-    if not 0 <= fill <= MAX_FILL_VALUE:
-        raise ValueError(ERROR_FILL.format(fill))
-    tile_h, tile_w = tile.shape[:2]
-    out_h, out_w = shape
-    if tile_h == out_h and tile_w == out_w:
-        return tile
-    if tile.ndim > 2:
-        shape = (out_h, out_w, tile.shape[-1])
-    output = np.zeros(shape, dtype=np.uint8) + fill
-    output[:tile_h, :tile_w] = tile
-    return output

@@ -7,11 +7,9 @@ import mpire
 import rich_click as click
 
 from histoprep import SlideReader
-from histoprep.backend import CziReader, OpenSlideReader, PillowReader
 
 from ._utils import error, info, warning
 
-SlideReaderBackend = Union[CziReader, OpenSlideReader, PillowReader]
 LOGO = """
 ██╗  ██╗██╗███████╗████████╗ ██████╗ ██████╗ ██████╗ ███████╗██████╗
 ██║  ██║██║██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗
@@ -21,12 +19,6 @@ LOGO = """
 ╚═╝  ╚═╝╚═╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝
                         by jopo666 (2023)
 """
-NAME_TO_BACKEND = {
-    "NONE": None,
-    "CZI": CziReader,
-    "OPENSLIDE": OpenSlideReader,
-    "PILLOW": PillowReader,
-}
 # Rich-click options.
 click.rich_click.USE_RICH_MARKUP = True
 click.rich_click.RANGE_STRING = ""
@@ -111,8 +103,9 @@ def glob_pattern(*args) -> list[Path]:
 @click.option(  # backend
     "-b",
     "--backend",
-    type=click.Choice(choices=["PILLOW", "OPENSLIDE", "CZI"], case_sensitive=False),
-    show_default=True,
+    type=click.Choice(choices=["PIL", "OPENSLIDE", "CZI"], case_sensitive=False),
+    default=None,
+    show_default="automatic",
     help="Backend for reading slides.",
 )
 # Tiles.
@@ -335,12 +328,9 @@ def cut_slides(
         overwrite=overwrite,
         overwrite_unfinished=overwrite_unfinished,
     )
-    # Define kwargs.
-    if str(backend).upper() not in NAME_TO_BACKEND:
-        error(f"Backend {backend} not recognised, choose from: {list(NAME_TO_BACKEND)}")
     # Define cut_slide kwargs.
-    cut_slide_kwargs = {
-        "backend": NAME_TO_BACKEND[str(backend).upper()],
+    kwargs = {
+        "reader_kwargs": {"backend": backend},
         "tissue_kwargs": {
             "level": tissue_level,
             "max_dimension": max_dimension,
@@ -375,7 +365,7 @@ def cut_slides(
     # Process.
     with mpire.WorkerPool(n_jobs=num_workers) as pool:
         for path, exception in pool.imap(
-            func=functools.partial(cut_slide, **cut_slide_kwargs),
+            func=functools.partial(cut_slide, **kwargs),
             iterable_of_args=paths,
             progress_bar=True,
             progress_bar_options={"desc": "Cutting slides"},
@@ -423,13 +413,13 @@ def filter_slide_paths(
 def cut_slide(
     path: Path,
     *,
-    backend: Optional[SlideReaderBackend],
+    reader_kwargs: dict,
     tissue_kwargs: dict,
     tile_kwargs: dict,
     save_kwargs: dict,
 ) -> tuple[Path, Optional[Exception]]:
     try:
-        reader = SlideReader(path, backend=backend)
+        reader = SlideReader(path, **reader_kwargs)
         tissue_mask = reader.get_tissue_mask(**tissue_kwargs)
         coords = reader.get_tile_coordinates(tissue_mask=tissue_mask, **tile_kwargs)
         reader.save_tiles(coordinates=coords, **save_kwargs)
