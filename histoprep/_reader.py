@@ -22,6 +22,8 @@ def SlideReader(  # noqa: N802
     """
     if not isinstance(path, Path):
         path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(str(path))
     if backend is None:
         if path.name.endswith(OPENSLIDE_READABLE):
             return OpenSlideReader(path)
