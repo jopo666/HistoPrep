@@ -84,7 +84,7 @@ def multiply_xywh(
 
 def allowed_xywh(
     xywh: tuple[int, int, int, int], dimensions: tuple[int, int]
-) -> Optional[tuple[int, int, int, int]]:
+) -> tuple[int, int, int, int]:
     """Get allowed xywh coordinates which are inside dimensions.
 
     Args:
@@ -98,22 +98,22 @@ def allowed_xywh(
     height, width = dimensions
     if y > height or x > width:
         # xywh is outside of dimensions.
-        return None
-    if y + h > height or x + w > width:
-        allowed_h = max(0, max(height - y, h))
-        allowed_w = max(0, max(width - x, w))
-        return x, y, allowed_h, allowed_w
+        return (x, y, 0, 0)
+    if y + h > height:
+        h = height - y
+    if x + w > width:
+        w = width - x
     return x, y, w, h
 
 
 def pad_tile(
-    tile: np.ndarray, xywh: tuple[int, int, int, int], fill: int = 255
+    tile: np.ndarray, *, shape: tuple[int, int], fill: int = 255
 ) -> np.ndarray:
     """Pad tile image with fill value to match w and h in xywh.
 
     Args:
         tile: Tile image.
-        xywh: xywh-coordinates of the tile.
+        shape: Output height and width of the tile.
         fill: Fill value. Defaults to 255.
 
     Returns:
@@ -122,11 +122,12 @@ def pad_tile(
     """
     if not 0 <= fill <= MAX_FILL_VALUE:
         raise ValueError(ERROR_FILL.format(fill))
-    __, __, w, h = xywh
     tile_h, tile_w = tile.shape[:2]
-    if tile_h < h or tile_w < w:
-        shape = (h, w) if tile.ndim == 2 else (h, w, tile.shape[-1])
-        output = np.zeros(shape, dtype=np.uint8) + fill
-        output[:tile_h, :tile_w] = tile
-        return output
-    return tile
+    out_h, out_w = shape
+    if tile_h == out_h and tile_w == out_w:
+        return tile
+    if tile.ndim > 2:
+        shape = (out_h, out_w, tile.shape[-1])
+    output = np.zeros(shape, dtype=np.uint8) + fill
+    output[:tile_h, :tile_w] = tile
+    return output
