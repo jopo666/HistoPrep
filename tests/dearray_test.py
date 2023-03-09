@@ -27,3 +27,22 @@ def test_dearray() -> None:
         warnings.simplefilter("error")
         spots = F.dearray_tma(tissue_mask_clean)
     assert len(spots) == 38
+    # Empty mask
+    tissue_mask[...] = 0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        spots = F.dearray_tma(tissue_mask)
+        assert len(spots) == 0
+
+
+def test_clean_mask() -> None:
+    reader = hp.SlideReader(SLIDE_PATH_TMA)
+    tissue_mask = reader.get_tissue_mask(sigma=2).mask
+    empty_mask = tissue_mask.copy()
+    empty_mask[...] = 0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        # empty mask.
+        F.clean_tissue_mask(empty_mask)
+        # bad values.
+        F.clean_tissue_mask(tissue_mask, max_area_pixel=0)
