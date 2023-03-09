@@ -23,6 +23,8 @@ def dearray_tma(spot_mask: np.ndarray) -> dict[str, tuple[int, int, int, int]]:
     """
     # Detect contours and get their bboxes and centroids.
     bboxes, centroids = contour_bboxes_and_centroids(spot_mask)
+    if len(bboxes) == 0:
+        return {}
     # Detect possible rotation of the image based on centroids.
     centroids = _rotate_coordinates(centroids, _detect_rotation(centroids))
     # Detect optimal number of rows and columns and cluster each spot.
@@ -71,7 +73,7 @@ def contour_bboxes_and_centroids(mask: np.ndarray) -> tuple[np.ndarray, np.ndarr
     contours, hierarchy = cv2.findContours(
         mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
     )
-    if len(contours) is None:
+    if len(contours) == 0:
         return np.array([]), np.array([])
     bboxes, centroids = [], []
     for cnt, is_parent in zip(contours, hierarchy[0][:, -1] == -1):
