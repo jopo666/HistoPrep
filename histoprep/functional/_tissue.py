@@ -106,11 +106,16 @@ def clean_tissue_mask(
     contours, __ = cv2.findContours(
         tissue_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
     )
+    if len(contours) == 0:
+        return tissue_mask
     contour_areas = np.array([cv2.contourArea(cnt) for cnt in contours])
     # Filter based on pixel values.
     selection = contour_areas >= min_area_pixel
     if max_area_pixel is not None:
         selection = selection & (contour_areas <= max_area_pixel)
+    if selection.sum() == 0:
+        # Nothing to draw
+        return np.zeros_like(tissue_mask)
     # Define relative min/max values.
     area_median = np.median(contour_areas[selection])
     area_min = area_median * min_area_relative
