@@ -14,7 +14,7 @@ class BaseBackend(ABC):
         if not path.exists():
             raise FileNotFoundError(str(path))
         self.path = path if isinstance(path, Path) else Path(path)
-        self.name = self.path.name.rstrip(self.path.suffix)
+        self.name = self.path.name.removesuffix(self.path.suffix)
 
     @property
     @abstractmethod
