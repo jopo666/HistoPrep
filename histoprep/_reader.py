@@ -294,8 +294,8 @@ class SlideReader:
         thumbnail_spots = F.draw_tiles(
             image=thumbnail,
             coordinates=list(spot_info.values()),
-            text_items=list(spot_info.keys()),
-            downsample=tissue_mask.level_downsample,
+            text_items=[key.lstrip("spot_") for key in spot_info.keys()],
+            downsample=(1.0, 1.0),
         )
         thumbnail_tissue = tissue_mask.to_pil()
         return TMASpotCoordinates(
