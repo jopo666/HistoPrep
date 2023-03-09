@@ -160,7 +160,7 @@ def save_region_data(
             quality=quality,
         )
         if save_masks:
-            output["mask_path"] = region_data.save_mask(output_dir=output_dir)
+            output["mask_path"] = region_data.save_mask(output_dir=output_dir / "masks")
     except KeyboardInterrupt:
         raise KeyboardInterrupt from None
     except Exception as catched_exception:  # noqa
