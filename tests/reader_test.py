@@ -1,6 +1,5 @@
 import json
 import warnings
-from curses import meta
 
 import polars as pl
 import pytest
