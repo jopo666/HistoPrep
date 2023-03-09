@@ -385,7 +385,7 @@ class SlideReader:
         *,
         level: int = 0,
         overwrite: bool = False,
-        save_metrics: bool = True,
+        save_metrics: bool = False,
         save_masks: bool = False,
         image_format: str = "jpeg",
         quality: int = 80,
