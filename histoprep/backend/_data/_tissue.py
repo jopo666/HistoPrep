@@ -40,16 +40,19 @@ class TissueMask:
 
         Args:
             xywh: Region coordinates from `level=0`.
-            shape: Output shape for the tile, ignored if None. Defaults to None.
+            shape: Output height and width for the tile, ignored if None. Defaults to
+                None.
 
         Returns:
             Tissue mask for thr region.
         """
         # Downsample xywh.
-        xywh = divide_xywh(xywh, self.level_downsample)
+        xywh_d = divide_xywh(xywh, self.level_downsample)
         # Read allowed region and pad.
-        x, y, output_w, output_h = xywh
-        allowed_h, allowed_w = allowed_dimensions(xywh, dimensions=self.mask.shape[:2])
+        x, y, output_w, output_h = xywh_d
+        allowed_h, allowed_w = allowed_dimensions(
+            xywh_d, dimensions=self.mask.shape[:2]
+        )
         tile_mask = pad_tile(
             tile=self.mask[y : y + allowed_h, x : x + allowed_w],
             shape=(output_h, output_w),
@@ -57,5 +60,7 @@ class TissueMask:
         )
         # Reshape.
         if shape is not None:
-            return cv2.resize(tile_mask, dsize=shape, interpolation=cv2.INTER_NEAREST)
+            return cv2.resize(
+                tile_mask, dsize=shape[::-1], interpolation=cv2.INTER_NEAREST
+            )
         return tile_mask
