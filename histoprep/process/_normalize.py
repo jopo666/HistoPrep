@@ -60,7 +60,6 @@ class MachenkoStainNormalizer(StainNormalizer):
         Args:
             angular_percentile: Hyperparameter. Defaults to 0.99.
         """
-        self.angular_percentile = angular_percentile
         super().__init__(
             stain_matrix_fn=F.get_macenko_stain_matrix,
             angular_percentile=angular_percentile,
@@ -75,8 +74,6 @@ class VahadaneStainNormalizer(StainNormalizer):
             alpha: Regulariser for lasso. Defaults to 0.1.
             max_iter: Maximum training iterations. Defaults to 3.
         """
-        self.alpha = alpha
-        self.max_iter = max_iter
         super().__init__(
             stain_matrix_fn=F.get_vahadane_stain_matrix, alpha=alpha, max_iter=max_iter
         )
