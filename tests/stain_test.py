@@ -1,7 +1,9 @@
 import numpy as np
+import pytest
 from PIL import Image
 
 import histoprep.functional as F
+from histoprep.process import MachenkoStainNormalizer, VahadaneStainNormalizer
 
 from .utils import SLIDE_PATH_JPEG, TILE_IMAGE
 
@@ -16,6 +18,12 @@ def test_macenko_stain_matrix() -> None:
         assert F.get_macenko_stain_matrix(img).shape == (2, 3)
         assert F.get_macenko_stain_matrix(img, mask).shape == (2, 3)
         assert F.get_macenko_stain_matrix(img, empty_mask).shape == (2, 3)
+    norm = MachenkoStainNormalizer()
+    with pytest.raises(ValueError):
+        norm.normalize(IMAGE_2)
+    norm.fit(IMAGE_1, F.get_tissue_mask(IMAGE_1)[1])
+    assert norm.normalize(IMAGE_2).shape == IMAGE_2.shape
+    assert norm.normalize(IMAGE_2, F.get_tissue_mask(IMAGE_2)[1]).shape == IMAGE_2.shape
 
 
 def test_vahadane_stain_matrix() -> None:
@@ -25,3 +33,10 @@ def test_vahadane_stain_matrix() -> None:
         assert F.get_vahadane_stain_matrix(img).shape == (2, 3)
         assert F.get_vahadane_stain_matrix(img, mask).shape == (2, 3)
         assert F.get_vahadane_stain_matrix(img, empty_mask).shape == (2, 3)
+
+    norm = VahadaneStainNormalizer()
+    with pytest.raises(ValueError):
+        norm.normalize(IMAGE_2)
+    norm.fit(IMAGE_1, F.get_tissue_mask(IMAGE_1)[1])
+    assert norm.normalize(IMAGE_2).shape == IMAGE_2.shape
+    assert norm.normalize(IMAGE_2, F.get_tissue_mask(IMAGE_2)[1]).shape == IMAGE_2.shape
