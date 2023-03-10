@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Union
 
 import numpy as np
 
@@ -8,7 +9,7 @@ import numpy as np
 class BaseBackend(ABC):
     """Base class for all slide-reader backends."""
 
-    def __init__(self, path: Union[str, Path]) -> None:
+    def __init__(self, path: str | Path) -> None:
         if not isinstance(path, Path):
             path = Path(path)
         if not path.exists():

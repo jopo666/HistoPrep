@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Optional, Union
 
 from ._czi import CziBackend
 from ._openslide import OPENSLIDE_READABLE, OpenSlideBackend
@@ -13,8 +14,8 @@ AVAILABLE_BACKENDS = ["PILLOW", "OPENSLIDE", "CZI"]
 
 
 def read_slide(
-    path: Union[str, Path], backend: Optional[str] = None
-) -> Union[CziBackend, OpenSlideBackend, PillowBackend]:
+    path: str | Path, backend: str | None = None
+) -> CziBackend | OpenSlideBackend | PillowBackend:
     """Get backend based on file-extension or backend argument."""
     if not isinstance(path, Path):
         path = Path(path)

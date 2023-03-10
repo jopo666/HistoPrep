@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 __all__ = ["TileCoordinates", "TMASpotCoordinates"]
 
 import json
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Union
 
 from PIL import Image
 
@@ -36,7 +37,7 @@ class TileCoordinates:
     thumbnail_tiles: Image.Image = field(repr=False)
     thumbnail_tissue: Image.Image = field(repr=False)
 
-    def save_thumbnails(self, output_dir: Union[str, Path]) -> None:
+    def save_thumbnails(self, output_dir: str | Path) -> None:
         """Save thumbnail images to output directory."""
         if not isinstance(output_dir, Path):
             output_dir = Path(output_dir)
@@ -47,7 +48,7 @@ class TileCoordinates:
 
     def save_properties(
         self,
-        output_dir: Union[str, Path],
+        output_dir: str | Path,
         level: int,
         level_downsample: tuple[float, float],
     ) -> dict:
@@ -97,7 +98,7 @@ class TMASpotCoordinates:
     thumbnail_spots: Image.Image = field(repr=False)
     thumbnail_tissue: Image.Image = field(repr=False)
 
-    def save_thumbnails(self, output_dir: Union[str, Path]) -> None:
+    def save_thumbnails(self, output_dir: str | Path) -> None:
         """Save thumbnail images to output directory."""
         if not isinstance(output_dir, Path):
             output_dir = Path(output_dir)
@@ -108,7 +109,7 @@ class TMASpotCoordinates:
 
     def save_properties(
         self,
-        output_dir: Union[str, Path],
+        output_dir: str | Path,
         level: int,
         level_downsample: tuple[float, float],
     ) -> dict:

@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 __all__ = ["get_tile_coordinates"]
 
 import itertools
-from typing import Optional
 
 ERROR_TYPE = "Tile width and height should be integers, got {} and {}."
 ERROR_NONZERO = (
@@ -19,7 +20,7 @@ def get_tile_coordinates(
     dimensions: tuple[int, int],
     width: int,
     *,
-    height: Optional[int] = None,
+    height: int | None = None,
     overlap: float = 0.0,
     out_of_bounds: bool = False,
 ) -> list[tuple[int, int, int, int]]:

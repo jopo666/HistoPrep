@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = [
     "normalize_stains",
     "adjust_stains",
@@ -7,7 +9,6 @@ __all__ = [
     "get_vahadane_stain_matrix",
 ]
 
-from typing import Optional
 
 import numpy as np
 from sklearn.decomposition import DictionaryLearning
@@ -108,7 +109,7 @@ def separate_stains(
 
 def get_macenko_stain_matrix(
     image: np.ndarray,
-    tissue_mask: Optional[np.ndarray] = None,
+    tissue_mask: np.ndarray | None = None,
     angular_percentile: float = 0.99,
 ) -> np.ndarray:
     """Estimate stain matrix with the Macenko method.
@@ -158,7 +159,7 @@ def get_macenko_stain_matrix(
 
 def get_vahadane_stain_matrix(
     image: np.ndarray,
-    tissue_mask: Optional[np.ndarray] = None,
+    tissue_mask: np.ndarray | None = None,
     alpha: float = 0.1,
     max_iter: int = 3,
 ) -> np.ndarray:

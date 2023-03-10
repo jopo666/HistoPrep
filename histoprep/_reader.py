@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 __all__ = ["SlideReader"]
 
 import functools
 from pathlib import Path
-from typing import Optional, Union
 
 import numpy as np
 import polars as pl
@@ -29,7 +30,7 @@ ERROR_CANNOT_OVERWRITE = "Output directory exists, but `overwrite=False`."
 
 
 class SlideReader:
-    def __init__(self, path: Union[str, Path], backend: Optional[str] = None) -> None:
+    def __init__(self, path: str | Path, backend: str | None = None) -> None:
         """Reader class for histological slide images, with a lot of useful
         functionalty.
 
@@ -122,8 +123,8 @@ class SlideReader:
     def get_tissue_mask(
         self,
         *,
-        level: Optional[int] = None,
-        threshold: Optional[int] = None,
+        level: int | None = None,
+        threshold: int | None = None,
         multiplier: float = 1.05,
         ignore_white: bool = True,
         ignore_black: bool = True,
@@ -182,7 +183,7 @@ class SlideReader:
         tissue_mask: TissueMask,
         width: int,
         *,
-        height: Optional[int] = None,
+        height: int | None = None,
         overlap: float = 0.0,
         max_background: float = 0.95,
         out_of_bounds: bool = True,
@@ -250,9 +251,9 @@ class SlideReader:
         tissue_mask: TissueMask,
         *,
         min_area_pixel: int = 10,
-        max_area_pixel: Optional[int] = None,
+        max_area_pixel: int | None = None,
         min_area_relative: float = 0.2,
-        max_area_relative: Optional[float] = 2.0,
+        max_area_relative: float | None = 2.0,
     ) -> TMASpotCoordinates:
         """Generate tissue microarray spot coordinates.
 
@@ -313,7 +314,7 @@ class SlideReader:
 
     def save_tiles(
         self,
-        parent_dir: Union[str, Path],
+        parent_dir: str | Path,
         coordinates: TileCoordinates,
         *,
         level: int = 0,
@@ -380,7 +381,7 @@ class SlideReader:
 
     def save_spots(
         self,
-        parent_dir: Union[str, Path],
+        parent_dir: str | Path,
         coordinates: TMASpotCoordinates,
         *,
         level: int = 0,
@@ -447,8 +448,8 @@ class SlideReader:
 
     def __save_data(
         self,
-        parent_dir: Union[str, Path],
-        coordinates: Union[TileCoordinates, TMASpotCoordinates],
+        parent_dir: str | Path,
+        coordinates: TileCoordinates | TMASpotCoordinates,
         *,
         level: int,
         overwrite: bool,
@@ -459,7 +460,7 @@ class SlideReader:
         use_csv: bool,
         num_workers: int,
         image_dir: str,
-        image_names: Optional[list[str]],
+        image_names: list[str] | None,
         raise_exception: bool,
         verbose: bool,
     ) -> pl.DataFrame:

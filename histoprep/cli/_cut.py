@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import functools
 import glob
 from pathlib import Path
-from typing import Optional, Union
 
 import mpire
 import rich_click as click
@@ -290,22 +291,22 @@ def glob_pattern(*args) -> list[Path]:
     help="Sigma for gaussian blurring during tissue detection.",
 )
 def cut_slides(
-    paths: list[Union[str, Path]],
-    parent_dir: Union[str, Path],
+    paths: list[str | Path],
+    parent_dir: str | Path,
     *,
-    backend: Optional[str] = None,
+    backend: str | None = None,
     # Tissue detection.
-    threshold: Optional[float] = None,
+    threshold: float | None = None,
     multiplier: float = 1.05,
     ignore_white: bool = True,
     ignore_black: bool = True,
-    tissue_level: Optional[int] = None,
+    tissue_level: int | None = None,
     sigma: float = 1.0,
     max_dimension: int = 8192,
     # Tile extraction.
     level: int = 0,
     width: int = 640,
-    height: Optional[int] = None,
+    height: int | None = None,
     overlap: float = 0.0,
     max_background: float = 0.75,
     out_of_bounds: bool = True,
@@ -318,7 +319,7 @@ def cut_slides(
     image_format: str = "jpeg",
     quality: int = 80,
     use_csv: bool = False,
-    num_workers: Optional[int] = None,
+    num_workers: int | None = None,
 ) -> None:
     """CLI interface to extract tile images from slides."""
     # Filter slide paths.
@@ -417,7 +418,7 @@ def cut_slide(
     tissue_kwargs: dict,
     tile_kwargs: dict,
     save_kwargs: dict,
-) -> tuple[Path, Optional[Exception]]:
+) -> tuple[Path, Exception | None]:
     try:
         reader = SlideReader(path, **reader_kwargs)
         tissue_mask = reader.get_tissue_mask(**tissue_kwargs)

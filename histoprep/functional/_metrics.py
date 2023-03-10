@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 __all__ = ["calculate_metrics"]
 
-from typing import Union
 
 import cv2
 import numpy as np
@@ -20,8 +21,8 @@ BLACK_PIXEL = 0
 WHITE_PIXEL = 255
 
 
-def calculate_metrics(
-    image: Union[Image.Image, np.ndarray],
+def calculate_metrics(  # noqa
+    image: Image.Image | np.ndarray,
     tissue_mask: np.ndarray,
     quantiles: tuple[float, ...] = DEFAULT_QUANTILES,
     shape: tuple[int, int] = DEFAULT_SHAPE,

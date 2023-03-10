@@ -1,6 +1,6 @@
-__all__ = ["allowed_dimensions", "divide_xywh", "multiply_xywh"]
+from __future__ import annotations
 
-from typing import Union
+__all__ = ["allowed_dimensions", "divide_xywh", "multiply_xywh"]
 
 
 def allowed_dimensions(
@@ -20,7 +20,7 @@ def allowed_dimensions(
 
 
 def divide_xywh(
-    xywh: tuple[int, int, int, int], divisor: Union[float, tuple[float, float]]
+    xywh: tuple[int, int, int, int], divisor: float | tuple[float, float]
 ) -> tuple[int, int, int, int]:
     """Divide xywh-coordinates with divisor(s)."""
     if not isinstance(divisor, (tuple, list)):
@@ -31,7 +31,7 @@ def divide_xywh(
 
 
 def multiply_xywh(
-    xywh: tuple[int, int, int, int], multiplier: Union[float, tuple[float, float]]
+    xywh: tuple[int, int, int, int], multiplier: float | tuple[float, float]
 ) -> tuple[int, int, int, int]:
     """Divide xywh-coordinates with divisor(s)."""
     if not isinstance(multiplier, (tuple, list)):

@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 __all__ = ["TissueMask"]
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 import cv2
 import numpy as np
@@ -34,7 +35,7 @@ class TissueMask:
         return Image.fromarray(255 - self.mask * 255)
 
     def read_region(
-        self, xywh: tuple[int, int, int, int], shape: Optional[tuple[int, int]] = None
+        self, xywh: tuple[int, int, int, int], shape: tuple[int, int] | None = None
     ) -> np.ndarray:
         """Read region from tissue mask.
 

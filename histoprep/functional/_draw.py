@@ -1,6 +1,6 @@
-__all__ = ["draw_tiles"]
+from __future__ import annotations
 
-from typing import Optional, Union
+__all__ = ["draw_tiles"]
 
 import numpy as np
 from matplotlib.font_manager import fontManager
@@ -16,16 +16,16 @@ ERROR_TEXT_ITEM_LENGTH = (
 
 
 def draw_tiles(
-    image: Union[np.ndarray, Image.Image],
+    image: np.ndarray | Image.Image,
     coordinates: list[tuple[int, int, int, int]],
-    downsample: Union[float, tuple[float, float]],
+    downsample: float | tuple[float, float],
     *,
     rectangle_outline: str = "red",
-    rectangle_fill: Optional[str] = None,
+    rectangle_fill: str | None = None,
     rectangle_width: int = 1,
     highlight_first: bool = False,
     highlight_outline: str = "blue",
-    text_items: Optional[list[str]] = None,
+    text_items: list[str] | None = None,
     text_color: str = "black",
     text_proportion: float = 0.75,
     text_font: str = "monospace",

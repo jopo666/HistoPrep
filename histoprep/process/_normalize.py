@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 __all__ = ["MachenkoStainNormalizer", "VahadaneStainNormalizer"]
 
 from collections.abc import Callable
 from functools import partial
-from typing import Optional
 
 import numpy as np
 
@@ -18,7 +19,7 @@ class StainNormalizer:
         self.__stain_matrix_fn = partial(stain_matrix_fn, **kwargs)
         self.__normalize_fn = None
 
-    def fit(self, image: np.ndarray, tissue_mask: Optional[np.ndarray] = None) -> None:
+    def fit(self, image: np.ndarray, tissue_mask: np.ndarray | None = None) -> None:
         """Fit stain normalizer with a target image.
 
         Args:
@@ -36,7 +37,7 @@ class StainNormalizer:
         )
 
     def normalize(
-        self, image: np.ndarray, tissue_mask: Optional[np.ndarray] = None
+        self, image: np.ndarray, tissue_mask: np.ndarray | None = None
     ) -> None:
         """Normalize image stains to match target image.
 

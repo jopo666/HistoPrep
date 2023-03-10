@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 __all__ = ["worker_func", "worker_init", "prepare_output_dir"]
 
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union
 
 import numpy as np
 from PIL import Image
@@ -25,7 +26,7 @@ class SlideRegionData:
 
     def save_image(
         self,
-        output_dir: Union[str, Path],
+        output_dir: str | Path,
         image_format: str = "jpeg",
         quality: int = 80,
     ) -> str:
@@ -40,7 +41,7 @@ class SlideRegionData:
         Image.fromarray(self.image).save(filepath, quality=quality)
         return str(filepath)
 
-    def save_mask(self, output_dir: Union[str, Path]) -> str:
+    def save_mask(self, output_dir: str | Path) -> str:
         """Save mask to output directory."""
         if not isinstance(output_dir, Path):
             output_dir = Path(output_dir)
@@ -50,9 +51,7 @@ class SlideRegionData:
         return str(filepath)
 
 
-def prepare_output_dir(
-    *, parent_dir: Union[str, Path], name: str, overwrite: bool
-) -> Path:
+def prepare_output_dir(*, parent_dir: str | Path, name: str, overwrite: bool) -> Path:
     """Prepare output directory."""
     if not isinstance(parent_dir, Path):
         parent_dir = Path(parent_dir)
@@ -85,7 +84,7 @@ def worker_func(
     quality: int,
     raise_exception: bool,
     image_dir: str,
-) -> Union[dict, Exception]:
+) -> dict | Exception:
     """Worker function to read and save images and masks."""
     # Read region.
     region_data = read_region_data(
@@ -123,7 +122,7 @@ def read_region_data(
     sigma: float,
     skip_metrics: bool,
     raise_exception: bool,
-) -> Union[SlideRegionData, Exception]:
+) -> SlideRegionData | Exception:
     """Read region image, generate mask and get image metrics safely."""
     try:
         x, y, w, h = xywh
@@ -150,7 +149,7 @@ def save_region_data(
     quality: int,
     image_dir: str,
     raise_exception: bool,
-) -> Union[dict[str, str], Exception]:
+) -> dict[str, str] | Exception:
     """Save image/mask safely."""
     try:
         output = {}
