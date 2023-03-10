@@ -25,6 +25,7 @@ tqdm = "*"
 [tool.poetry.group.dev.dependencies]
 ipykernel = "*"
 pytest = "*"
+ipywidgets = "*"
 
 [build-system]
 requires = ["poetry-core"]
