@@ -252,20 +252,6 @@ def glob_pattern(*args) -> list[Path]:
     show_default=True,
     help="Multiplier for Otsu's threshold. Ignored if threshold is set.",
 )
-@click.option(  # ignore_white
-    "--ignore-white",
-    type=click.BOOL,
-    default=True,
-    show_default=True,
-    help="Ignore white pixels when finding Otsu's threshold.",
-)
-@click.option(  # ignore_black
-    "--ignore-black",
-    type=click.BOOL,
-    default=True,
-    show_default=True,
-    help="Ignore black pixels when finding Otsu's threshold.",
-)
 @click.option(  # tissue_level
     "--tissue-level",
     metavar="INT",
@@ -298,8 +284,6 @@ def cut_slides(
     # Tissue detection.
     threshold: float | None = None,
     multiplier: float = 1.05,
-    ignore_white: bool = True,
-    ignore_black: bool = True,
     tissue_level: int | None = None,
     sigma: float = 1.0,
     max_dimension: int = 8192,
@@ -338,8 +322,6 @@ def cut_slides(
             "threshold": threshold,
             "multiplier": multiplier,
             "sigma": sigma,
-            "ignore_white": ignore_white,
-            "ignore_black": ignore_black,
         },
         "tile_kwargs": {
             "width": width,

@@ -26,8 +26,6 @@ def get_tissue_mask(
     threshold: int | None = None,
     multiplier: float = 1.0,
     sigma: float = 1.0,
-    ignore_white: bool = True,
-    ignore_black: bool = True,
 ) -> tuple[int, np.ndarray]:
     """Detect tissue from image.
 
@@ -41,12 +39,6 @@ def get_tissue_mask(
             then multiplied with `multiplier`. Ignored if `threshold` is not None.
             Defaults to 1.0.
         sigma: Sigma for gaussian blurring. Defaults to 1.0.
-        ignore_white: Does not consider white pixels with Otsu's method. Useful
-            for slide images where large areas are artificially set to white.
-            Defaults to True.
-        ignore_white: Does not consider black pixels with Otsu's method. Useful
-            for slide images where large areas are artificially set to black.
-            Defaults to True.
 
     Raises:
         ValueError: Threshold not between 0 and 255.
@@ -71,9 +63,7 @@ def get_tissue_mask(
     blur = _gaussian_blur(image=gray, sigma=sigma, truncate=3.5)
     # Get threshold.
     if threshold is None:
-        threshold = _otsu_threshold(
-            gray=blur, ignore_white=ignore_white, ignore_black=ignore_black
-        )
+        threshold = _otsu_threshold(gray=blur)
         threshold = max(min(255, int(threshold * multiplier + 0.5)), 0)
     # Global thresholding.
     thrsh, mask = cv2.threshold(blur, threshold, 1, cv2.THRESH_BINARY_INV)
@@ -128,15 +118,10 @@ def clean_tissue_mask(
     return new_mask
 
 
-def _otsu_threshold(*, gray: np.ndarray, ignore_white: bool, ignore_black: bool) -> int:
+def _otsu_threshold(*, gray: np.ndarray) -> int:
     """Helper function to calculate Otsu's thresold from a grayscale image."""
-    # Collect values for Otsu's method.
     values = gray.flatten()
-    if ignore_white:
-        values = values[values != WHITE_PIXEL]
-    if ignore_black:
-        values = values[values != BLACK_PIXEL]
-    # Get threshold.
+    values = values[(values != WHITE_PIXEL) & (values != BLACK_PIXEL)]
     threshold, __ = cv2.threshold(
         values, None, 1, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
     )

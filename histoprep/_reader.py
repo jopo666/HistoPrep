@@ -126,8 +126,6 @@ class SlideReader:
         level: int | None = None,
         threshold: int | None = None,
         multiplier: float = 1.05,
-        ignore_white: bool = True,
-        ignore_black: bool = True,
         sigma: float = 0.0,
     ) -> TissueMask:
         """Detect tissue from slide level image.
@@ -142,12 +140,7 @@ class SlideReader:
                 minimizing the weighted within-class variance. This threshold is
                 then multiplied with `multiplier`. Ignored if `threshold` is not None.
                 Defaults to 1.0.
-            ignore_white: Does not consider white pixels with Otsu's method. Useful
-                for slide images where large areas are artificially set to white.
-                Defaults to True.
-            ignore_black: Does not consider black pixels with Otsu's method. Useful
-                for slide images where large areas are artificially set to black.
-                Defaults to True.
+
             sigma: Sigma for gaussian blurring. Defaults to 0.0.
 
         Raises:
@@ -167,8 +160,6 @@ class SlideReader:
             threshold=threshold,
             multiplier=multiplier,
             sigma=sigma,
-            ignore_white=ignore_white,
-            ignore_black=ignore_black,
         )
         return TissueMask(
             mask=tissue_mask,
