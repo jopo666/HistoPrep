@@ -33,7 +33,8 @@ class TileMetadata:
             dataframe: Polars dataframe containing tile metadata with image metrics.
         """
         self.__dataframe = dataframe
-        self.__outliers = np.array([], dtype=int)
+        self.__outliers = np.repeat([False], repeats=len(dataframe))
+        self.__outlier_selections = []
         self.__metric_columns = [
             x for x in dataframe.columns if "_q" in x or (x.endswith(("_mean", "_std")))
         ]
@@ -59,6 +60,11 @@ class TileMetadata:
         return self.__outliers
 
     @property
+    def outlier_selections(self) -> list[dict[str, np.ndarray | str]]:
+        """List of dicts with outlier selections and descriptions."""
+        return self.__outlier_selections
+
+    @property
     def metric_columns(self) -> np.ndarray:
         """Image metric columns."""
         return self.__metric_columns
@@ -76,6 +82,17 @@ class TileMetadata:
         mean = tuple((self.dataframe[RGB_MEAN_COLUMNS].mean() / 255).to_numpy()[0])
         std = tuple((self.dataframe[RGB_STD_COLUMNS].mean() / 255).to_numpy()[0])
         return mean, std
+
+    def add_outliers(self, selection: np.ndarray, *, desc: str) -> None:
+        """Set outliers to `True` with selection, and append the selection to
+        `outlier_selections` property.
+
+        Args:
+            selection: Selection for indexing `outliers` property.
+            desc: Description for selection.
+        """
+        self.__outliers[selection] = True
+        self.__outlier_selections.append({"selection": selection, "desc": desc})
 
     def random_collage(
         self,

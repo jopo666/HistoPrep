@@ -23,7 +23,8 @@ def test_tile_metadata() -> None:
     ).all()
     assert len(metadata.metric_columns) == 64
     assert metadata.metrics.shape == (434, 64)
-    assert len(metadata.outliers) == 0
+    assert len(metadata.outliers) == 434
+    assert metadata.outliers.sum() == 0
     # test plotting and methods.
     metadata.plot_histogram("background")
     clusters = metadata.cluster_kmeans(10)
@@ -35,4 +36,8 @@ def test_tile_metadata() -> None:
     assert metadata.random_collage(
         selection=metadata["hue_std"] > 50, shape=(64, 64)
     ).size == (16 * 64, 4 * 64)
+    # Add outliers.
+    metadata.add_outliers(metadata["background"] > 0.7, desc="high background")
+    assert metadata.outliers.sum() == 10
+    assert metadata.__repr__() == "TileMetadata(n_images=434, n_outliers=10)"
     clean_temporary_directory()
