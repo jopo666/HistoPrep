@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = ["SlideReader"]
 
 import functools
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -308,12 +308,27 @@ class SlideReader:
 
     def yield_tiles(
         self,
-        coordinates: TileCoordinates,
+        coordinates: TileCoordinates | list[tuple[int, int, int, int]],
         *,
         level: int = 0,
         transform: Callable[[np.ndarray], Any] | None = None,
         num_workers: int = 1,
-    ) -> np.ndarray | Any:
+    ) -> Iterator[tuple[np.ndarray | Any, tuple[int, int, int, int]]]:
+        """Yield tile images and corresponding xywh coordinates.
+
+        Args:
+            coordinates: `TileCoordinates` instance or a list of xywh-coordinates.
+            level: Slide level for reading tile image. Defaults to 0.
+            transform: Transform function for tile image. Defaults to None.
+            num_workers: Number of worker processes. Defaults to 1.
+
+        Yields:
+            Tuple of (possibly transformed) tile image and corresponding
+            xywh-coordinate.
+        """
+        # Check arguments.
+        if isinstance(coordinates, TileCoordinates):
+            coordinates = coordinates.coordinates
         # Prepare yield and init functions.
         init_fn = functools.partial(
             worker_init, reader_class=self.__class__, path=self.path
@@ -329,18 +344,54 @@ class SlideReader:
             pool = WorkerPool(n_jobs=num_workers, use_worker_state=True)
             iterable = pool.imap(
                 func=read_fn,
-                iterable_of_args=((x,) for x in coordinates.coordinates),
+                iterable_of_args=((x,) for x in coordinates),
                 iterable_len=len(coordinates),
                 worker_init=init_fn,
             )
         else:
             pool = None
-            iterable = (read_fn({"reader": self}, x) for x in coordinates.coordinates)
+            iterable = (read_fn({"reader": self}, x) for x in coordinates)
         # Yield tiles.
-        yield from zip(iterable, coordinates.coordinates)
+        yield from zip(iterable, coordinates)
         # Close pool.
         if pool is not None:
             pool.terminate()
+
+    def estimate_mean_and_std(
+        self,
+        coordinates: TileCoordinates | list[tuple[int, int, int, int]],
+        level: int = 0,
+        max_samples: int = 1000,
+        num_workers: int = 1,
+    ) -> tuple[tuple[float, ...], tuple[float, ...]]:
+        """Estimate slide mean and std.
+
+        Args:
+            coordinates: `TileCoordinates` instance or a list of xywh-coordinates.
+            level: Slide level for reading tile image. Defaults to 0.
+            max_samples: Maximum tiles to load. Defaults to 1000.
+            num_workers: Number of worker processes. Defaults to 1.
+
+        Returns:
+            Tuples of mean and std values for each image channel.
+        """
+        # Check arguments.
+        if isinstance(coordinates, TileCoordinates):
+            coordinates = coordinates.coordinates
+        if len(coordinates) > max_samples:
+            rng = np.random.default_rng()
+            coordinates = rng.choice(
+                coordinates, size=max_samples, replace=False
+            ).tolist()
+        mean, std = [], []
+        for tile, __ in self.yield_tiles(
+            coordinates=coordinates, level=level, num_workers=num_workers
+        ):
+            if tile.ndim == 2:  # noqa
+                tile = np.expand_dims(tile, -1)  # noqa
+            mean.append([tile[..., i].mean() for i in range(tile.shape[-1])])
+            std.append([tile[..., i].std() for i in range(tile.shape[-1])])
+        return tuple(np.array(mean).mean(0) / 255), tuple(np.array(std).mean(0) / 255)
 
     def save_tiles(
         self,

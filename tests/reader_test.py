@@ -292,3 +292,10 @@ def test_yield_tiles() -> None:
         assert tile.shape == (512, 512)
     for tile, __ in reader.yield_tiles(tile_coords, level=1):
         assert tile.shape == (256, 256, 3)
+
+
+def test_estimate_mean_and_std() -> None:
+    reader = SlideReader(SLIDE_PATH_JPEG)
+    tissue_mask = reader.get_tissue_mask()
+    tile_coords = reader.get_tile_coordinates(tissue_mask, 128, max_background=1.0)
+    mean, std = reader.estimate_mean_and_std(tile_coords, max_samples=1000)
