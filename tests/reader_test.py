@@ -279,3 +279,16 @@ def test_save_spots() -> None:
         == 0
     )
     clean_temporary_directory()
+
+
+def test_yield_tiles() -> None:
+    reader = SlideReader(SLIDE_PATH_JPEG)
+    tissue_mask = reader.get_tissue_mask()
+    tile_coords = reader.get_tile_coordinates(tissue_mask, 512, max_background=1.0)
+    for i, (tile, xywh) in enumerate(reader.yield_tiles(tile_coords)):
+        assert tile.shape == (512, 512, 3)
+        assert tile_coords.coordinates[i] == xywh
+    for tile, __ in reader.yield_tiles(tile_coords, transform=lambda x: x[..., 0]):
+        assert tile.shape == (512, 512)
+    for tile, __ in reader.yield_tiles(tile_coords, level=1):
+        assert tile.shape == (256, 256, 3)

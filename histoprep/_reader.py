@@ -3,7 +3,9 @@ from __future__ import annotations
 __all__ = ["SlideReader"]
 
 import functools
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import polars as pl
@@ -19,6 +21,7 @@ from .backend._functional import (
     multiply_xywh,
     prepare_output_dir,
     read_and_save_image,
+    read_tile,
     worker_init,
 )
 from .backend._read import read_slide
@@ -302,6 +305,42 @@ class SlideReader:
             thumbnail_spots=thumbnail_spots,
             thumbnail_tissue=thumbnail_tissue,
         )
+
+    def yield_tiles(
+        self,
+        coordinates: TileCoordinates,
+        *,
+        level: int = 0,
+        transform: Callable[[np.ndarray], Any] | None = None,
+        num_workers: int = 1,
+    ) -> np.ndarray | Any:
+        # Prepare yield and init functions.
+        init_fn = functools.partial(
+            worker_init, reader_class=self.__class__, path=self.path
+        )
+        read_fn = functools.partial(
+            read_tile,
+            level=level,
+            transform=transform,
+            raise_exception=True,
+        )
+        # Define tile saving iterable.
+        if num_workers > 1:
+            pool = WorkerPool(n_jobs=num_workers, use_worker_state=True)
+            iterable = pool.imap(
+                func=read_fn,
+                iterable_of_args=((x,) for x in coordinates.coordinates),
+                iterable_len=len(coordinates),
+                worker_init=init_fn,
+            )
+        else:
+            pool = None
+            iterable = (read_fn({"reader": self}, x) for x in coordinates.coordinates)
+        # Yield tiles.
+        yield from zip(iterable, coordinates.coordinates)
+        # Close pool.
+        if pool is not None:
+            pool.terminate()
 
     def save_tiles(
         self,
