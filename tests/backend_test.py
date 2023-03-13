@@ -84,6 +84,7 @@ def test_czi_backend() -> None:
     backend = CziBackend(SLIDE_PATH_CZI)
     assert isinstance(backend.reader, CziFile)
     assert backend.dimensions == (107903, 188868)
+    assert backend.read_level(-1).shape == (*backend.level_dimensions[7], 3)
     assert backend.level_dimensions == {
         0: (107903, 188868),
         1: (53952, 94434),
@@ -106,7 +107,4 @@ def test_czi_backend() -> None:
     }
     assert backend.level_count == 8
     assert backend.data_bounds == (0, 0, 188868, 107903)
-    with pytest.warns():
-        backend.read_region((0, 0, 100, 100), level=2)
-    assert backend.read_level(-1).shape == (*backend.level_dimensions[7], 3)
     read_regions_with_reader(backend)

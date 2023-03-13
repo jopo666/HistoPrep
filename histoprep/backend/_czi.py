@@ -1,8 +1,5 @@
 __all__ = ["CziBackend"]
 
-
-import warnings
-
 import cv2
 import numpy as np
 from aicspylibczi import CziFile
@@ -11,10 +8,6 @@ from ._base import BaseBackend
 from ._functional import allowed_dimensions, format_level, pad_tile
 
 ERROR_NON_MOSAIC = "HistoPrep does not support reading non-mosaic czi-files."
-WARN_NONZERO_LEVEL = (
-    "Reading regions from non-zero slide level(s) is not stable "
-    "due to a bug in the underlying libCZI implementation."
-)
 BACKGROUND_COLOR = (1.0, 1.0, 1.0)
 MIN_LEVEL_DIMENSION = 1024
 
@@ -45,8 +38,6 @@ class CziBackend(BaseBackend):
             )
             self.__level_downsamples[lvl] = slide_h / level_h, slide_w / level_w
             lvl += 1
-        # Set warning flag.
-        self.__warn_about_nonzero_level = True
 
     @property
     def reader(self) -> CziFile:
@@ -80,9 +71,6 @@ class CziBackend(BaseBackend):
 
     def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
         level = format_level(level, available=list(self.level_dimensions))
-        if level > 0 and self.__warn_about_nonzero_level:
-            warnings.warn(WARN_NONZERO_LEVEL)
-            self.__warn_about_nonzero_level = False
         x, y, w, h = xywh
         # Define allowed dims, output dims and expected dims.
         allowed_h, allowed_w = allowed_dimensions(xywh, dimensions=self.dimensions)
