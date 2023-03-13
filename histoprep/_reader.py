@@ -18,7 +18,7 @@ from .backend._functional import (
     format_level,
     multiply_xywh,
     prepare_output_dir,
-    worker_func,
+    read_and_save_image,
     worker_init,
 )
 from .backend._read import read_slide
@@ -468,7 +468,7 @@ class SlideReader:
             worker_init, reader_class=self.__class__, path=self.path
         )
         save_fn = functools.partial(
-            worker_func,
+            read_and_save_image,
             output_dir=output_dir,
             level=level,
             threshold=coordinates.tissue_mask.threshold,

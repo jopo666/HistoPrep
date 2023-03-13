@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ["worker_func", "worker_init", "prepare_output_dir"]
+__all__ = ["read_and_save_image", "prepare_output_dir"]
 
 import shutil
 from dataclasses import dataclass
@@ -65,12 +65,7 @@ def prepare_output_dir(*, parent_dir: str | Path, name: str, overwrite: bool) ->
     return output_dir
 
 
-def worker_init(worker_state, reader_class, path: Path) -> None:  # noqa
-    """Worker initialization function for `worker_func`."""
-    worker_state["reader"] = reader_class(path)
-
-
-def worker_func(
+def read_and_save_image(
     worker_state: dict,
     xywh: tuple[int, int, int, int],
     *,
