@@ -40,8 +40,10 @@ class CziBackend(BaseBackend):
         self.__level_dimensions, self.__level_downsamples = {}, {}
         while lvl == 0 or max(slide_w, slide_h) // 2**lvl >= MIN_LEVEL_DIMENSION:
             level_h, level_w = (slide_h // 2**lvl, slide_w // 2**lvl)
-            self.__level_dimensions[lvl] = (slide_h // 2**lvl, slide_w // 2**lvl)
-            self.__level_downsamples[lvl] = (slide_h / level_h, slide_w / level_w)
+            self.__level_dimensions[lvl] = round(slide_h / 2**lvl), round(
+                slide_w / 2**lvl
+            )
+            self.__level_downsamples[lvl] = slide_h / level_h, slide_w / level_w
             lvl += 1
         # Set warning flag.
         self.__warn_about_nonzero_level = True
@@ -74,7 +76,7 @@ class CziBackend(BaseBackend):
 
     def read_level(self, level: int) -> np.ndarray:
         level = format_level(level, available=list(self.level_dimensions))
-        return self._read_region(xywh=self.data_bounds, level=level)
+        return self.read_region(xywh=self.data_bounds, level=level)
 
     def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
         level = format_level(level, available=list(self.level_dimensions))
@@ -92,7 +94,7 @@ class CziBackend(BaseBackend):
             return np.zeros((output_h, output_w, 3), dtype=np.uint8) + 255
         tile = self.__reader.read_mosaic(
             region=(self.__origo[0] + x, self.__origo[1] + y, allowed_w, allowed_h),
-            scale_factor=1 / 2**level,
+            scale_factor=scale_factor,
             C=0,
             background_color=BACKGROUND_COLOR,
         )[0]
@@ -104,9 +106,9 @@ class CziBackend(BaseBackend):
         tile_h, tile_w = tile.shape[:2]
         if tile_h != excepted_h or tile_w != excepted_w:
             tile = cv2.resize(
-                tile, dsize=(excepted_h, excepted_w), interpolation=cv2.INTER_NEAREST
+                tile, dsize=(excepted_w, excepted_h), interpolation=cv2.INTER_NEAREST
             )
         # Convert to RGB and pad.
         return pad_tile(
-            cv2.cvtColor(tile, cv2.COLOR_BGR2RGB), shape=(output_h, output_w)
+            cv2.cvtColor(tile, cv2.COLOR_BGR2RGB), shape=(excepted_h, excepted_w)
         )

@@ -27,6 +27,7 @@ def test_pillow_backend() -> None:
     backend = PillowBackend(SLIDE_PATH_JPEG)
     assert isinstance(backend.reader, Image.Image)
     assert backend.dimensions == (1000, 2000)
+    assert backend.read_level(1).shape == (*backend.level_dimensions[1], 3)
     assert backend.level_dimensions == {0: (1000, 2000), 1: (500, 1000)}
     assert backend.level_downsamples == {0: (1.0, 1.0), 1: (2.0, 2.0)}
     assert backend.level_count == 2
@@ -41,6 +42,7 @@ def test_openslide_backend() -> None:
     backend = OpenSlideBackend(SLIDE_PATH_SVS)
     assert isinstance(backend.reader, OpenSlide)
     assert backend.dimensions == (2967, 2220)
+    assert backend.read_level(0).shape == (*backend.level_dimensions[0], 3)
     assert backend.level_dimensions == {0: (2967, 2220)}
     assert backend.level_downsamples == {0: (1.0, 1.0)}
     assert backend.level_count == 1
@@ -50,6 +52,7 @@ def test_openslide_backend() -> None:
     backend = OpenSlideBackend(SLIDE_PATH_MRXS)
     assert isinstance(backend.reader, OpenSlide)
     assert backend.dimensions == (410429, 170489)
+    assert backend.read_level(7).shape == (*backend.level_dimensions[7], 3)
     assert backend.level_dimensions == {
         0: (410429, 170489),
         1: (205214, 85244),
@@ -83,13 +86,13 @@ def test_czi_backend() -> None:
     assert backend.dimensions == (107903, 188868)
     assert backend.level_dimensions == {
         0: (107903, 188868),
-        1: (53951, 94434),
-        2: (26975, 47217),
-        3: (13487, 23608),
-        4: (6743, 11804),
-        5: (3371, 5902),
-        6: (1685, 2951),
-        7: (842, 1475),
+        1: (53952, 94434),
+        2: (26976, 47217),
+        3: (13488, 23608),
+        4: (6744, 11804),
+        5: (3372, 5902),
+        6: (1686, 2951),
+        7: (843, 1476),
     }
     assert backend.level_downsamples == {
         0: (1.0, 1.0),
@@ -105,4 +108,5 @@ def test_czi_backend() -> None:
     assert backend.data_bounds == (0, 0, 188868, 107903)
     with pytest.warns():
         backend.read_region((0, 0, 100, 100), level=2)
+    assert backend.read_level(-1).shape == (*backend.level_dimensions[7], 3)
     read_regions_with_reader(backend)
