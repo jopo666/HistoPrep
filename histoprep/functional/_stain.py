@@ -16,35 +16,37 @@ from sklearn.decomposition import DictionaryLearning
 from ._check import check_image
 
 ERROR_GRAYSCALE = "Stain matrix is not defined for grayscale images (`image.ndim==2`)."
+# These are from: https://github.com/mitkovetta/staining-normalization
+REF_STAIN_MATRIX = np.array([[0.5626, 0.7201, 0.4062], [0.2159, 0.8012, 0.5581]])
+REF_MAX_CONCENTRATIONS = np.array([[1.9705, 1.0308]])
 
 
 def normalize_stains(
     image: np.ndarray,
-    src_stain_matrix: np.ndarray,
-    dst_stain_matrix: np.ndarray,
-    dst_stain_concentrations: np.ndarray,
+    stain_matrix: np.ndarray,
+    *,
+    target_stain_matrix: np.ndarray = REF_STAIN_MATRIX,
+    target_max_concentrations: np.ndarray = REF_MAX_CONCENTRATIONS,
 ) -> dict[str, np.ndarray]:
     """Normalize image stains to match destination stain matrix.
 
     Args:
         image: Image to be normalized.
-        src_stain_matrix: Stain matrix for the input image.
-        dst_stain_matrix: Stain matrix for the destination image.
-        dst_concentrations: Stain concentrations of the destination image.
+        stain_matrix: Stain matrix for image.
+        target_stain_matrix: Target stain matrix. Defaults to reference values from [1].
+        target_max_concentrations: Maximum target stain concentrations. Defaults to
+            reference values from [1].
 
     Returns:
         Normalized image.
     """
     image = _check_and_copy_image(image)
-    src_stain_concentrations = get_stain_consentrations(image, src_stain_matrix)
-    dst_max_concentrations = np.percentile(
-        dst_stain_concentrations, 99, axis=0
-    ).reshape((1, 2))
+    src_stain_concentrations = get_stain_consentrations(image, stain_matrix)
     src_max_concentrations = np.percentile(
         src_stain_concentrations, 99, axis=0
     ).reshape((1, 2))
-    src_stain_concentrations *= dst_max_concentrations / src_max_concentrations
-    output = 255 * np.exp(-1 * np.dot(src_stain_concentrations, dst_stain_matrix))
+    src_stain_concentrations *= target_max_concentrations / src_max_concentrations
+    output = 255 * np.exp(-1 * np.dot(src_stain_concentrations, target_stain_matrix))
     return np.clip(output, 0, 255).reshape(image.shape).astype(np.uint8)
 
 

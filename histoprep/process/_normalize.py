@@ -17,7 +17,7 @@ class StainNormalizer:
 
     def __init__(self, stain_matrix_fn: Callable, **kwargs) -> None:
         self.__stain_matrix_fn = partial(stain_matrix_fn, **kwargs)
-        self.__normalize_fn = None
+        self.__normalize_fn = F.normalize_stains
 
     def fit(self, image: np.ndarray, tissue_mask: np.ndarray | None = None) -> None:
         """Fit stain normalizer with a target image.
@@ -27,13 +27,12 @@ class StainNormalizer:
             tissue_mask: Tissue mask, which is ignored if empty. Defaults to None.
         """
         stain_matrix = self.__stain_matrix_fn(image=image, tissue_mask=tissue_mask)
-        stain_concentrations = F.get_stain_consentrations(
-            image=image, stain_matrix=stain_matrix
-        )
+        concentrations = F.get_stain_consentrations(image, stain_matrix)
+        max_concentrations = np.percentile(concentrations, 99, axis=0).reshape((1, 2))
         self.__normalize_fn = partial(
             F.normalize_stains,
-            dst_stain_matrix=stain_matrix,
-            dst_stain_concentrations=stain_concentrations,
+            target_stain_matrix=stain_matrix,
+            target_max_concentrations=max_concentrations,
         )
 
     def normalize(
@@ -48,10 +47,8 @@ class StainNormalizer:
         Returns:
             Stain normalized image.
         """
-        if self.__normalize_fn is None:
-            raise ValueError(ERROR_NO_TARGET)
         stain_matrix = self.__stain_matrix_fn(image=image, tissue_mask=tissue_mask)
-        return self.__normalize_fn(image=image, src_stain_matrix=stain_matrix)
+        return self.__normalize_fn(image=image, stain_matrix=stain_matrix)
 
 
 class MachenkoStainNormalizer(StainNormalizer):
