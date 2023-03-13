@@ -41,6 +41,10 @@ def get_tile_coordinates(
 
     Returns:
         List of xywh-coordinates.
+
+    Examples:
+        >>> get_tile_coordinates((16, 8), width=8, overlap=0.5)
+        [(0, 0, 8, 8), (0, 4, 8, 8), (0, 8, 8, 8)]
     """
     # Check arguments.
     if height is None:
