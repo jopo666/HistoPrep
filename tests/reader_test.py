@@ -6,9 +6,17 @@ import pytest
 from PIL import Image
 
 from histoprep import SlideReader
-from histoprep.backend import TileCoordinates, TissueMask, TMASpotCoordinates
+from histoprep.backend import (
+    CziBackend,
+    OpenSlideBackend,
+    PillowBackend,
+    TileCoordinates,
+    TissueMask,
+    TMASpotCoordinates,
+)
 
 from .utils import (
+    SLIDE_PATH_CZI,
     SLIDE_PATH_JPEG,
     SLIDE_PATH_TMA,
     TMP_DIRECTORY,
@@ -299,3 +307,9 @@ def test_estimate_mean_and_std() -> None:
     tissue_mask = reader.get_tissue_mask()
     tile_coords = reader.get_tile_coordinates(tissue_mask, 128, max_background=1.0)
     mean, std = reader.estimate_mean_and_std(tile_coords, max_samples=1000)
+
+
+def test_reader_init_with_backend_class() -> None:
+    __ = SlideReader(SLIDE_PATH_JPEG, backend=PillowBackend)
+    __ = SlideReader(SLIDE_PATH_TMA, backend=OpenSlideBackend)
+    __ = SlideReader(SLIDE_PATH_CZI, backend=CziBackend)

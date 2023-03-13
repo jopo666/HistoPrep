@@ -26,6 +26,7 @@ tqdm = "*"
 ipykernel = "*"
 pytest = "*"
 ipywidgets = "*"
+torch = "*"
 
 [build-system]
 requires = ["poetry-core"]

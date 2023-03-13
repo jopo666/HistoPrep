@@ -15,7 +15,14 @@ from PIL import Image
 
 import histoprep.functional as F
 
-from .backend._data import TileCoordinates, TissueMask, TMASpotCoordinates
+from .backend import (
+    CziBackend,
+    OpenSlideBackend,
+    PillowBackend,
+    TileCoordinates,
+    TissueMask,
+    TMASpotCoordinates,
+)
 from .backend._functional import (
     format_level,
     multiply_xywh,
@@ -33,7 +40,11 @@ ERROR_CANNOT_OVERWRITE = "Output directory exists, but `overwrite=False`."
 
 
 class SlideReader:
-    def __init__(self, path: str | Path, backend: str | None = None) -> None:
+    def __init__(
+        self,
+        path: str | Path,
+        backend: str | OpenSlideBackend | PillowBackend | CziBackend | None = None,
+    ) -> None:
         """Reader class for histological slide images, with a lot of useful
         functionalty.
 
@@ -43,7 +54,10 @@ class SlideReader:
                 assing the correct backend based on file extension. Defaults to None.
         """
         super().__init__()
-        self.backend = read_slide(path=path, backend=backend)
+        if backend is None or isinstance(backend, str):
+            self.backend = read_slide(path=path, backend=backend)
+        else:
+            self.backend = backend(path=path)
 
     @property
     def path(self) -> str:
