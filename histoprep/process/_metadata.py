@@ -114,7 +114,9 @@ class TileMetadata:
         """
         rng = np.random.default_rng()
         sampled_paths = rng.choice(
-            self["path"][selection], size=min(selection.sum(), n_cols * n_rows)
+            self["path"][selection],
+            size=min(selection.sum(), n_cols * n_rows),
+            replace=False,
         )
         return create_collage(read_images(sampled_paths), n_cols=n_cols, shape=shape)
 
