@@ -11,6 +11,8 @@ from PIL import Image
 
 import histoprep.functional as F
 
+from ._tile import read_tile
+
 ERROR_OUTPUT_DIR_IS_FILE = "Output directory exists but it is a file."
 ERROR_CANNOT_OVERWRITE = "Output directory exists, but `overwrite=False`."
 
@@ -83,7 +85,7 @@ def read_and_save_image(
     """Worker function to read and save images and masks."""
     # Read region.
     region_data = read_region_data(
-        reader=worker_state["reader"],
+        worker_state=worker_state,
         xywh=xywh,
         level=level,
         threshold=threshold,
@@ -110,7 +112,7 @@ def read_and_save_image(
 
 def read_region_data(
     *,
-    reader,  # noqa
+    worker_state: dict,
     xywh: tuple[int, int, int, int],
     level: int,
     threshold: int,
@@ -119,19 +121,19 @@ def read_region_data(
     raise_exception: bool,
 ) -> SlideRegionData | Exception:
     """Read region image, generate mask and get image metrics safely."""
-    try:
-        x, y, w, h = xywh
-        image = reader.read_region(xywh, level=level)
-        __, mask = F.get_tissue_mask(image, threshold=threshold, sigma=sigma)
-        metadata = {"x": x, "y": y, "w": w, "h": h}
-        if not skip_metrics:
-            metadata.update(F.calculate_metrics(image, mask))
-    except KeyboardInterrupt:
-        raise KeyboardInterrupt from None
-    except Exception as catched_exception:  # noqa
-        if raise_exception:
-            raise catched_exception  # noqa
-        return catched_exception
+    image = read_tile(
+        worker_state,
+        xywh=xywh,
+        level=level,
+        transform=None,
+        raise_exception=raise_exception,
+    )
+    if isinstance(image, Exception):
+        return image
+    __, mask = F.get_tissue_mask(image, threshold=threshold, sigma=sigma)
+    metadata = dict(zip("xywh", xywh))
+    if not skip_metrics:
+        metadata.update(F.calculate_metrics(image, mask))
     return SlideRegionData(xywh=xywh, image=image, mask=mask, metadata=metadata)
 
 
