@@ -1,8 +1,15 @@
 from __future__ import annotations
 
-__all__ = ["get_tile_coordinates"]
+__all__ = [
+    "get_tile_coordinates",
+    "get_non_overlapping_coordinates",
+    "get_overlap_index",
+    "get_overlap_area",
+]
 
 import itertools
+
+import numpy as np
 
 ERROR_TYPE = "Tile width and height should be integers, got {} and {}."
 ERROR_NONZERO = (
@@ -14,6 +21,7 @@ ERROR_DIMENSION = (
 ERROR_OVERLAP = "Overlap should be in range [0, 1), got {}."
 
 OVERLAP_LIMIT = 1.0
+XYWH = tuple[int, int, int, int]
 
 
 def get_tile_coordinates(
@@ -23,7 +31,7 @@ def get_tile_coordinates(
     height: int | None = None,
     overlap: float = 0.0,
     out_of_bounds: bool = False,
-) -> list[tuple[int, int, int, int]]:
+) -> list[XYWH]:
     """Create tile coordinates (xywh).
 
     Args:
@@ -70,3 +78,87 @@ def get_tile_coordinates(
         y_coords = y_coords[:-1]
     # Take product and add width and height.
     return [(x, y, width, height) for y, x in itertools.product(y_coords, x_coords)]
+
+
+def get_non_overlapping_coordinates(
+    tile_coordinates: list[XYWH], overlap: float
+) -> np.ndarray:
+    """Convert tile coordinates into non-overlapping tile coordindates.
+
+    Args:
+        tile_coordinates: Tile coordinates.
+        overlap: Overlap between neighbouring tile coordinates.
+
+    Returns:
+        List of non-overlapping tile coordinates.
+
+    Examples:
+        >>> coords = [[0, 0, 4, 4], [0, 2, 4, 4]]
+        >>> get_non_overlapping_coordinates(coords, overlap=0.5).tolist()
+        [[0, 0, 2, 2], [0, 2, 2, 2]]
+    """
+    if overlap <= 0:
+        return tile_coordinates
+    return np.array(
+        [
+            (x, y, int(w - w * overlap), int(h - h * overlap))
+            for x, y, w, h in tile_coordinates
+        ]
+    )
+
+
+def get_overlap_index(xywh: XYWH, coordinates: list[XYWH]) -> np.ndarray:
+    """Indices of tiles in `coordinates` which overlap with `xywh`.
+
+    Args:
+        xywh: Coordinates.
+        tile_coordinates: List of tile coordinates.
+
+    Returns:
+        Indices of tiles which overlap with xywh.
+
+    Examples:
+        >>> xywh = [5, 5, 5, 5]
+        >>> coordinates = [[0, 0, 100, 100], [0, 0, 4, 4], [4, 4, 2, 2], [11, 11, 2, 2]]
+        >>> get_overlap_index(xywh, coordinates)
+        array([0, 2])
+    """
+    x, y, w, h = xywh
+    if not isinstance(coordinates, np.ndarray):
+        coordinates = np.array(coordinates, dtype=int)
+    return np.argwhere(
+        (coordinates[:, 0] <= x + w)
+        & (coordinates[:, 0] + coordinates[:, 2] >= x)
+        & (coordinates[:, 1] <= y + h)
+        & (coordinates[:, 1] + coordinates[:, 3] >= y)
+    ).flatten()
+
+
+def get_overlap_area(
+    xywh: tuple[int, int, int, int],
+    coordinates: list[XYWH],
+) -> np.ndarray:
+    """Calculate how much each coordinate overlaps with `xywh`.
+
+    Args:
+        xywh: Coordinates.
+        coordinates: List of coordinates.
+
+    Returns:
+        Overlapping area for each tile in `coordinates`
+
+    Examples:
+        >>> xywh = [5, 5, 5, 5]
+        >>> coordinates = [[0, 0, 100, 100], [0, 0, 4, 4], [4, 4, 2, 2], [11, 11, 2, 2]]
+        >>> get_overlap_area(xywh, coordinates)
+        array([25,  0,  1,  0])
+    """
+    x, y, w, h = xywh
+    if not isinstance(coordinates, np.ndarray):
+        coordinates = np.array(coordinates)
+    areas = np.zeros(len(coordinates))
+    overlap_index = get_overlap_index(xywh, coordinates)
+    x_overlap = coordinates[overlap_index, 0] + coordinates[overlap_index, 2] - w
+    y_overlap = coordinates[overlap_index, 1] + coordinates[overlap_index, 3] - h
+    areas[overlap_index] = np.minimum(x_overlap, w) * np.minimum(y_overlap, h)
+    return areas.astype(int)
