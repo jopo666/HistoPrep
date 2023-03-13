@@ -21,7 +21,7 @@ BLACK_PIXEL = 0
 WHITE_PIXEL = 255
 
 
-def calculate_metrics(  # noqa
+def calculate_metrics(
     image: Image.Image | np.ndarray,
     tissue_mask: np.ndarray,
     quantiles: tuple[float, ...] = DEFAULT_QUANTILES,
@@ -73,32 +73,51 @@ def calculate_metrics(  # noqa
     if tissue_mask.sum() < MIN_TISSUE_PIXELS:
         tissue_mask[...] = 1
     # Channel mean and std.
-    metrics.update(get_channel_mean(gray, "gray"))
-    metrics.update(get_channel_std(gray, "gray"))
+    metrics.update(get_mean_and_std(gray, ["gray"]))
     if image.ndim > GRAYSCALE_NDIM:
-        for idx, name in enumerate(["red", "green", "blue"]):
-            metrics.update(get_channel_mean(image[..., idx], name))
-            metrics.update(get_channel_std(image[..., idx], name))
-        for idx, name in enumerate(["hue", "saturation", "brightness"]):
-            metrics.update(get_channel_mean(hsv[..., idx], name))  # type: ignore
-            metrics.update(get_channel_std(hsv[..., idx], name))  # type: ignore
+        metrics.update(get_mean_and_std(image, ["red", "green", "blue"]))
+        metrics.update(get_mean_and_std(hsv, ["hue", "saturation", "brightness"]))
     # Channel quantiles.
-    metrics.update(get_channel_quantiles(gray, tissue_mask, quantiles, "gray"))
+    metrics.update(get_quantiles(gray, tissue_mask, quantiles, ["gray"]))
     if image.ndim > GRAYSCALE_NDIM:
-        for idx, name in enumerate(["red", "green", "blue"]):
-            metrics.update(
-                get_channel_quantiles(image[..., idx], tissue_mask, quantiles, name)
+        metrics.update(
+            get_quantiles(image, tissue_mask, quantiles, ["red", "green", "blue"])
+        )
+        metrics.update(
+            get_quantiles(
+                hsv, tissue_mask, quantiles, ["hue", "saturation", "brightness"]
             )
-        for idx, name in enumerate(["hue", "saturation", "brightness"]):
-            metrics.update(
-                get_channel_quantiles(
-                    hsv[..., idx],  # type: ignore
-                    tissue_mask,
-                    quantiles,
-                    name,
-                )
-            )
+        )
     return metrics
+
+
+def get_mean_and_std(image: np.ndarray, names: list[str]) -> dict[str, float]:
+    """Collect mean and standard deviation for image."""
+    if image.ndim == GRAYSCALE_NDIM:
+        return {
+            **_get_channel_mean(image, names[0]),
+            **_get_channel_std(image, names[0]),
+        }
+    output = {}
+    for channel_idx, name in enumerate(names):
+        output.update(_get_channel_mean(image[..., channel_idx], name))
+        output.update(_get_channel_std(image[..., channel_idx], name))
+    return output
+
+
+def get_quantiles(
+    image: np.ndarray, tissue_mask: np.ndarray, quantiles: list[float], names: list[str]
+) -> dict[str, float]:
+    if image.ndim == GRAYSCALE_NDIM:
+        return _get_channel_quantiles(image, tissue_mask, quantiles, names[0])
+    output = {}
+    for channel_idx, name in enumerate(names):
+        output.update(
+            _get_channel_quantiles(
+                image[..., channel_idx], tissue_mask, quantiles, name
+            )
+        )
+    return output
 
 
 def get_data_loss(gray: np.ndarray) -> dict[str, float]:
@@ -114,17 +133,17 @@ def get_laplacian_std(gray: np.ndarray) -> dict[str, float]:
     return {"laplacian_std": cv2.Laplacian(gray, cv2.CV_32F).std()}
 
 
-def get_channel_mean(channel: np.ndarray, name: str) -> dict[str, float]:
+def _get_channel_mean(channel: np.ndarray, name: str) -> dict[str, float]:
     """Calculate mean value for the channel."""
     return {f"{name}_mean": channel.mean().round(3).tolist()}
 
 
-def get_channel_std(channel: np.ndarray, name: str) -> dict[str, float]:
+def _get_channel_std(channel: np.ndarray, name: str) -> dict[str, float]:
     """Calculate std value for the channel."""
     return {f"{name}_std": channel.std().round(3).tolist()}
 
 
-def get_channel_quantiles(
+def _get_channel_quantiles(
     channel: np.ndarray,
     tissue_mask: np.ndarray,
     quantiles: tuple[float, ...],
