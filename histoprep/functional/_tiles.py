@@ -119,18 +119,18 @@ def get_overlap_index(xywh: XYWH, coordinates: list[XYWH]) -> np.ndarray:
 
     Examples:
         >>> xywh = [5, 5, 5, 5]
-        >>> coordinates = [[0, 0, 100, 100], [0, 0, 4, 4], [4, 4, 2, 2], [11, 11, 2, 2]]
+        >>> coordinates = [[0, 0, 5, 5], [0, 0, 5, 6], [0, 0, 6, 6], [10, 10, 1, 1]]
         >>> get_overlap_index(xywh, coordinates)
-        array([0, 2])
+        array([2])
     """
     x, y, w, h = xywh
     if not isinstance(coordinates, np.ndarray):
         coordinates = np.array(coordinates, dtype=int)
     return np.argwhere(
-        (coordinates[:, 0] <= x + w)
-        & (coordinates[:, 0] + coordinates[:, 2] >= x)
-        & (coordinates[:, 1] <= y + h)
-        & (coordinates[:, 1] + coordinates[:, 3] >= y)
+        (coordinates[:, 0] < x + w)
+        & (coordinates[:, 0] + coordinates[:, 2] > x)
+        & (coordinates[:, 1] < y + h)
+        & (coordinates[:, 1] + coordinates[:, 3] > y)
     ).flatten()
 
 
