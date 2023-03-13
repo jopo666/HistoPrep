@@ -176,7 +176,7 @@ class TileMetadata:
         n_images: int = 12,
         ax: plt.Axes | None = None,
         **kwargs,
-    ) -> plt.Axes | list[plt.Axes]:
+    ) -> plt.Axes | np.ndarray[plt.Axes]:
         """Plot column values in a histogram with example images.
 
         Args:
@@ -190,7 +190,7 @@ class TileMetadata:
             ValueError: No difference between min and max values.
 
         Returns:
-            Matplotlib ax(es) for the plot.
+            Matplotlib axis or axes when `n_images>0`.
         """
         if ax is not None and n_images > 0:
             raise ValueError(ERROR_AX_WITH_IMAGES)
@@ -227,7 +227,7 @@ class TileMetadata:
         for idx, bin_image in enumerate(bin_images):
             ax_images[idx].imshow(bin_image)
             ax_images[idx].axis("off")
-        return [ax_hist, *ax_images]
+        return np.array([ax_hist, *ax_images])
 
     def __getitem__(self, key: str) -> np.ndarray:
         """Indexing with column names."""
