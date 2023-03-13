@@ -2,7 +2,7 @@ import numpy as np
 from PIL import Image
 
 import histoprep.functional as F
-from histoprep.process import MachenkoStainNormalizer, VahadaneStainNormalizer
+from histoprep.utils import MachenkoStainNormalizer, VahadaneStainNormalizer
 
 from .utils import SLIDE_PATH_JPEG, TILE_IMAGE
 

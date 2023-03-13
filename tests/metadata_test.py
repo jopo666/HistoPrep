@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from histoprep import SlideReader
-from histoprep.process import TileMetadata
+from histoprep.utils import TileMetadata
 
 from .utils import SLIDE_PATH_JPEG, TMP_DIRECTORY, clean_temporary_directory
 
