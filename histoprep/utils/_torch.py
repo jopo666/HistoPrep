@@ -40,9 +40,7 @@ class SlideReaderDataset(Dataset):
         if not HAS_PYTORCH:
             raise ImportError(ERROR_PYTORCH)
         super().__init__()
-        self.__reader = None
-        self.__reader_path = reader.path
-        self.__reader_backend = reader.backend.__class__
+        self.reader = reader
         self.coordinates = (
             coordinates.coordinates
             if isinstance(coordinates, TileCoordinates)
@@ -51,20 +49,12 @@ class SlideReaderDataset(Dataset):
         self.level = level
         self.transform = transform
 
-    def __init_reader(self) -> None:
-        """Initialise reader with each worker when getting the first item."""
-        if self.__reader is None:
-            self.__reader = SlideReader(
-                path=self.__reader_path, backend=self.__reader_backend
-            )
-
     def __len__(self) -> int:
         return len(self.coordinates)
 
     def __getitem__(self, index: int) -> tuple[np.ndarray | Any, np.ndarray]:
-        self.__init_reader()
         xywh = self.coordinates[index]
-        tile = self.__reader.read_region(xywh, level=self.level)
+        tile = self.reader.read_region(xywh, level=self.level)
         if self.transform is not None:
             tile = self.transform(tile)
         return tile, np.array(xywh)

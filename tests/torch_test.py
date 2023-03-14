@@ -12,7 +12,7 @@ def test_torch_dataset() -> None:
     tissue_mask = reader.get_tissue_mask()
     coords = reader.get_tile_coordinates(tissue_mask, 512, max_background=0.01)
     # CZI fails if multiple workers read data from same instance, which should not
-    # happen here...
+    # happen here as there is some voodoo shit going on with `Dataset` & `DataLoader`...
     dataset = SlideReaderDataset(reader, coords, level=1, transform=lambda z: z)
     assert isinstance(dataset, Dataset)
     loader = DataLoader(dataset, batch_size=4, num_workers=2)
