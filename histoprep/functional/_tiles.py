@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 __all__ = [
-    "get_tile_coordinates",
-    "get_non_overlapping_coordinates",
-    "get_overlap_index",
+    "get_non_overlapping_regions",
     "get_overlap_area",
+    "get_overlap_index",
+    "get_tile_coordinates",
 ]
 
 import itertools
@@ -43,7 +43,7 @@ def get_tile_coordinates(
 
     Raises:
         TypeError: Height and/or width are not integers.
-        ValueError: Height and/or width are not less or equal to zero.
+        ValueError: Height and/or width are zero or less.
         ValueError: Height and/or width are larger than dimensions.
         ValueError: Overlap is not in range [0, 1).
 
@@ -80,10 +80,10 @@ def get_tile_coordinates(
     return [(x, y, width, height) for y, x in itertools.product(y_coords, x_coords)]
 
 
-def get_non_overlapping_coordinates(
+def get_non_overlapping_regions(
     tile_coordinates: list[XYWH], overlap: float
 ) -> np.ndarray:
-    """Convert tile coordinates into non-overlapping tile coordindates.
+    """Extract non-overlapping xywh-coordinate regions from tile coordinates.
 
     Args:
         tile_coordinates: Tile coordinates.
