@@ -9,7 +9,7 @@ from PIL import Image
 
 from ._check import check_image
 
-ERROR_THRESHOLD = "Threshold should be an integer in range [0, 255], got {}."
+ERROR_THRESHOLD = "Threshold should be in range [0, 255], got {}."
 
 MAX_THRESHOLD = 255
 WHITE_PIXEL = 255
