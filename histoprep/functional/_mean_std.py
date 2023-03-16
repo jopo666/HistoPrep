@@ -19,7 +19,7 @@ def _get_mean_and_std(
         Mean and standard deviation for each channel.
     """
     mean, std = [], []
-    for image in images:
+    for image, __ in images:
         check_image(image)
         if image.ndim == 2:  # noqa
             image = np.expand_dims(tile, -1)  # noqa

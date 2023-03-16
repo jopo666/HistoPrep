@@ -62,4 +62,4 @@ def _level_from_max_dimension(
     for level, (level_h, level_w) in level_dimensions.items():
         if level_h <= max_dimension and level_w <= max_dimension:
             return level
-    return list(_level_from_dimensions.keys())[-1]
+    return list(level_dimensions.keys())[-1]
