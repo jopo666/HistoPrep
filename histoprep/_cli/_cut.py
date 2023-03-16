@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__all__ = ["cut_slides"]
+
 import functools
 import glob
 from pathlib import Path
@@ -40,7 +42,6 @@ TILE_OPTIONS = [
     "--out-of-bounds",
 ]
 SAVE_OPTIONS = [
-    "--save-paths",
     "--save-metrics",
     "--save-masks",
     "--overwrite",
@@ -52,8 +53,6 @@ SAVE_OPTIONS = [
 TISSUE_OPTIONS = [
     "--threshold",
     "--multiplier",
-    "--ignore-white",
-    "--ignore-black",
     "--tissue-level",
     "--max-dimension",
     "--sigma",
@@ -162,13 +161,6 @@ def glob_pattern(*args) -> list[Path]:
     help="Allow tiles to go out-of-bounds. ",
 )
 # Saving.
-@click.option(  # save_paths
-    "--save-paths",
-    type=click.BOOL,
-    default=True,
-    show_default=True,
-    help="Save filepaths to metadata.",
-)
 @click.option(  # save_metrics
     "--save-metrics",
     type=click.BOOL,
@@ -178,6 +170,13 @@ def glob_pattern(*args) -> list[Path]:
 )
 @click.option(  # save_masks
     "--save-masks",
+    type=click.BOOL,
+    default=False,
+    show_default=True,
+    help="Save tissue masks for each tile.",
+)
+@click.option(  # save_masks
+    "--save-thumbnails",
     type=click.BOOL,
     default=False,
     show_default=True,
@@ -285,8 +284,8 @@ def cut_slides(
     threshold: float | None = None,
     multiplier: float = 1.05,
     tissue_level: int | None = None,
-    sigma: float = 1.0,
     max_dimension: int = 8192,
+    sigma: float = 1.0,
     # Tile extraction.
     level: int = 0,
     width: int = 640,
@@ -295,9 +294,9 @@ def cut_slides(
     max_background: float = 0.75,
     out_of_bounds: bool = True,
     # Tile saving.
-    save_paths: bool = True,
     save_metrics: bool = True,
     save_masks: bool = True,
+    save_thumbnails: bool = True,
     overwrite: bool = False,
     overwrite_unfinished: bool = False,
     image_format: str = "jpeg",
@@ -333,9 +332,9 @@ def cut_slides(
         "save_kwargs": {
             "parent_dir": parent_dir,
             "level": level,
-            "save_paths": save_paths,
             "save_metrics": save_metrics,
             "save_masks": save_masks,
+            "save_thumbnails": save_thumbnails,
             "image_format": image_format,
             "quality": quality,
             "use_csv": use_csv,
@@ -369,9 +368,11 @@ def filter_slide_paths(
     for path in all_paths:
         if not path.is_file():
             continue
-        output_dir = parent_dir / path.name.rstrip(path.suffix)
+        output_dir = parent_dir / path.name.removesuffix(path.suffix)
         if output_dir.exists():
-            if (output_dir / "metadata.parquet").exists():
+            if (output_dir / "metadata.parquet").exists() or (
+                output_dir / "metadata.csv"
+            ).exists():
                 processed.append(path)
             else:
                 interrupted.append(path)
@@ -381,11 +382,13 @@ def filter_slide_paths(
     if overwrite:
         output += processed + interrupted
         if len(processed + interrupted) > 0:
-            warning(f"Overwriting {len(interrupted)} slide outputs.")
+            warning(f"Overwriting {len(processed + interrupted)} slide outputs.")
     elif overwrite_unfinished:
         output += interrupted
         if len(interrupted) > 0:
             warning(f"Overwriting {len(interrupted)} unfinished slide outputs.")
+    elif len(processed) > 0:
+        info(f"Skipping {len(processed)} processed slides.")
     # Verbose.
     if len(output) == 0:
         error("No slides to process.")
@@ -403,9 +406,12 @@ def cut_slide(
 ) -> tuple[Path, Exception | None]:
     try:
         reader = SlideReader(path, **reader_kwargs)
-        tissue_mask = reader.get_tissue_mask(**tissue_kwargs)
+        max_dimension = tissue_kwargs.pop("max_dimension")
+        if tissue_kwargs["level"] is None:
+            tissue_kwargs["level"] = reader.level_from_max_dimension(max_dimension)
+        threshold, tissue_mask = reader.get_tissue_mask(**tissue_kwargs)
         coords = reader.get_tile_coordinates(tissue_mask=tissue_mask, **tile_kwargs)
-        reader.save_tiles(coordinates=coords, **save_kwargs)
+        reader.save_regions(coordinates=coords, threshold=threshold, **save_kwargs)
     except Exception as e:  # noqa
         return path, e
     return path, None

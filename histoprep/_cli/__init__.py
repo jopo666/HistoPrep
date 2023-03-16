@@ -1,3 +1,3 @@
 """CLI interface functions."""
 
-from ._cut import cut_slide
+from ._cut import cut_slides

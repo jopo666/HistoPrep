@@ -92,6 +92,10 @@ class SlideReader:
 
         Returns:
             Array containing image data for the level.
+
+        Example:
+            >>> reader.read_level(-1).shape
+            (1000, 1000, 3)
         """
         return self.backend.read_level(level=level)
 
@@ -496,3 +500,11 @@ class SlideReader:
             f"{self.__class__.__name__}(path={self.path}, "
             f"backend={self.backend.BACKEND_NAME})"
         )
+
+
+if __name__ == "__main__":
+    import doctest
+    import pathlib
+
+    path = pathlib.Path(__file__).parent.parent / "tests" / "data" / "slide.jpeg"
+    doctest.testmod(extraglobs={"reader": SlideReader()})
