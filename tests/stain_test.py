@@ -4,10 +4,10 @@ import histoprep.functional as F
 from histoprep import SlideReader
 from histoprep.utils import MachenkoStainNormalizer, VahadaneStainNormalizer
 
-from ._utils import SLIDE_PATH_JPEG, SLIDE_PATH_SVS
+from ._utils import IMAGE, SLIDE_PATH_SVS
 
-IMAGE_1 = SlideReader(SLIDE_PATH_JPEG).read_level(-1)[:500, :500, :]
-IMAGE_2 = SlideReader(SLIDE_PATH_SVS).read_level(-1)[:500, :500, :]
+IMAGE_1 = IMAGE
+IMAGE_2 = SlideReader(SLIDE_PATH_SVS).read_level(-1)[500:1000, 500:1000, :]
 
 
 def test_macenko_stain_matrix() -> None:
