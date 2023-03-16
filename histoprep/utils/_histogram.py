@@ -20,19 +20,26 @@ def _plot_histogram(
 
 
 def _get_bin_collages(
+    *,
     paths: np.ndarray,
     values: np.ndarray,
-    n_bins: int,
-    n_images_per_bin: int,
+    num_bins: int,
+    num_images: int,
+    num_workers: int,
     rng: np.random.Generator,
 ) -> list[np.ndarray]:
-    """Collect image paths based on binned values."""
-    __, cutoffs = np.histogram(values, bins=n_bins)
+    """Collect bin image collages."""
+    __, cutoffs = np.histogram(values, bins=num_bins)
     bin_indices = np.digitize(values, cutoffs[:-1]) - 1
     bin_paths = _collect_bin_paths(
-        paths, bin_indices=bin_indices, n_images_per_bin=n_images_per_bin, rng=rng
+        paths, bin_indices=bin_indices, n_images_per_bin=num_images, rng=rng
     )
-    return _read_bin_paths(bin_paths, n_bins=n_bins, n_images_per_bin=n_images_per_bin)
+    return _read_bin_paths(
+        bin_paths,
+        n_bins=num_bins,
+        n_images_per_bin=num_images,
+        num_workers=num_workers,
+    )
 
 
 def _collect_bin_paths(
@@ -41,6 +48,7 @@ def _collect_bin_paths(
     n_images_per_bin: int,
     rng: np.random.Generator,
 ) -> list[str]:
+    """Collect image paths based on binned values."""
     output = []
     for bin_idx in range(bin_indices.max() + 1):
         bin_paths = paths[bin_indices == bin_idx]
@@ -55,13 +63,12 @@ def _collect_bin_paths(
 
 
 def _read_bin_paths(
-    bin_paths: list[str | None], n_bins: int, n_images_per_bin: int
+    bin_paths: list[str | None], n_bins: int, n_images_per_bin: int, num_workers: int
 ) -> list[np.ndarray]:
     """Read paths for each bin and generate vertically stacked array."""
-    # Read all images to get resize shape for empty images.
     all_images = []
     resize_shape = None
-    for image in _read_images(bin_paths):
+    for image in _read_images(bin_paths, num_workers=num_workers):
         if resize_shape is None and image is not None:
             resize_shape = image.shape
         all_images.append(image)

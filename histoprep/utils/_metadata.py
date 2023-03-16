@@ -2,6 +2,7 @@ from __future__ import annotations
 
 __all__ = ["TileMetadata"]
 
+
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
@@ -19,7 +20,7 @@ ERROR_NO_METRICS = (
 ERROR_NO_DIFFERENCE = (
     "Difference between min={} and max={} values for column '{}' is zero."
 )
-ERROR_AX_WITH_IMAGES = "Passing `ax` when `n_images > 0` is not supported."
+ERROR_AX_WITH_IMAGES = "Passing `ax` when `num_images > 0` is not supported."
 FIGURE_WIDTH, FIGURE_HEIGHT = plt.rcParams["figure.figsize"]
 RGB_MEAN_COLUMNS = ["red_mean", "green_mean", "blue_mean"]
 RGB_STD_COLUMNS = ["red_std", "green_std", "blue_std"]
@@ -97,9 +98,11 @@ class TileMetadata:
     def random_collage(
         self,
         selection: np.ndarray,
+        *,
         n_rows: int = 4,
         n_cols: int = 16,
         shape: tuple[int, int] = (64, 64),
+        num_workers: int = 1,
     ) -> Image.Image:
         """Generate a random collage from `paths[selection]`.
 
@@ -108,17 +111,22 @@ class TileMetadata:
             n_rows: Number of rows in the collage image. Defaults to 4.
             n_cols: Number of columns in the collage image. Defaults to 16.
             shape: Size of each image in the collage. Defaults to (64, 64).
+            num_workers: Number of image loading workers. Defaults to 1.
 
         Returns:
             Collage image of randomly samples images based on selection.
         """
+        if selection.sum() == 0:
+            raise ValueError("Empty selection.")
         rng = np.random.default_rng()
         sampled_paths = rng.choice(
             self["path"][selection],
             size=min(selection.sum(), n_cols * n_rows),
             replace=False,
         )
-        return _create_collage(_read_images(sampled_paths), n_cols=n_cols, shape=shape)
+        return _create_collage(
+            _read_images(sampled_paths, num_workers), n_cols=n_cols, shape=shape
+        )
 
     def cluster_kmeans(self, n_clusters: int, **kwargs) -> np.ndarray:
         """Perform kmeans clustering on the metrics and order the clusters based on the
@@ -172,8 +180,9 @@ class TileMetadata:
         min_value: float | None = None,
         max_value: float | None = None,
         *,
-        n_bins: int = 20,
-        n_images: int = 12,
+        num_bins: int = 20,
+        num_images: int = 12,
+        num_workers: int = 1,
         ax: plt.Axes | None = None,
         **kwargs,
     ) -> plt.Axes | np.ndarray[plt.Axes]:
@@ -183,16 +192,20 @@ class TileMetadata:
             column: Column name.
             min_value: Minimum value for filtering. Defaults to None.
             max_value: Maximum value for filtering. Defaults to None.
-            n_bins: Number of bins. Defaults to 20.
-            n_images: Number of images per bin. Defaults to 12.
+            num_bins: Number of bins. Defaults to 20.
+            num_images: Number of images per bin. Defaults to 12.
+            num_workers: Number of image loading workers. Defaults to 1.
+            ax: Axis for histogram. Cannot be passed when `num_images>0`. Defaults to
+                None.
 
         Raises:
             ValueError: No difference between min and max values.
+            ValueError: Passing an axis when `num_images>0`.
 
         Returns:
-            Matplotlib axis or axes when `n_images>0`.
+            Matplotlib axis or axes when `num_images>0`.
         """
-        if ax is not None and n_images > 0:
+        if ax is not None and num_images > 0:
             raise ValueError(ERROR_AX_WITH_IMAGES)
         values = self[column]
         if min_value is None:
@@ -204,30 +217,34 @@ class TileMetadata:
         selection = (values >= min_value) & (values <= max_value)
         if "ec" not in kwargs:
             kwargs["ec"] = "black"
-        if n_images == 0:
+        if num_images == 0:
             # Plot only histogram.
-            return _plot_histogram(values[selection], n_bins, ax=ax, **kwargs)
+            return _plot_histogram(values[selection], num_bins, ax=ax, **kwargs)
         # Initialize figure.
-        ax_hist = plt.subplot2grid((4, n_bins), (0, 0), colspan=n_bins)
+        ax_hist = plt.subplot2grid((4, num_bins), (0, 0), colspan=num_bins)
         ax_images = []
-        for i in range(n_bins):
+        for i in range(num_bins):
             ax_images.append(
-                plt.subplot2grid((4, n_bins), (1, i), colspan=1, rowspan=3)
+                plt.subplot2grid((4, num_bins), (1, i), colspan=1, rowspan=3)
             )
         # Plot histogram.
-        _plot_histogram(values[selection], n_bins, ax=ax_hist, **kwargs)
+        _plot_histogram(values[selection], num_bins, ax=ax_hist, **kwargs)
         # Plot images.
         bin_images = _get_bin_collages(
             paths=self["path"][selection],
             values=values[selection],
-            n_bins=n_bins,
-            n_images_per_bin=n_images,
+            num_bins=num_bins,
+            num_images=num_images,
             rng=np.random.default_rng(),
+            num_workers=num_workers,
         )
         for idx, bin_image in enumerate(bin_images):
             ax_images[idx].imshow(bin_image)
             ax_images[idx].axis("off")
         return np.array([ax_hist, *ax_images])
+
+    def __len__(self) -> int:
+        return len(self.dataframe)
 
     def __getitem__(self, key: str) -> np.ndarray:
         """Indexing with column names."""
@@ -235,6 +252,6 @@ class TileMetadata:
 
     def __repr__(self) -> str:
         return (
-            f"{self.__class__.__name__}(n_images={len(self.dataframe)}, "
-            f"n_outliers={self.outliers.sum()})"
+            f"{self.__class__.__name__}(num_images={len(self.dataframe)}, "
+            f"num_outliers={self.outliers.sum()})"
         )

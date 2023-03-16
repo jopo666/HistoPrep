@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
+from mpire import WorkerPool
 from PIL import Image
-from tqdm.contrib.concurrent import process_map
 
 
 def _create_collage(
@@ -25,12 +25,15 @@ def _create_collage(
     return Image.fromarray(np.vstack(output))
 
 
-def _read_images(paths: list[str | None], chunksize: int = 8) -> list[np.ndarray]:
-    """Read images from list of paths."""
-    return process_map(_read_image, paths, disable=True, chunksize=chunksize)
+def _read_images(paths: list[str | None], num_workers: int) -> None:
+    if num_workers <= 1:
+        return [_read_image(x) for x in paths]
+    with WorkerPool(n_jobs=num_workers) as pool:
+        output = list(pool.imap(_read_image, paths))
+    return output  # noqa
 
 
-def _read_image(path: str) -> np.ndarray:
+def _read_image(path: str | None) -> np.ndarray:
     """Parallisable."""
     if path is None:
         return None
