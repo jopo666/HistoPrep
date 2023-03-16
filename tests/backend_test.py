@@ -6,7 +6,11 @@ from openslide import OpenSlide, OpenSlideUnsupportedFormatError
 from PIL import Image, UnidentifiedImageError
 
 from histoprep.backend import CziBackend, OpenSlideBackend, PillowBackend
-from tests.utils import SLIDE_PATH_CZI, SLIDE_PATH_JPEG, SLIDE_PATH_MRXS, SLIDE_PATH_SVS
+from tests._utils import (
+    SLIDE_PATH_CZI,
+    SLIDE_PATH_JPEG,
+    SLIDE_PATH_SVS,
+)
 
 
 def read_zero_sized_region(
@@ -25,13 +29,16 @@ def read_region_from_all_levels(
         tile_dims = backend.read_region(
             (0, 0, tile_width, tile_width), level=level
         ).shape
-        expected_dims = (tile_width // 2**level, tile_width // 2**level, 3)
+        h_d, w_d = backend.level_downsamples[level]
+        expected_dims = (round(tile_width / h_d), round(tile_width / w_d), 3)
         assert tile_dims == expected_dims
 
 
 def read_invalid_level(
     backend: CziBackend | OpenSlideBackend | PillowBackend,
 ) -> None:
+    with pytest.raises(ValueError, match="Level 100 could not be found"):
+        backend.read_region((0, 0, 10, 10), level=100)
     with pytest.raises(ValueError, match="Level 100 could not be found"):
         backend.read_region((0, 0, 10, 10), level=100)
 
@@ -71,7 +78,7 @@ def test_read_region_pillow() -> None:
 
 def test_read_level_pillow() -> None:
     backend = PillowBackend(SLIDE_PATH_JPEG)
-    assert backend.read_level(-1).shape == (500, 1000, 3)
+    assert backend.read_level(-1).shape == (625, 625, 3)
 
 
 def test_zero_region_czi() -> None:
@@ -91,98 +98,92 @@ def test_read_region_czi() -> None:
 
 def test_read_level_czi() -> None:
     backend = CziBackend(SLIDE_PATH_CZI)
-    assert backend.read_level(-1).shape == (843, 1476, 3)
+    assert backend.read_level(-1).shape == (1047, 1160, 3)
 
 
 def test_zero_region_openslide() -> None:
-    backend = OpenSlideBackend(SLIDE_PATH_MRXS)
+    backend = OpenSlideBackend(SLIDE_PATH_SVS)
     read_zero_sized_region(backend)
 
 
 def test_invalid_level_openslide() -> None:
-    backend = OpenSlideBackend(SLIDE_PATH_MRXS)
+    backend = OpenSlideBackend(SLIDE_PATH_SVS)
     read_invalid_level(backend)
 
 
 def test_read_region_openslide() -> None:
-    backend = OpenSlideBackend(SLIDE_PATH_MRXS)
+    backend = OpenSlideBackend(SLIDE_PATH_SVS)
     read_region_from_all_levels(backend)
 
 
 def test_read_level_openslide() -> None:
-    backend = OpenSlideBackend(SLIDE_PATH_MRXS)
-    assert backend.read_level(-1).shape == (1603, 665, 3)
+    backend = OpenSlideBackend(SLIDE_PATH_SVS)
+    assert backend.read_level(-1).shape == (1867, 1904, 3)
 
 
 def test_properties_pillow() -> None:
     backend = PillowBackend(SLIDE_PATH_JPEG)
-    assert backend.path == SLIDE_PATH_JPEG
+    assert backend.path == str(SLIDE_PATH_JPEG)
     assert backend.name == "slide"
+    assert backend.suffix == ".jpeg"
     assert backend.BACKEND_NAME == "PILLOW"
-    assert backend.level_count == 2
-    assert backend.dimensions == (1000, 2000)
-    assert backend.level_dimensions == {0: (1000, 2000), 1: (500, 1000)}
-    assert backend.level_downsamples == {0: (1.0, 1.0), 1: (2.0, 2.0)}
-    assert backend.data_bounds == (0, 0, 2000, 1000)
+    assert backend.level_count == 3
+    assert backend.dimensions == (2500, 2500)
+    assert backend.level_dimensions == {0: (2500, 2500), 1: (1250, 1250), 2: (625, 625)}
+    assert backend.level_downsamples == {0: (1.0, 1.0), 1: (2.0, 2.0), 2: (4.0, 4.0)}
+    assert backend.data_bounds == (0, 0, 2500, 2500)
     assert isinstance(backend.reader, Image.Image)
 
 
 def test_properties_czi() -> None:
     backend = CziBackend(SLIDE_PATH_CZI)
-    assert backend.path == SLIDE_PATH_CZI
+    assert backend.path == str(SLIDE_PATH_CZI)
     assert backend.name == "slide"
+    assert backend.suffix == ".czi"
     assert backend.BACKEND_NAME == "CZI"
-    assert backend.dimensions == (107903, 188868)
+    assert backend.dimensions == (134009, 148428)
     assert backend.level_count == 8
     assert backend.level_dimensions == {
-        0: (107903, 188868),
-        1: (53952, 94434),
-        2: (26976, 47217),
-        3: (13488, 23608),
-        4: (6744, 11804),
-        5: (3372, 5902),
-        6: (1686, 2951),
-        7: (843, 1476),
+        0: (134009, 148428),
+        1: (67004, 74214),
+        2: (33502, 37107),
+        3: (16751, 18554),
+        4: (8376, 9277),
+        5: (4188, 4638),
+        6: (2094, 2319),
+        7: (1047, 1160),
     }
     assert backend.level_downsamples == {
         0: (1.0, 1.0),
-        1: (2.000018535337621, 2.0),
-        2: (4.000111214087117, 4.0),
-        3: (8.000519018313932, 8.00016943409014),
-        4: (16.002224529141333, 16.00033886818028),
-        5: (32.009196084247996, 32.00067773636056),
-        6: (64.03738872403561, 64.00135547272112),
-        7: (128.15083135391924, 128.04610169491525),
+        1: (2.0000149244821204, 2.0),
+        2: (4.000029848964241, 4.0),
+        3: (8.000059697928481, 8.00021559855549),
+        4: (16.001074626865673, 16.001293661060803),
+        5: (32.0059708621925, 32.002587322121606),
+        6: (64.02723363592929, 64.00517464424321),
+        7: (128.11567877629062, 128.0655737704918),
     }
-    assert backend.data_bounds == (0, 0, 188868, 107903)
+    assert backend.data_bounds == (0, 0, 148428, 134009)
     assert isinstance(backend.reader, CziFile)
 
 
 def test_openslide_properties() -> None:
-    backend = OpenSlideBackend(SLIDE_PATH_MRXS)
-    assert backend.dimensions == (410429, 170489)
-    assert backend.level_count == 9
+    backend = OpenSlideBackend(SLIDE_PATH_SVS)
+    assert backend.path == str(SLIDE_PATH_SVS)
+    assert backend.name == "slide"
+    assert backend.suffix == ".svs"
+    assert backend.BACKEND_NAME == "OPENSLIDE"
+    assert backend.level_count == 3
+    assert backend.dimensions == (29875, 30464)
     assert backend.level_dimensions == {
-        0: (410429, 170489),
-        1: (205214, 85244),
-        2: (102607, 42622),
-        3: (51303, 21311),
-        4: (25651, 10655),
-        5: (12825, 5327),
-        6: (6412, 2663),
-        7: (3206, 1331),
-        8: (1603, 665),
+        0: (29875, 30464),
+        1: (7468, 7616),
+        2: (1867, 1904),
     }
     assert backend.level_downsamples == {
         0: (1.0, 1.0),
-        1: (2.000004872961884, 2.000011731030923),
-        2: (4.000009745923768, 4.000023462061846),
-        3: (8.000097460187513, 8.000046924123692),
-        4: (16.00050680285369, 16.000844673862037),
-        5: (32.002261208576996, 32.004693073024214),
-        6: (64.00951341235184, 64.02140443109275),
-        7: (128.01902682470367, 128.0909090909091),
-        8: (256.03805364940735, 256.3744360902256),
+        1: (4.000401713979646, 4.0),
+        2: (16.001606855918585, 16.0),
     }
-    assert backend.data_bounds == (21065, 179718, 94074, 410429)
+    assert backend.data_bounds == (0, 0, 30464, 29875)
     assert isinstance(backend.reader, OpenSlide)
