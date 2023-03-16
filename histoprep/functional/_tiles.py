@@ -7,11 +7,10 @@ __all__ = [
     "_pad_tile",
     "get_background_percentages",
     "get_downsample",
-    "get_non_overlapping_regions",
     "get_overlap_area",
     "get_overlap_index",
+    "get_region_from_array",
     "get_tile_coordinates",
-    "read_region",
 ]
 
 import itertools
@@ -23,10 +22,10 @@ ERROR_NONZERO = (
     "Tile width and height should non-zero positive integers, got {} and {}."
 )
 ERROR_DIMENSION = (
-    "Tile width ({}) and height ({}) should be smaller than image dimensions ({})."
+    "Tile width ({}) and height ({}) should be smaller than image dimensions {}."
 )
 ERROR_OVERLAP = "Overlap should be in range [0, 1), got {}."
-ERROR_PADDING = "Tile shape ({}) is larger that requested padding shape ({})."
+
 OVERLAP_LIMIT = 1.0
 XYWH = tuple[int, int, int, int]
 
@@ -87,7 +86,7 @@ def get_tile_coordinates(
     return [(x, y, width, height) for y, x in itertools.product(y_coords, x_coords)]
 
 
-def read_region(
+def get_region_from_array(
     image: np.ndarray,
     xywh: XYWH,
     downsample: float | tuple[float, float] = 1,
@@ -133,36 +132,11 @@ def get_background_percentages(
     """
     output = []
     for xywh in tile_coordinates:
-        tile_mask = read_region(tissue_mask, xywh=xywh, downsample=downsample, fill=0)
+        tile_mask = get_region_from_array(
+            tissue_mask, xywh=xywh, downsample=downsample, fill=0
+        )
         output.append((tile_mask == 0).sum() / tile_mask.size)
     return output
-
-
-def get_non_overlapping_regions(
-    tile_coordinates: list[XYWH], overlap: float
-) -> np.ndarray:
-    """Extract non-overlapping xywh-coordinate regions from tile coordinates.
-
-    Args:
-        tile_coordinates: Tile coordinates.
-        overlap: Overlap between neighbouring tile coordinates.
-
-    Returns:
-        List of non-overlapping tile coordinates.
-
-    Example:
-        >>> coords = [[0, 0, 4, 4], [0, 2, 4, 4]]
-        >>> get_non_overlapping_regions(coords, overlap=0.5).tolist()
-        [[0, 0, 2, 2], [0, 2, 2, 2]]
-    """
-    if overlap <= 0:
-        return tile_coordinates
-    return np.array(
-        [
-            (x, y, int(w - w * overlap), int(h - h * overlap))
-            for x, y, w, h in tile_coordinates
-        ]
-    )
 
 
 def get_overlap_index(xywh: XYWH, coordinates: list[XYWH]) -> np.ndarray:
@@ -174,12 +148,6 @@ def get_overlap_index(xywh: XYWH, coordinates: list[XYWH]) -> np.ndarray:
 
     Returns:
         Indices of tiles which overlap with xywh.
-
-    Example:
-        >>> xywh = [5, 5, 5, 5]
-        >>> coordinates = [[0, 0, 5, 5], [0, 0, 5, 6], [0, 0, 6, 6], [10, 10, 1, 1]]
-        >>> get_overlap_index(xywh, coordinates)
-        array([2])
     """
     x, y, w, h = xywh
     if not isinstance(coordinates, np.ndarray):
@@ -204,12 +172,6 @@ def get_overlap_area(
 
     Returns:
         Overlapping area for each tile in `coordinates`
-
-    Example:
-        >>> xywh = [5, 5, 5, 5]
-        >>> coordinates = [[0, 0, 100, 100], [0, 0, 4, 4], [4, 4, 2, 2], [11, 11, 2, 2]]
-        >>> get_overlap_area(xywh, coordinates)
-        array([25,  0,  1,  0])
     """
     x, y, w, h = xywh
     if not isinstance(coordinates, np.ndarray):
@@ -245,15 +207,7 @@ def get_downsample(
 def _get_allowed_dimensions(
     xywh: tuple[int, int, int, int], dimensions: tuple[int, int]
 ) -> tuple[int, int, int, int]:
-    """Get height and width for `xywh` which are inside `dimensions`.
-
-    Args:
-        xywh: Region coordinates.
-        dimensions: Dimensions of the slide.
-
-    Returns:
-        Height and width which are inside dimensions.
-    """
+    """Get height and width for `xywh` which are inside `dimensions`."""
     x, y, w, h = xywh
     height, width = dimensions
     if y > height or x > width:
@@ -300,21 +254,13 @@ def _pad_tile(
 
     Returns:
         Tile image padded into shape.
-
-    Example:
-        >>> tile = np.zeros((5, 5))
-        >>> padded = pad_tile(tile, shape=(5, 10), fill=1)
-        >>> padded.shape
-        (5, 10)
-        >>> padded.sum()
-        25
     """
     tile_h, tile_w = tile.shape[:2]
     out_h, out_w = shape
     if tile_h == out_h and tile_w == out_w:
         return tile
     if tile_h > out_h or tile_w > out_w:
-        raise ValueError(ERROR_PADDING.format(tile.shape, shape))
+        return tile[:out_h, :out_w]
     if tile.ndim > 2:  # noqa
         shape = (out_h, out_w, tile.shape[-1])
     output = np.zeros(shape, dtype=np.uint8) + fill
