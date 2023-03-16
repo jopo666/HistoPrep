@@ -22,14 +22,14 @@ def dearray_tma(spot_mask: np.ndarray) -> dict[str, tuple[int, int, int, int]]:
         Dictionary of spot numbers and xywh-coordinates.
     """
     # Detect contours and get their bboxes and centroids.
-    bboxes, centroids = contour_bboxes_and_centroids(spot_mask)
+    bboxes, centroids = _contour_bboxes_and_centroids(spot_mask)
     if len(bboxes) == 0:
         return {}
     # Detect possible rotation of the image based on centroids.
     centroids = _rotate_coordinates(centroids, _detect_rotation(centroids))
     # Detect optimal number of rows and columns and cluster each spot.
-    num_cols = optimal_cluster_size(centroids[:, 0].reshape(-1, 1))
-    num_rows = optimal_cluster_size(centroids[:, 1].reshape(-1, 1))
+    num_cols = _optimal_cluster_size(centroids[:, 0].reshape(-1, 1))
+    num_rows = _optimal_cluster_size(centroids[:, 1].reshape(-1, 1))
     col_labels = _hierachial_clustering(
         centroids[:, 0].reshape(-1, 1), n_clusters=num_cols
     )
@@ -68,7 +68,7 @@ def dearray_tma(spot_mask: np.ndarray) -> dict[str, tuple[int, int, int, int]]:
     return {f"spot_{k}": tuple(v) for k, v in zip(numbers, bboxes)}
 
 
-def contour_bboxes_and_centroids(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _contour_bboxes_and_centroids(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Extract contour bounding boxes and centroids."""
     contours, hierarchy = cv2.findContours(
         mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
@@ -122,7 +122,7 @@ def _rotate_coordinates(coords: np.ndarray, theta: float) -> np.ndarray:
     return coords @ r_matrix
 
 
-def optimal_cluster_size(data: np.ndarray) -> int:
+def _optimal_cluster_size(data: np.ndarray) -> int:
     """Find optimal cluster size for dataset X."""
     sil = []
     if data.shape[0] <= 2:  # noqa

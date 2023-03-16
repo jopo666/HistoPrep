@@ -9,8 +9,8 @@ from PIL import Image
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.decomposition import PCA
 
-from ._histogram import get_bin_collages, plot_histogram
-from ._images import create_collage, read_images
+from ._histogram import _get_bin_collages, _plot_histogram
+from ._images import _create_collage, _read_images
 
 ERROR_NO_METRICS = (
     "Metadata does not contain any metrics, make sure tiles are saved "
@@ -118,7 +118,7 @@ class TileMetadata:
             size=min(selection.sum(), n_cols * n_rows),
             replace=False,
         )
-        return create_collage(read_images(sampled_paths), n_cols=n_cols, shape=shape)
+        return _create_collage(_read_images(sampled_paths), n_cols=n_cols, shape=shape)
 
     def cluster_kmeans(self, n_clusters: int, **kwargs) -> np.ndarray:
         """Perform kmeans clustering on the metrics and order the clusters based on the
@@ -206,7 +206,7 @@ class TileMetadata:
             kwargs["ec"] = "black"
         if n_images == 0:
             # Plot only histogram.
-            return plot_histogram(values[selection], n_bins, ax=ax, **kwargs)
+            return _plot_histogram(values[selection], n_bins, ax=ax, **kwargs)
         # Initialize figure.
         ax_hist = plt.subplot2grid((4, n_bins), (0, 0), colspan=n_bins)
         ax_images = []
@@ -215,9 +215,9 @@ class TileMetadata:
                 plt.subplot2grid((4, n_bins), (1, i), colspan=1, rowspan=3)
             )
         # Plot histogram.
-        plot_histogram(values[selection], n_bins, ax=ax_hist, **kwargs)
+        _plot_histogram(values[selection], n_bins, ax=ax_hist, **kwargs)
         # Plot images.
-        bin_images = get_bin_collages(
+        bin_images = _get_bin_collages(
             paths=self["path"][selection],
             values=values[selection],
             n_bins=n_bins,

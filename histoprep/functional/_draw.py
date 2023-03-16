@@ -6,9 +6,8 @@ import numpy as np
 from matplotlib.font_manager import fontManager
 from PIL import Image, ImageDraw, ImageFont
 
-from histoprep.backend._functional import divide_xywh
-
 from ._check import check_image
+from ._tiles import _divide_xywh
 
 ERROR_TEXT_ITEM_LENGTH = (
     "Length of text items ({}) does not match length of coordinates ({})."
@@ -77,7 +76,7 @@ def draw_tiles(
     draw = ImageDraw.Draw(annotated)
     for idx, (xywh, text) in enumerate(zip(coordinates, text_items)):
         # Downscale coordinates.
-        x, y, w, h = divide_xywh(xywh, downsample)
+        x, y, w, h = _divide_xywh(xywh, downsample)
         # Draw rectangle.
         draw.rectangle(
             ((x, y), (x + w, y + h)),
@@ -107,7 +106,7 @@ def draw_tiles(
             )
     # Highlight first.
     if highlight_first and len(coordinates) > 0:
-        x, y, w, h = divide_xywh(coordinates[0], downsample)
+        x, y, w, h = _divide_xywh(coordinates[0], downsample)
         draw.rectangle(
             ((x, y), (x + w, y + h)),
             fill=rectangle_fill,

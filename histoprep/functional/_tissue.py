@@ -10,8 +10,6 @@ from PIL import Image
 from ._check import check_image
 
 ERROR_THRESHOLD = "Threshold should be an integer in range [0, 255], got {}."
-ERROR_MULTIPLIER = "Threshold multiplier should be a positive float, got {}."
-ERROR_SIGMA = "Sigma for gaussian blur should be a positive float, got {}."
 
 MAX_THRESHOLD = 255
 WHITE_PIXEL = 255
@@ -42,8 +40,6 @@ def get_tissue_mask(
 
     Raises:
         ValueError: Threshold not between 0 and 255.
-        ValueError: Multiplier is negative.
-        ValueError: Sigma is negative.
 
     Returns:
         Tuple with `threshold` and `tissue_mask` (0=background and 1=tissue).
@@ -53,10 +49,6 @@ def get_tissue_mask(
     # Check arguments.
     if threshold is not None and not 0 <= threshold <= MAX_THRESHOLD:
         raise ValueError(ERROR_THRESHOLD.format(threshold))
-    if multiplier < 0:
-        raise ValueError(ERROR_MULTIPLIER.format(multiplier))
-    if sigma < 0:
-        raise ValueError(ERROR_SIGMA.format(sigma))
     # Convert to grayscale.
     gray = image if image.ndim == GRAY_NDIM else cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     # Gaussian blurring.
@@ -64,7 +56,7 @@ def get_tissue_mask(
     # Get threshold.
     if threshold is None:
         threshold = _otsu_threshold(gray=blur)
-        threshold = max(min(255, int(threshold * multiplier + 0.5)), 0)
+        threshold = max(min(255, int(threshold * max(0.0, multiplier) + 0.5)), 0)
     # Global thresholding.
     thrsh, mask = cv2.threshold(blur, threshold, 1, cv2.THRESH_BINARY_INV)
     return int(thrsh), mask
@@ -132,7 +124,7 @@ def _gaussian_blur(
     *, image: np.ndarray, sigma: float, truncate: float = 3.5
 ) -> np.ndarray:
     """Apply gaussian blurring."""
-    if sigma == SIGMA_NO_OP:
+    if sigma <= SIGMA_NO_OP:
         return image
     ksize = int(truncate * sigma + 0.5)
     if ksize % 2 == 0:

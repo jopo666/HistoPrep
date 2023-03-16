@@ -6,7 +6,7 @@ from PIL import Image
 from tqdm.contrib.concurrent import process_map
 
 
-def create_collage(
+def _create_collage(
     images: list[np.ndarray], n_cols: int, shape: tuple[int, int]
 ) -> Image.Image:
     """Collect images into a collage."""
@@ -25,7 +25,7 @@ def create_collage(
     return Image.fromarray(np.vstack(output))
 
 
-def read_images(paths: list[str | None], chunksize: int = 8) -> list[np.ndarray]:
+def _read_images(paths: list[str | None], chunksize: int = 8) -> list[np.ndarray]:
     """Read images from list of paths."""
     return process_map(_read_image, paths, disable=True, chunksize=chunksize)
 

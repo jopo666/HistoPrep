@@ -3,10 +3,10 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ._images import read_images
+from ._images import _read_images
 
 
-def plot_histogram(
+def _plot_histogram(
     values: np.ndarray, n_bins: int, ax: plt.Axes = None, **kwargs
 ) -> plt.Axes:
     """Plot histogram."""
@@ -19,7 +19,7 @@ def plot_histogram(
     return ax
 
 
-def get_bin_collages(
+def _get_bin_collages(
     paths: np.ndarray,
     values: np.ndarray,
     n_bins: int,
@@ -61,7 +61,7 @@ def _read_bin_paths(
     # Read all images to get resize shape for empty images.
     all_images = []
     resize_shape = None
-    for image in read_images(bin_paths):
+    for image in _read_images(bin_paths):
         if resize_shape is None and image is not None:
             resize_shape = image.shape
         all_images.append(image)

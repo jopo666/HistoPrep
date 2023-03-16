@@ -3,40 +3,30 @@ from __future__ import annotations
 __all__ = ["SlideReader"]
 
 import functools
+import json
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import polars as pl
-import tqdm
-from mpire import WorkerPool
 from PIL import Image
 
 import histoprep.functional as F
-
-from .backend import (
-    CziBackend,
-    OpenSlideBackend,
-    PillowBackend,
-    TileCoordinates,
-    TissueMask,
-    TMASpotCoordinates,
-)
-from .backend._functional import (
-    format_level,
-    multiply_xywh,
+from histoprep._helpers import (
+    close_pool,
+    load_region_data,
     prepare_output_dir,
-    read_and_save_image,
+    prepare_worker_pool,
+    read_slide,
     read_tile,
-    worker_init,
+    save_regions,
 )
-from .backend._read import read_slide
+from histoprep.backend import CziBackend, OpenSlideBackend, PillowBackend
+from histoprep.data import SpotCoordinates, TileCoordinates
 
 ERROR_WRONG_TYPE = "Expected '{}' to be of type {}, not {}."
-ERROR_TILECOORDS_EMPTY = "Could not save tiles as tile coordinates is empty."
-ERROR_OUTPUT_DIR_IS_FILE = "Output directory exists but it is a file."
-ERROR_CANNOT_OVERWRITE = "Output directory exists, but `overwrite=False`."
+ERROR_NO_THRESHOLD = "Threshold argument is required to save masks/metrics."
 
 
 class SlideReader:
@@ -123,19 +113,31 @@ class SlideReader:
         """
         return self.backend.read_region(xywh=xywh, level=level)
 
-    def level_from_max_dimension(self, maximum: int = 4096) -> int:
-        """Find level with both dimensions less or equal to `maximum`.
+    def level_from_max_dimension(self, max_dimension: int = 4096) -> int:
+        """Find level with both dimensions less or equal to `max_dimension`.
 
         Args:
-            maximum: Maximum dimension for level. Defaults to 4096.
+            max_dimension: Maximum dimension for the level. Defaults to 4096.
 
         Returns:
-            Level with both dimensions less than `maximum`, or the smallest level.
+            Level with both dimensions less than `max_dimension`, or the smallest level.
         """
-        for level, (level_h, level_w) in self.level_dimensions.items():
-            if level_h <= maximum and level_w <= maximum:
-                return level
-        return -1
+        return F._level_from_max_dimension(
+            max_dimension=max_dimension, level_dimensions=self.level_dimensions
+        )
+
+    def level_from_dimensions(self, dimensions: tuple[int, int]) -> int:
+        """Find level which is closest to `dimensions`.
+
+        Args:
+            dimensions: Height and width to match.
+
+        Returns:
+            Level which is closest to `dimensions`.
+        """
+        return F._level_from_dimensions(
+            dimensions=dimensions, level_dimensions=self.level_dimensions
+        )
 
     def get_tissue_mask(
         self,
@@ -144,7 +146,7 @@ class SlideReader:
         threshold: int | None = None,
         multiplier: float = 1.05,
         sigma: float = 0.0,
-    ) -> TissueMask:
+    ) -> tuple[int, np.ndarray]:
         """Detect tissue from slide level image.
 
         Args:
@@ -157,38 +159,29 @@ class SlideReader:
                 minimizing the weighted within-class variance. This threshold is
                 then multiplied with `multiplier`. Ignored if `threshold` is not None.
                 Defaults to 1.0.
-
             sigma: Sigma for gaussian blurring. Defaults to 0.0.
 
         Raises:
-            ValueError: Invalid level argument.
             ValueError: Threshold not between 0 and 255.
-            ValueError: Multiplier is negative.
-            ValueError: Sigma is negative.
 
         Returns:
-            `TissueMask` dataclass.
+            Threshold and tissue mask.
         """
-        if level is None:
-            level = self.level_from_max_dimension()
-        level = format_level(level, available=list(self.level_dimensions))
-        threshold, tissue_mask = F.get_tissue_mask(
+        level = (
+            self.level_from_max_dimension()
+            if level is None
+            else F._format_level(level, available=list(self.level_dimensions))
+        )
+        return F.get_tissue_mask(
             image=self.read_level(level),
             threshold=threshold,
             multiplier=multiplier,
             sigma=sigma,
         )
-        return TissueMask(
-            mask=tissue_mask,
-            threshold=threshold,
-            sigma=sigma,
-            level=level,
-            level_downsample=self.level_downsamples[level],
-        )
 
     def get_tile_coordinates(
         self,
-        tissue_mask: TissueMask,
+        tissue_mask: np.ndarray | None,
         width: int,
         *,
         height: int | None = None,
@@ -199,70 +192,60 @@ class SlideReader:
         """Generate tile coordinates.
 
         Args:
-            tissue_mask: `TissueMask` for filtering tiles with too much background.
+            tissue_mask: Tissue mask for filtering tiles with too much background. Set
+                to None if you wish to skip filtering.
             width: Width of a tile.
             height: Height of a tile. If None, will be set to `width`. Defaults to None.
             overlap: Overlap between neighbouring tiles. Defaults to 0.0.
-            max_background: Maximum proportion of background in tiles. Defaults to 0.95.
+            max_background: Maximum proportion of background in tiles. Ignored if
+                `tissue_mask` is None. Defaults to 0.95.
             out_of_bounds: Keep tiles which contain regions outside of the image.
                 Defaults to True.
 
         Raises:
-            TypeError: Tissue mask is not a `TissueMask` dataclass instance.
-            ValueError: Height and/or width are not non-zero positive integers.
+            ValueError: Height and/or width are smaller than 1.
             ValueError: Height and/or width is larger than dimensions.
             ValueError: Overlap is not in range [0, 1).
 
         Returns:
             `TileCoordinates` dataclass.
         """
-        # Check arguments.
-        if not isinstance(tissue_mask, TissueMask):
-            raise TypeError(
-                ERROR_WRONG_TYPE.format("tissue_mask", TissueMask, type(tissue_mask))
-            )
-        # Filter tiles based on background.
-        tile_coords = []
-        for xywh in F.get_tile_coordinates(
+        tile_coordinates = F.get_tile_coordinates(
             dimensions=self.dimensions,
             width=width,
             height=height,
             overlap=overlap,
             out_of_bounds=out_of_bounds,
-        ):
-            tile_mask = tissue_mask.read_region(xywh=xywh)
-            if (tile_mask == 0).sum() / tile_mask.size <= max_background:
-                tile_coords.append(xywh)
-        # Create thumbnails.
-        thumbnail = Image.fromarray(self.read_level(tissue_mask.level))
-        thumbnail_tiles = F.draw_tiles(
-            image=thumbnail,
-            coordinates=tile_coords,
-            downsample=self.level_downsamples[tissue_mask.level],
-            highlight_first=True,
         )
+        if tissue_mask is not None:
+            all_backgrounds = F.get_background_percentages(
+                tile_coordinates=tile_coordinates,
+                tissue_mask=tissue_mask,
+                downsample=F.get_downsample(tissue_mask, self.dimensions),
+            )
+            filtered_coordinates = []
+            for xywh, background in zip(tile_coordinates, all_backgrounds):
+                if background <= max_background:
+                    filtered_coordinates.append(xywh)
+            tile_coordinates = filtered_coordinates
         return TileCoordinates(
-            num_tiles=len(tile_coords),
-            coordinates=tile_coords,
+            coordinates=tile_coordinates,
             width=width,
             height=width if height is None else height,
             overlap=overlap,
-            max_background=max_background,
+            max_background=None if tissue_mask is None else max_background,
             tissue_mask=tissue_mask,
-            thumbnail=thumbnail,
-            thumbnail_tiles=thumbnail_tiles,
-            thumbnail_tissue=tissue_mask.to_pil(),
         )
 
     def get_spot_coordinates(
         self,
-        tissue_mask: TissueMask,
+        tissue_mask: np.ndarray,
         *,
         min_area_pixel: int = 10,
         max_area_pixel: int | None = None,
         min_area_relative: float = 0.2,
         max_area_relative: float | None = 2.0,
-    ) -> TMASpotCoordinates:
+    ) -> SpotCoordinates:
         """Generate tissue microarray spot coordinates.
 
         Args:
@@ -278,20 +261,11 @@ class SlideReader:
                 contour area after filtering contours with `[min,max]_pixel` arguments
                 (`max_area_relative * median(contour_areas)`). Defaults to 2.0.
 
-        Raises:
-            TypeError: Tissue mask is not a `TissueMask` dataclass instance.
-
         Returns:
             `TMASpotCoordinates` instance.
         """
-        # Check arguments.
-        if not isinstance(tissue_mask, TissueMask):
-            raise TypeError(
-                ERROR_WRONG_TYPE.format("tissue_mask", TissueMask, type(tissue_mask))
-            )
-        # Clean tissue mask into a spot mask.
         spot_mask = F.clean_tissue_mask(
-            tissue_mask=tissue_mask.mask,
+            tissue_mask=tissue_mask,
             min_area_pixel=min_area_pixel,
             max_area_pixel=max_area_pixel,
             min_area_relative=min_area_relative,
@@ -299,97 +273,101 @@ class SlideReader:
         )
         # Dearray spots.
         spot_info = F.dearray_tma(spot_mask)
-        thumbnail = Image.fromarray(self.read_level(level=tissue_mask.level))
-        thumbnail_spots = F.draw_tiles(
-            image=thumbnail,
-            coordinates=list(spot_info.values()),
-            text_items=[key.lstrip("spot_") for key in spot_info.keys()],
-            downsample=(1.0, 1.0),
-        )
-        thumbnail_tissue = tissue_mask.to_pil()
-        return TMASpotCoordinates(
-            num_spots=len(spot_info),
-            coordinates=[  # upsample to level zero.
-                multiply_xywh(x, tissue_mask.level_downsample)
-                for x in spot_info.values()
-            ],
-            names=list(spot_info.keys()),
-            tissue_mask=tissue_mask,
-            thumbnail=thumbnail,
-            thumbnail_spots=thumbnail_spots,
-            thumbnail_tissue=thumbnail_tissue,
+        spot_coordinates = [  # upsample to level zero.
+            F._multiply_xywh(x, F.get_downsample(tissue_mask, self.dimensions))
+            for x in spot_info.values()
+        ]
+        return SpotCoordinates(
+            coordinates=spot_coordinates,
+            spot_names=list(spot_info.keys()),
+            spot_mask=spot_mask,
         )
 
-    def yield_tiles(
+    def get_annotated_thumbnail(
         self,
-        coordinates: TileCoordinates | list[tuple[int, int, int, int]],
+        image: np.ndarray,
+        coordinates: Iterator[tuple[int, int, int, int]],
+    ) -> Image.Image:
+        """Generate annotated thumbnail from coordinates.
+
+        Args:
+            image: Input image.
+            coordinates: Coordinates to annotate.
+
+        Returns:
+            Annotated thumbnail.
+        """
+        kwargs = {
+            "image": image,
+            "downsample": F.get_downsample(image, self.dimensions),
+        }
+        if isinstance(coordinates, SpotCoordinates):
+            text_items = ([x.lstrip("spot_") for x in coordinates.spot_names],)
+            kwargs.update(
+                {"coordinates": coordinates.coordinates, "text_items": text_items}
+            )
+        elif isinstance(coordinates, TileCoordinates):
+            kwargs.update(
+                {"coordinates": coordinates.coordinates, "highlight_first": True}
+            )
+        return F.draw_tiles(**kwargs)
+
+    def yield_regions(
+        self,
+        coordinates: Iterator[tuple[int, int, int, int]],
         *,
         level: int = 0,
         transform: Callable[[np.ndarray], Any] | None = None,
         num_workers: int = 1,
-    ) -> Iterator[tuple[np.ndarray | Any, tuple[int, int, int, int]]]:
+        return_exception: bool = False,
+    ) -> Iterator[tuple[np.ndarray | Exception | Any, tuple[int, int, int, int]]]:
         """Yield tile images and corresponding xywh coordinates.
 
         Args:
-            coordinates: `TileCoordinates` instance or a list of xywh-coordinates.
+            coordinates: List of xywh-coordinates.
             level: Slide level for reading tile image. Defaults to 0.
             transform: Transform function for tile image. Defaults to None.
             num_workers: Number of worker processes. Defaults to 1.
+            return_exception: Whether to return exception in case there is a failure to
+                read region, instead of raising the exception. Defaults to False.
 
         Yields:
             Tuple of (possibly transformed) tile image and corresponding
             xywh-coordinate.
         """
-        # Check arguments.
-        if isinstance(coordinates, TileCoordinates):
-            coordinates = coordinates.coordinates
-        # Prepare yield and init functions.
-        init_fn = functools.partial(
-            worker_init, reader_class=self.__class__, path=self.path
+        pool, iterable = prepare_worker_pool(
+            worker_fn=functools.partial(
+                read_tile,
+                level=level,
+                transform=transform,
+                return_exception=return_exception,
+            ),
+            reader=self,
+            iterable_of_args=((x,) for x in coordinates),
+            iterable_length=len(coordinates),
+            num_workers=num_workers,
         )
-        read_fn = functools.partial(
-            read_tile,
-            level=level,
-            transform=transform,
-            raise_exception=True,
-        )
-        # Define tile saving iterable.
-        if num_workers > 1:
-            pool = WorkerPool(n_jobs=num_workers, use_worker_state=True)
-            iterable = pool.imap(
-                func=read_fn,
-                iterable_of_args=((x,) for x in coordinates),
-                iterable_len=len(coordinates),
-                worker_init=init_fn,
-            )
-        else:
-            pool = None
-            iterable = (read_fn({"reader": self}, x) for x in coordinates)
-        # Yield tiles.
         yield from zip(iterable, coordinates)
-        # Close pool.
-        if pool is not None:
-            pool.terminate()
+        close_pool(pool)
 
-    def estimate_mean_and_std(
+    def get_mean_and_std(
         self,
-        coordinates: TileCoordinates | list[tuple[int, int, int, int]],
+        coordinates: Iterator[tuple[int, int, int, int]],
         level: int = 0,
         max_samples: int = 1000,
         num_workers: int = 1,
     ) -> tuple[tuple[float, ...], tuple[float, ...]]:
-        """Estimate slide mean and std.
+        """Calculate mean and std for each image channel.
 
         Args:
             coordinates: `TileCoordinates` instance or a list of xywh-coordinates.
             level: Slide level for reading tile image. Defaults to 0.
             max_samples: Maximum tiles to load. Defaults to 1000.
-            num_workers: Number of worker processes. Defaults to 1.
+            num_workers: Number of worker processes for yielding tiles. Defaults to 1.
 
         Returns:
             Tuples of mean and std values for each image channel.
         """
-        # Check arguments.
         if isinstance(coordinates, TileCoordinates):
             coordinates = coordinates.coordinates
         if len(coordinates) > max_samples:
@@ -397,92 +375,24 @@ class SlideReader:
             coordinates = rng.choice(
                 coordinates, size=max_samples, replace=False
             ).tolist()
-        mean, std = [], []
-        for tile, __ in self.yield_tiles(
-            coordinates=coordinates, level=level, num_workers=num_workers
-        ):
-            if tile.ndim == 2:  # noqa
-                tile = np.expand_dims(tile, -1)  # noqa
-            mean.append([tile[..., i].mean() for i in range(tile.shape[-1])])
-            std.append([tile[..., i].std() for i in range(tile.shape[-1])])
-        return tuple(np.array(mean).mean(0) / 255), tuple(np.array(std).mean(0) / 255)
-
-    def save_tiles(
-        self,
-        parent_dir: str | Path,
-        coordinates: TileCoordinates,
-        *,
-        level: int = 0,
-        overwrite: bool = False,
-        save_metrics: bool = True,
-        save_masks: bool = False,
-        image_format: str = "jpeg",
-        quality: int = 80,
-        use_csv: bool = False,
-        num_workers: int = 1,
-        raise_exception: bool = True,
-        verbose: bool = True,
-    ) -> pl.DataFrame:
-        """Save `TileCoordinates` and summary images.
-
-        Args:
-            parent_dir: Parent directory for output. All output is saved to
-                `parent_dir/{self.name}/`.
-            coordinates: `TileCoordinates` instance.
-            level: Slide level for extracting xywh-regions. Defaults to 0.
-            overwrite: Overwrite everything in `parent_dir/{self.name}/` if it exists.
-                Defaults to False.
-            save_metrics: Save image metrics to metadata. Defaults to True.
-            save_masks: Save tissue masks as `png` images. Defaults to False.
-            image_format: File format for `PIL` image writer. Defaults to "jpeg".
-            quality: JPEG compression quality if `format="jpeg"`. Defaults to 80.
-            use_csv: Save metadata to csv-files instead of parquet-files. Defaults to
-                False.
-            num_workers: Number of data saving workers. Defaults to 1.
-            raise_exception: Whether to raise an `Exception`, or continue saving tiles
-                if there are problems with reading tile regions. Defaults to True.
-            verbose: Enables `tqdm` progress bar. Defaults to True.
-
-        Raises:
-            TypeError: coordinates is not a `TileCoordinates` dataclass instance.
-            ValueError: Invalid level argument.
-
-        Returns:
-            Polars dataframe with metadata.
-        """
-        # Check arguments.
-        if not isinstance(coordinates, TileCoordinates):
-            raise TypeError(
-                ERROR_WRONG_TYPE.format(
-                    "coordinates", TileCoordinates, type(coordinates)
-                )
+        return F._get_mean_and_std(
+            images=self.yield_regions(
+                coordinates=coordinates, level=level, num_workers=num_workers
             )
-        return self.__save_data(
-            parent_dir=parent_dir,
-            coordinates=coordinates,
-            level=level,
-            overwrite=overwrite,
-            save_metrics=save_metrics,
-            save_masks=save_masks,
-            image_format=image_format,
-            quality=quality,
-            use_csv=use_csv,
-            num_workers=num_workers,
-            image_dir="tiles",
-            image_names=None,
-            raise_exception=raise_exception,
-            verbose=verbose,
         )
 
-    def save_spots(
+    def save_regions(
         self,
         parent_dir: str | Path,
-        coordinates: TMASpotCoordinates,
+        coordinates: Iterator[tuple[int, int, int, int]],
         *,
         level: int = 0,
+        threshold: int | None = None,
         overwrite: bool = False,
         save_metrics: bool = False,
         save_masks: bool = False,
+        save_thumbnails: bool = True,
+        thumbnail_level: int | None = None,
         image_format: str = "jpeg",
         quality: int = 80,
         use_csv: bool = False,
@@ -490,132 +400,86 @@ class SlideReader:
         raise_exception: bool = True,
         verbose: bool = True,
     ) -> pl.DataFrame:
-        """Save `TMASpotCoordinates` and summary images.
+        """Save regions from an iterable of xywh-coordinates.
 
         Args:
             parent_dir: Parent directory for output. All output is saved to
                 `parent_dir/{self.name}/`.
-            coordinates: `TMASpotCoordinates` instance.
+            coordinates: Iterator of xywh-coordinates.
             level: Slide level for extracting xywh-regions. Defaults to 0.
-            overwrite: Overwrite everything in `parent_dir/{self.name}/` if it exists.
+            threshold: Tissue detection threshold. Required when either `save_masks` or
+                `save_metrics` is True. Defaults to None.
+            overwrite: Overwrite everything in `parent_dir/{slide_name}/` if it exists.
                 Defaults to False.
-            save_metrics: Save image metrics to metadata. Defaults to True.
-            save_masks: Save tissue masks as `png` images. Defaults to False.
-            image_format: File format for `PIL` image writer. Defaults to "jpeg".
+            save_metrics: Save image metrics to metadata, requires that threshold is
+                set. Defaults to False.
+            save_masks: Save tissue masks as `png` images, requires that threshold is
+                set. Defaults to False.
+            save_thumbnails: Save slide thumbnail with and without region annotations.
+                Defaults to True.
+            thumbnail_level: Level for thumbnail images. If None, uses the
+                `level_from_max_dimension` method. Ignored when `save_thumbnails=False`.
+                Defaults to None.
+            image_format: File format for `Pillow` image writer. Defaults to "jpeg".
             quality: JPEG compression quality if `format="jpeg"`. Defaults to 80.
             use_csv: Save metadata to csv-files instead of parquet-files. Defaults to
                 False.
             num_workers: Number of data saving workers. Defaults to 1.
-            raise_exception: Whether to raise an `Exception`, or continue saving tiles
-                if there are problems with reading tile regions. Defaults to True.
+            raise_exception: Whether to raise an exception if there are problems with
+                reading tile regions. Defaults to True.
             verbose: Enables `tqdm` progress bar. Defaults to True.
 
         Raises:
-            TypeError: Coordinates is not a `TMASpotCoordinates` dataclass instance.
             ValueError: Invalid level argument.
+            ValueError: Threshold is not between 0 and 255.
 
         Returns:
             Polars dataframe with metadata.
         """
-        # Check arguments.
-        if not isinstance(coordinates, TMASpotCoordinates):
-            raise TypeError(
-                ERROR_WRONG_TYPE.format(
-                    "coordinates", TMASpotCoordinates, type(coordinates)
+        if (save_metrics or save_masks) and threshold is None:
+            raise ValueError(ERROR_NO_THRESHOLD)
+        level = F._format_level(level, available=list(self.level_dimensions))
+        parent_dir = parent_dir if isinstance(parent_dir, Path) else Path(parent_dir)
+        output_dir = prepare_output_dir(parent_dir / self.name, overwrite=overwrite)
+        image_dir = "spots" if isinstance(coordinates, SpotCoordinates) else "tiles"
+        # Save properties.
+        if isinstance(coordinates, TileCoordinates):
+            with (output_dir / "properties.json").open("w") as f:
+                json.dump(
+                    coordinates.get_properties(
+                        level=level, level_downsample=self.level_downsamples[level]
+                    ),
+                    f,
                 )
-            )
-        return self.__save_data(
-            parent_dir=parent_dir,
-            coordinates=coordinates,
-            level=level,
-            overwrite=overwrite,
-            save_metrics=save_metrics,
-            save_masks=save_masks,
-            image_format=image_format,
+        # Save thumbnails.
+        if save_thumbnails:
+            if thumbnail_level is None:
+                thumbnail_level = self.level_from_max_dimension()
+            thumbnail = self.read_level(thumbnail_level)
+            thumbnail_regions = self.get_annotated_thumbnail(thumbnail, coordinates)
+            Image.fromarray(thumbnail).save(output_dir / "thumbnail.jpeg")
+            thumbnail_regions.save(output_dir / f"thumbnail_{image_dir}.jpeg")
+        metadata = save_regions(
+            output_dir=output_dir,
+            iterable=self.yield_regions(
+                coordinates=coordinates,
+                level=level,
+                transform=functools.partial(
+                    load_region_data,
+                    save_masks=save_masks,
+                    save_metrics=save_metrics,
+                    threshold=threshold,
+                ),
+                num_workers=num_workers,
+                return_exception=not raise_exception,
+            ),
+            desc=self.name,
+            total=len(coordinates),
             quality=quality,
-            use_csv=use_csv,
-            num_workers=num_workers,
-            image_dir="spots",
-            image_names=coordinates.names,
-            raise_exception=raise_exception,
+            image_format=image_format,
+            image_dir=image_dir,
             verbose=verbose,
         )
-
-    def __save_data(
-        self,
-        parent_dir: str | Path,
-        coordinates: TileCoordinates | TMASpotCoordinates,
-        *,
-        level: int,
-        overwrite: bool,
-        save_metrics: bool,
-        save_masks: bool,
-        image_format: str,
-        quality: int,
-        use_csv: bool,
-        num_workers: int,
-        image_dir: str,
-        image_names: list[str] | None,
-        raise_exception: bool,
-        verbose: bool,
-    ) -> pl.DataFrame:
-        """Internal helper function to save regions from slide."""
-        # Prepare output dir and save thumbnails & property.
-        level = format_level(level, available=list(self.level_dimensions.keys()))
-        output_dir = prepare_output_dir(
-            parent_dir=parent_dir, name=self.name, overwrite=overwrite
-        )
-        coordinates.save_thumbnails(output_dir)
-        coordinates.save_properties(output_dir, level, self.level_downsamples[level])
-        # Prepare init and worker functions.
-        init_fn = functools.partial(
-            worker_init, reader_class=self.__class__, path=self.path
-        )
-        save_fn = functools.partial(
-            read_and_save_image,
-            output_dir=output_dir,
-            level=level,
-            threshold=coordinates.tissue_mask.threshold,
-            sigma=coordinates.tissue_mask.sigma,
-            save_metrics=save_metrics,
-            save_masks=save_masks,
-            image_format=image_format,
-            quality=quality,
-            raise_exception=raise_exception,
-            image_dir=image_dir,
-        )
-        # Define tile saving iterable.
-        if num_workers > 1:
-            pool = WorkerPool(n_jobs=num_workers, use_worker_state=True)
-            iterable = pool.imap(
-                func=save_fn,
-                iterable_of_args=((x,) for x in coordinates.coordinates),
-                iterable_len=len(coordinates),
-                worker_init=init_fn,
-            )
-        else:
-            pool = None
-            iterable = (save_fn({"reader": self}, x) for x in coordinates.coordinates)
-        # Save tiles.
-        progbar = tqdm.tqdm(
-            iterable, desc=self.name, disable=not verbose, total=len(coordinates)
-        )
-        num_failed = 0
-        metadata_dicts = []
-        for idx, result in enumerate(progbar):
-            if isinstance(result, Exception):
-                num_failed += 1
-                progbar.set_postfix({"failed": num_failed}, refresh=False)
-            else:
-                # Add spot name.
-                if image_names is not None:
-                    result = {"name": image_names[idx], **result}  # noqa
-                metadata_dicts.append(result)
-        # Close pool.
-        if pool is not None:
-            pool.terminate()
-        # Save metadata.
-        metadata = pl.from_dicts(metadata_dicts if len(metadata_dicts) > 0 else [{}])
         if use_csv:
             metadata.write_csv(output_dir / "metadata.csv")
         else:
@@ -623,4 +487,7 @@ class SlideReader:
         return metadata
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(path=)"
+        return (
+            f"{self.__class__.__name__}(path={self.path}, dimensions={self.dimensions},"
+            f"backend={self.backend.BACKEND_NAME})"
+        )

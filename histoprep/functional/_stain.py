@@ -4,9 +4,9 @@ __all__ = [
     "normalize_stains",
     "adjust_stains",
     "separate_stains",
-    "get_stain_consentrations",
     "get_macenko_stain_matrix",
     "get_vahadane_stain_matrix",
+    "_get_stain_consentrations",
 ]
 
 
@@ -41,7 +41,7 @@ def normalize_stains(
         Normalized image.
     """
     image = _check_and_copy_image(image)
-    src_stain_concentrations = get_stain_consentrations(image, stain_matrix)
+    src_stain_concentrations = _get_stain_consentrations(image, stain_matrix)
     src_max_concentrations = np.percentile(
         src_stain_concentrations, 99, axis=0
     ).reshape((1, 2))
@@ -69,7 +69,7 @@ def adjust_stains(
         Stain adjusted image.
     """
     image = _check_and_copy_image(image)
-    stain_concentrations = get_stain_consentrations(image, stain_matrix)
+    stain_concentrations = _get_stain_consentrations(image, stain_matrix)
     stain_concentrations[:, 0] *= haematoxylin_magnitude
     stain_concentrations[:, 1] *= eosin_magnitude
     return (
@@ -81,7 +81,7 @@ def adjust_stains(
 
 def separate_stains(
     image: np.ndarray, stain_matrix: np.ndarray
-) -> dict[str, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Separate haematoxylin and eosin stains based on a stain matrix.
 
     Args:
@@ -92,10 +92,10 @@ def separate_stains(
         ValueError: Non RGB image.
 
     Returns:
-        Haematoxylin or eosin stain images.
+        Haematoxylin and eosin stain images.
     """
     image = _check_and_copy_image(image)
-    stain_concentrations = get_stain_consentrations(image, stain_matrix)
+    stain_concentrations = _get_stain_consentrations(image, stain_matrix)
     output = []
     for stain_idx in range(2):
         tmp = stain_concentrations.copy()
@@ -200,7 +200,9 @@ def get_vahadane_stain_matrix(
     return dictionary / np.linalg.norm(dictionary, axis=1)[:, None]
 
 
-def get_stain_consentrations(image: np.ndarray, stain_matrix: np.ndarray) -> np.ndarray:
+def _get_stain_consentrations(
+    image: np.ndarray, stain_matrix: np.ndarray
+) -> np.ndarray:
     image = _check_and_copy_image(image)
     optical_density = _rgb_to_optical_density(image).reshape((-1, 3))
     return np.linalg.lstsq(stain_matrix.T, optical_density.T, rcond=-1)[0].T

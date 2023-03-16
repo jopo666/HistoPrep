@@ -2,8 +2,9 @@ __all__ = ["OpenSlideBackend", "OPENSLIDE_READABLE"]
 
 import numpy as np
 
+from histoprep import functional as F
+
 from ._base import BaseBackend
-from ._functional import allowed_dimensions, divide_xywh, format_level, pad_tile
 
 ERROR_OPENSLIDE_IMPORT = (
     "Could not import `openslide-python`, make sure `OpenSlide` is installed "
@@ -29,6 +30,8 @@ except ImportError as e:
 
 
 class OpenSlideBackend(BaseBackend):
+    BACKEND_NAME = "OPENSLIDE"
+
     def __init__(self, path: str) -> None:
         """Slide reader using OpenSlide as a backend.
 
@@ -78,20 +81,20 @@ class OpenSlideBackend(BaseBackend):
         return self.__level_downsamples
 
     def read_level(self, level: int) -> np.ndarray:
-        level = format_level(level, available=list(self.level_dimensions))
+        level = F._format_level(level, available=list(self.level_dimensions))
         level_h, level_w = self.level_dimensions[level]
         return np.array(self.__reader.get_thumbnail(size=(level_w, level_h)))
 
     def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        level = format_level(level, available=list(self.level_dimensions))
+        level = F._format_level(level, available=list(self.level_dimensions))
         # Only width and height have to be adjusted for the level.
         x, y, *__ = xywh
-        *__, w, h = divide_xywh(xywh, self.level_downsamples[level])
+        *__, w, h = F._divide_xywh(xywh, self.level_downsamples[level])
         # Read allowed region.
-        allowed_h, allowed_w = allowed_dimensions((x, y, w, h), self.dimensions)
+        allowed_h, allowed_w = F._get_allowed_dimensions((x, y, w, h), self.dimensions)
         tile = self.__reader.read_region(
             location=(x, y), level=level, size=(allowed_w, allowed_h)
         )
         tile = np.array(tile)[..., :3]  # only rgb channels
         # Pad tile.
-        return pad_tile(tile, shape=(h, w))
+        return F._pad_tile(tile, shape=(h, w))

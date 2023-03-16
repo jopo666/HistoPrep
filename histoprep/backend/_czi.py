@@ -4,8 +4,9 @@ import cv2
 import numpy as np
 from aicspylibczi import CziFile
 
+from histoprep import functional as F
+
 from ._base import BaseBackend
-from ._functional import allowed_dimensions, format_level, pad_tile
 
 ERROR_NON_MOSAIC = "HistoPrep does not support reading non-mosaic czi-files."
 BACKGROUND_COLOR = (1.0, 1.0, 1.0)
@@ -13,6 +14,8 @@ MIN_LEVEL_DIMENSION = 1024
 
 
 class CziBackend(BaseBackend):
+    BACKEND_NAME = "CZI"
+
     def __init__(self, path: str) -> None:
         """Slide reader using `aicspylibczi.CziFile` as a backend (by Allen Institute
         for Cell Science).
@@ -66,14 +69,16 @@ class CziBackend(BaseBackend):
         return self.__level_downsamples
 
     def read_level(self, level: int) -> np.ndarray:
-        level = format_level(level, available=list(self.level_dimensions))
+        level = F._format_level(level, available=list(self.level_dimensions))
         return self.read_region(xywh=self.data_bounds, level=level)
 
     def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        level = format_level(level, available=list(self.level_dimensions))
+        level = F._format_level(level, available=list(self.level_dimensions))
         x, y, w, h = xywh
         # Define allowed dims, output dims and expected dims.
-        allowed_h, allowed_w = allowed_dimensions(xywh, dimensions=self.dimensions)
+        allowed_h, allowed_w = F._get_allowed_dimensions(
+            xywh, dimensions=self.dimensions
+        )
         output_h, output_w = round(h / 2**level), round(w / 2**level)
         # Read allowed reagion.
         scale_factor = 1 / 2**level
@@ -97,6 +102,6 @@ class CziBackend(BaseBackend):
                 tile, dsize=(excepted_w, excepted_h), interpolation=cv2.INTER_NEAREST
             )
         # Convert to RGB and pad.
-        return pad_tile(
+        return F._pad_tile(
             cv2.cvtColor(tile, cv2.COLOR_BGR2RGB), shape=(excepted_h, excepted_w)
         )

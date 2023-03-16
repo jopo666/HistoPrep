@@ -27,7 +27,7 @@ class StainNormalizer:
             tissue_mask: Tissue mask, which is ignored if empty. Defaults to None.
         """
         stain_matrix = self.__stain_matrix_fn(image=image, tissue_mask=tissue_mask)
-        concentrations = F.get_stain_consentrations(image, stain_matrix)
+        concentrations = F._get_stain_consentrations(image, stain_matrix)
         max_concentrations = np.percentile(concentrations, 99, axis=0).reshape((1, 2))
         self.__normalize_fn = partial(
             F.normalize_stains,

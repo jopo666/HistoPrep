@@ -3,14 +3,17 @@ __all__ = ["PillowBackend"]
 import numpy as np
 from PIL import Image
 
+from histoprep import functional as F
+
 from ._base import BaseBackend
-from ._functional import allowed_dimensions, divide_xywh, format_level, pad_tile
 
 MIN_LEVEL_DIMENSION = 512
-Image.MAX_IMAGE_PIXELS = 15_000 * 15_000
+Image.MAX_IMAGE_PIXELS = 20_000 * 20_000
 
 
 class PillowBackend(BaseBackend):
+    BACKEND_NAME = "PILLOW"
+
     def __init__(self, path: str) -> None:
         """PIL reader backend, requires that the whole image is read into memory.
 
@@ -58,23 +61,23 @@ class PillowBackend(BaseBackend):
         return self.__level_downsamples
 
     def read_level(self, level: int) -> np.ndarray:
-        level = format_level(level, available=list(self.level_dimensions))
+        level = F._format_level(level, available=list(self.level_dimensions))
         self.__lazy_load(level)
         return np.array(self.__pyramid[level])
 
     def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        level = format_level(level, available=list(self.level_dimensions))
+        level = F._format_level(level, available=list(self.level_dimensions))
         self.__lazy_load(level)
         # Read allowed region.
-        x, y, output_w, output_h = divide_xywh(xywh, self.level_downsamples[level])
-        allowed_h, allowed_w = allowed_dimensions(
+        x, y, output_w, output_h = F._divide_xywh(xywh, self.level_downsamples[level])
+        allowed_h, allowed_w = F._get_allowed_dimensions(
             xywh=(x, y, output_w, output_h), dimensions=self.level_dimensions[level]
         )
         tile = np.array(
             self.__pyramid[level].crop((x, y, x + allowed_w, y + allowed_h))
         )
         # Pad tile.
-        return pad_tile(tile, shape=(output_h, output_w))
+        return F._pad_tile(tile, shape=(output_h, output_w))
 
     def __lazy_load(self, level: int) -> None:
         if level not in self.__pyramid:
