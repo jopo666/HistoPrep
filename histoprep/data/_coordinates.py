@@ -51,11 +51,8 @@ class TileCoordinates:
 
     def __repr__(self) -> str:
         return (
-            f"{self.__class__.__name__}("
-            f"num_tiles={len(self)}, "
-            f"shape={(self.height,self.width)}, "
-            f"overlap={self.overlap}, "
-            f"max_background={self.max_background},"
+            f"{self.__class__.__name__}(num_tiles={len(self)}, "
+            f"shape={self.height, self.width})"
         )
 
 
@@ -77,10 +74,10 @@ class SpotCoordinates:
         return len(self.coordinates)
 
     def __iter__(self) -> Iterator[str, tuple[int, int, int, int]]:
-        return iter(zip(self.spot_names, self.coordinates))
+        return iter(self.coordinates)
 
     def __getitem__(self, index: int) -> tuple[int, int, int, int]:
-        return self.spot_names[index], self.coordinates[index]
+        return self.coordinates[index]
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(num_spots={len(self)})"

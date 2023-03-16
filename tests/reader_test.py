@@ -118,10 +118,7 @@ def test_tile_coordinates_properties() -> None:
     assert tile_coords.height == 1024
     assert tile_coords.max_background is None
     assert tile_coords.overlap == 0.0
-    assert str(tile_coords) == (
-        "TileCoordinates(num_tiles=9, shape=(1024, 1024), overlap=0.0, "
-        "max_background=None)"
-    )
+    assert str(tile_coords) == "TileCoordinates(num_tiles=9, shape=(1024, 1024))"
 
 
 def test_tile_coordinates_mask() -> None:
@@ -171,7 +168,7 @@ def test_spot_coordinates_properties() -> None:
     assert len(spot_coords) == 94
     assert len(spot_coords.spot_names) == 94
     assert len(spot_coords.coordinates) == 94
-    assert spot_coords.__repr__() == "SpotCoordinates(num_spots=94)"
+    assert str(spot_coords) == "SpotCoordinates(num_spots=94)"
 
 
 def test_spot_coordinates_good_sigma() -> None:
