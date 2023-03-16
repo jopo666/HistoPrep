@@ -1,34 +1,42 @@
+import numpy as np
 import pytest
 
 import histoprep.functional as F
-from tests.utils import TILE_IMAGE
+from histoprep import SlideReader
+from tests._utils import IMAGE, SLIDE_PATH_TMA
 
 
-def test_tissue_detection():
-    # No arguments.
-    thresh, mask = F.get_tissue_mask(TILE_IMAGE)
-    assert thresh == 153
-    assert mask.shape == TILE_IMAGE.size
-    assert mask.sum() == 47643
-    # Explicit threshold.
-    thresh, mask = F.get_tissue_mask(TILE_IMAGE, threshold=100)
-    assert thresh == 100
-    assert mask.sum() == 23655
-    assert F.get_tissue_mask(TILE_IMAGE, threshold=100, multiplier=20000)[0] == 100
-    # Multiplier.
-    thresh, mask = F.get_tissue_mask(TILE_IMAGE, multiplier=20000)
-    assert thresh == 255
-    assert mask.sum() == 256 * 256
-    thresh, mask = F.get_tissue_mask(TILE_IMAGE, multiplier=0)
-    assert thresh == 0
-    assert mask.sum() == 0
-    thresh, mask = F.get_tissue_mask(TILE_IMAGE, multiplier=1.1)
-    assert thresh == 168
-    assert mask.sum() == 50365
-    # Errors.
-    with pytest.raises(ValueError):
-        F.get_tissue_mask(TILE_IMAGE, threshold=-1)
-    with pytest.raises(ValueError):
-        F.get_tissue_mask(TILE_IMAGE, multiplier=-1)
-    with pytest.raises(ValueError):
-        F.get_tissue_mask(TILE_IMAGE, sigma=-1)
+def test_tissue_mask_otsu() -> None:
+    thresh, mask = F.get_tissue_mask(IMAGE)
+    assert mask.shape == IMAGE.shape[:2]
+    assert thresh == 200
+    assert mask.sum() == 184158
+
+
+def test_tissue_mask_otsu_multiplier() -> None:
+    thresh, mask = F.get_tissue_mask(IMAGE, multiplier=1.05)
+    assert thresh == 210
+    assert mask.sum() == 192803
+
+
+def test_tissue_mask_threshold() -> None:
+    thresh, mask = F.get_tissue_mask(IMAGE, threshold=210)
+    assert thresh == 210
+    assert mask.sum() == 192803
+
+
+def test_tissue_mask_bad_threshold() -> None:
+    with pytest.raises(ValueError, match="Threshold should be in range"):
+        F.get_tissue_mask(IMAGE, threshold=500)
+
+
+def test_clean_tissue_mask() -> None:
+    image = SlideReader(SLIDE_PATH_TMA).read_level(-1)
+    __, tissue_mask = F.get_tissue_mask(image, sigma=0.0)
+    # We fill the areas.
+    assert F.clean_tissue_mask(tissue_mask).sum() > tissue_mask.sum()
+
+
+def test_clean_empty_mask() -> None:
+    empty_mask = np.zeros((100, 100), dtype=np.uint8)
+    assert F.clean_tissue_mask(empty_mask).sum() == 0
