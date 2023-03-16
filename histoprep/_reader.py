@@ -44,15 +44,12 @@ class SlideReader:
                 assing the correct backend based on file extension. Defaults to None.
         """
         super().__init__()
-        if backend is None or isinstance(backend, str):
-            self.backend = read_slide(path=path, backend=backend)
-        else:
-            self.backend = backend(path=path)
+        self.backend = read_slide(path=path, backend=backend)
 
     @property
     def path(self) -> str:
         """Resolved path to slide."""
-        return str(self.backend.path.resolve())
+        return self.backend.path
 
     @property
     def name(self) -> str:
@@ -287,12 +284,14 @@ class SlideReader:
         self,
         image: np.ndarray,
         coordinates: Iterator[tuple[int, int, int, int]],
+        linewidth: int = 1,
     ) -> Image.Image:
         """Generate annotated thumbnail from coordinates.
 
         Args:
             image: Input image.
             coordinates: Coordinates to annotate.
+            linewidth: Width of rectangle lines.
 
         Returns:
             Annotated thumbnail.
@@ -300,9 +299,10 @@ class SlideReader:
         kwargs = {
             "image": image,
             "downsample": F.get_downsample(image, self.dimensions),
+            "rectangle_width": linewidth,
         }
         if isinstance(coordinates, SpotCoordinates):
-            text_items = ([x.lstrip("spot_") for x in coordinates.spot_names],)
+            text_items = [x.lstrip("spot_") for x in coordinates.spot_names]
             kwargs.update(
                 {"coordinates": coordinates.coordinates, "text_items": text_items}
             )
@@ -310,6 +310,8 @@ class SlideReader:
             kwargs.update(
                 {"coordinates": coordinates.coordinates, "highlight_first": True}
             )
+        else:
+            kwargs.update({"coordinates": coordinates})
         return F.draw_tiles(**kwargs)
 
     def yield_regions(
@@ -478,6 +480,9 @@ class SlideReader:
             quality=quality,
             image_format=image_format,
             image_dir=image_dir,
+            file_prefixes=coordinates.spot_names
+            if isinstance(coordinates, SpotCoordinates)
+            else None,
             verbose=verbose,
         )
         if use_csv:
@@ -488,6 +493,6 @@ class SlideReader:
 
     def __repr__(self) -> str:
         return (
-            f"{self.__class__.__name__}(path={self.path}, dimensions={self.dimensions},"
+            f"{self.__class__.__name__}(path={self.path}, "
             f"backend={self.backend.BACKEND_NAME})"
         )

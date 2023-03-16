@@ -36,10 +36,13 @@ class RegionData:
         xywh: tuple[int, int, int, int],
         quality: int,
         image_format: str,
+        prefix: str | None,
     ) -> dict[str, float]:
         """Save image (and mask) and return region metadata."""
         metadata = dict(zip("xywh", xywh))
         filename = "x{}_y{}_w{}_h{}".format(*xywh)
+        if prefix is not None:
+            filename = f"{prefix}_{filename}"
         # Save image.
         image_path = image_dir / f"{filename}.{image_format}"
         image_path.parent.mkdir(parents=True, exist_ok=True)
@@ -63,6 +66,7 @@ def save_regions(
     quality: int,
     image_format: str,
     image_dir: str,
+    file_prefixes: list[str],
     verbose: bool,
 ) -> pl.DataFrame:
     """Save region data to output directory.
@@ -75,6 +79,7 @@ def save_regions(
         quality: Quality of jpeg-compression.
         image_format: Image extension.
         image_dir: Image directory name
+        file_prefixes: List of file prefixes.
         verbose: Enable progress bar.
 
     Returns:
@@ -88,7 +93,7 @@ def save_regions(
     )
     rows = []
     num_failed = 0
-    for region_data, xywh in progress_bar:
+    for i, (region_data, xywh) in enumerate(progress_bar):
         if isinstance(region_data, Exception):
             num_failed += 1
             progress_bar.set_postfix({"failed": num_failed}, refresh=False)
@@ -99,6 +104,7 @@ def save_regions(
                 xywh=xywh,
                 quality=quality,
                 image_format=image_format,
+                prefix=None if file_prefixes is None else file_prefixes[i],
             )
         )
     return pl.DataFrame(rows)
