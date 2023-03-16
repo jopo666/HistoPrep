@@ -3,17 +3,16 @@ import numpy as np
 from histoprep import functional as F
 
 
-def test_grayscale_metrics():
+def test_grayscale_metrics() -> None:
     # Create image.
     image = np.zeros((100, 100), dtype=np.uint8) + 255
     image[:20, :20] = 60
     image[50:60, 20:50] = 100
     image[80:, 80:] = 120
-
     # Detect tissue.
     __, tissue_mask = F.get_tissue_mask(image, threshold=200)
     metrics = F.calculate_metrics(image, tissue_mask)
-    assert 29 == int(metrics.pop("laplacian_std"))
+    assert int(metrics.pop("laplacian_std")) == 29
     assert metrics == {
         "background": 0.886,
         "black_pixels": 0.0,
@@ -30,7 +29,7 @@ def test_grayscale_metrics():
     }
 
 
-def test_rgb_metrics():
+def test_rgb_metrics() -> None:
     # Create image.
     image = np.zeros((100, 100, 3), dtype=np.uint8) + 255
     image[:20, :20, 1] = 0
@@ -45,7 +44,7 @@ def test_rgb_metrics():
     __, tissue_mask = F.get_tissue_mask(image, threshold=200)
     # Check metrics.
     metrics = F.calculate_metrics(image, tissue_mask, quantiles=[0.9])
-    assert 33 == int(metrics.pop("laplacian_std"))
+    assert int(metrics.pop("laplacian_std")) == 33
     assert metrics == {
         "background": 0.886,
         "black_pixels": 0.0,
