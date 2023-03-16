@@ -17,7 +17,7 @@ class StainNormalizer:
 
     def __init__(self, stain_matrix_fn: Callable, **kwargs) -> None:
         self.__stain_matrix_fn = partial(stain_matrix_fn, **kwargs)
-        self.__normalize_fn = F.normalize_stains
+        self.__normalize_fn = F._normalize_stains
 
     def fit(self, image: np.ndarray, tissue_mask: np.ndarray | None = None) -> None:
         """Fit stain normalizer with a target image.
@@ -30,7 +30,7 @@ class StainNormalizer:
         concentrations = F._get_stain_consentrations(image, stain_matrix)
         max_concentrations = np.percentile(concentrations, 99, axis=0).reshape((1, 2))
         self.__normalize_fn = partial(
-            F.normalize_stains,
+            F._normalize_stains,
             target_stain_matrix=stain_matrix,
             target_max_concentrations=max_concentrations,
         )
