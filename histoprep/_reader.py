@@ -392,7 +392,11 @@ class SlideReader:
             return_exception=not raise_exception,
         )
         return F._get_mean_and_std(
-            images=(x for x in iterable if not isinstance(x, Exception))
+            images=(
+                (tile, xywh)
+                for tile, xywh in iterable
+                if not isinstance(tile, Exception)
+            )
         )
 
     def save_regions(
