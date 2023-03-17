@@ -359,9 +359,11 @@ class SlideReader:
     def get_mean_and_std(
         self,
         coordinates: Iterator[tuple[int, int, int, int]],
+        *,
         level: int = 0,
         max_samples: int = 1000,
         num_workers: int = 1,
+        raise_exception: bool = True,
     ) -> tuple[tuple[float, ...], tuple[float, ...]]:
         """Calculate mean and std for each image channel.
 
@@ -370,6 +372,8 @@ class SlideReader:
             level: Slide level for reading tile image. Defaults to 0.
             max_samples: Maximum tiles to load. Defaults to 1000.
             num_workers: Number of worker processes for yielding tiles. Defaults to 1.
+            raise_exception: Whether to raise an exception if there are problems with
+                reading tile regions. Defaults to True.
 
         Returns:
             Tuples of mean and std values for each image channel.
@@ -381,10 +385,14 @@ class SlideReader:
             coordinates = rng.choice(
                 coordinates, size=max_samples, replace=False
             ).tolist()
+        iterable = self.yield_regions(
+            coordinates=coordinates,
+            level=level,
+            num_workers=num_workers,
+            return_exception=not raise_exception,
+        )
         return F._get_mean_and_std(
-            images=self.yield_regions(
-                coordinates=coordinates, level=level, num_workers=num_workers
-            )
+            images=(x for x in iterable if not isinstance(x, Exception))
         )
 
     def save_regions(
