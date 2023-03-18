@@ -220,6 +220,7 @@ class TileMetadata:
         if num_images == 0:
             # Plot only histogram.
             return _plot_histogram(values[selection], num_bins, ax=ax, **kwargs)
+        plt.gca().remove()  # Auto removal depracated since 3.6
         # Initialize figure.
         ax_hist = plt.subplot2grid((4, num_bins), (0, 0), colspan=num_bins)
         ax_images = []
