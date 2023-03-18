@@ -63,12 +63,12 @@ class SpotCoordinates:
     Args:
         coordinates: List of XYWH-coordinates.
         spot_names: Spot numbers.
-        spot_mask: Tissue mask used to dearray spots.
+        tissue_mask: Tissue mask used to dearray spots.
     """
 
     coordinates: tuple[int, int, int, int] = field(repr=False)
     spot_names: list[str] = field(repr=False)
-    spot_mask: np.ndarray = field(repr=False)
+    tissue_mask: np.ndarray = field(repr=False)
 
     def __len__(self) -> int:
         return len(self.coordinates)

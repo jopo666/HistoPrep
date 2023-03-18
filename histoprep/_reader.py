@@ -92,10 +92,6 @@ class SlideReader:
 
         Returns:
             Array containing image data for the level.
-
-        Example:
-            >>> reader.read_level(-1).shape
-            (1000, 1000, 3)
         """
         return self.backend.read_level(level=level)
 
@@ -281,7 +277,7 @@ class SlideReader:
         return SpotCoordinates(
             coordinates=spot_coordinates,
             spot_names=list(spot_info.keys()),
-            spot_mask=spot_mask,
+            tissue_mask=spot_mask,
         )
 
     def get_annotated_thumbnail(
@@ -474,9 +470,16 @@ class SlideReader:
             if thumbnail_level is None:
                 thumbnail_level = self.level_from_max_dimension()
             thumbnail = self.read_level(thumbnail_level)
-            thumbnail_regions = self.get_annotated_thumbnail(thumbnail, coordinates)
             Image.fromarray(thumbnail).save(output_dir / "thumbnail.jpeg")
+            thumbnail_regions = self.get_annotated_thumbnail(thumbnail, coordinates)
             thumbnail_regions.save(output_dir / f"thumbnail_{image_dir}.jpeg")
+            if (
+                isinstance(coordinates, (TileCoordinates, SpotCoordinates))
+                and coordinates.tissue_mask is not None
+            ):
+                Image.fromarray(255 - 255 * coordinates.tissue_mask).save(
+                    output_dir / "thumbnail_tissue.jpeg"
+                )
         metadata = save_regions(
             output_dir=output_dir,
             iterable=self.yield_regions(
@@ -512,11 +515,3 @@ class SlideReader:
             f"{self.__class__.__name__}(path={self.path}, "
             f"backend={self.backend.BACKEND_NAME})"
         )
-
-
-if __name__ == "__main__":
-    import doctest
-    import pathlib
-
-    path = pathlib.Path(__file__).parent.parent / "tests" / "data" / "slide.jpeg"
-    doctest.testmod(extraglobs={"reader": SlideReader()})

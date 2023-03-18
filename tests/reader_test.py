@@ -304,6 +304,7 @@ def test_save_regions_spots() -> None:
     assert [f.name for f in (TMP_DIRECTORY / reader.name).iterdir()] == [
         "thumbnail.jpeg",
         "thumbnail_spots.jpeg",
+        "thumbnail_tissue.jpeg",
         "spots",
         "metadata.parquet",
     ]
