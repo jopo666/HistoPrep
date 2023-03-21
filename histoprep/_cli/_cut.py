@@ -317,9 +317,9 @@ def cut_slides(
     # Define cut_slide kwargs.
     kwargs = {
         "reader_kwargs": {"backend": backend},
+        "max_dimension": max_dimension,
         "tissue_kwargs": {
             "level": tissue_level,
-            "max_dimension": max_dimension,
             "threshold": threshold,
             "multiplier": multiplier,
             "sigma": sigma,
@@ -355,7 +355,9 @@ def cut_slides(
             progress_bar_options={"desc": "Cutting slides"},
         ):
             if isinstance(exception, Exception):
-                error(f"Could not process {path} due to exception: {exception}")
+                warning(
+                    f"Could not process {path} due to exception: {exception.__repr__()}"
+                )
 
 
 def filter_slide_paths(
@@ -402,13 +404,13 @@ def cut_slide(
     path: Path,
     *,
     reader_kwargs: dict,
+    max_dimension: int,
     tissue_kwargs: dict,
     tile_kwargs: dict,
     save_kwargs: dict,
 ) -> tuple[Path, Exception | None]:
     try:
         reader = SlideReader(path, **reader_kwargs)
-        max_dimension = tissue_kwargs.pop("max_dimension")
         if tissue_kwargs["level"] is None:
             tissue_kwargs["level"] = reader.level_from_max_dimension(max_dimension)
         threshold, tissue_mask = reader.get_tissue_mask(**tissue_kwargs)
