@@ -44,10 +44,12 @@ TILE_OPTIONS = [
 SAVE_OPTIONS = [
     "--save-metrics",
     "--save-masks",
+    "--save-thumbnails",
     "--overwrite",
     "--unfinished",
     "--format",
     "--quality",
+    "--use-csv",
     "--num-workers",
 ]
 TISSUE_OPTIONS = [
@@ -217,7 +219,7 @@ def glob_pattern(*args) -> list[Path]:
 )
 @click.option(  # overwrite_unfinished
     "-c",
-    "--use_csv",
+    "--use-csv",
     type=click.BOOL,
     default=False,
     show_default=True,
