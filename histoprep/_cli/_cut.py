@@ -175,12 +175,12 @@ def glob_pattern(*args) -> list[Path]:
     show_default=True,
     help="Save tissue masks for each tile.",
 )
-@click.option(  # save_masks
+@click.option(  # save_thumbnails
     "--save-thumbnails",
     type=click.BOOL,
-    default=False,
+    default=True,
     show_default=True,
-    help="Save tissue masks for each tile.",
+    help="Save thumbnail images.",
 )
 @click.option(  # overwrite
     "-z",
