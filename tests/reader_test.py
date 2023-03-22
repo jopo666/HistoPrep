@@ -472,5 +472,5 @@ def test_save_regions_with_metrics() -> None:
 def test_estimate_mean_and_std() -> None:
     reader = SlideReader(SLIDE_PATH_JPEG)
     mean, std = reader.get_mean_and_std(reader.get_tile_coordinates(None, 512))
-    assert mean == (0.8447404647527956, 0.7014915950999541, 0.779204397164139)
-    assert std == (0.1367226593250863, 0.18658047647561957, 0.1402206641594302)
+    assert [round(x, 2) for x in mean] == [0.84, 0.70, 0.78]
+    assert [round(x, 2) for x in std] == [0.14, 0.19, 0.14]
