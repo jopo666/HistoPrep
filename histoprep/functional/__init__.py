@@ -2,6 +2,7 @@
 
 from ._dearray import *
 from ._draw import *
+from ._images import *
 from ._level import *
 from ._mean_std import *
 from ._metrics import *

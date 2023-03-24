@@ -3,7 +3,7 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ._images import _read_images
+from histoprep import functional as F
 
 
 def _plot_histogram(
@@ -68,7 +68,7 @@ def _read_bin_paths(
     """Read paths for each bin and generate vertically stacked array."""
     all_images = []
     resize_shape = None
-    for image in _read_images(bin_paths, num_workers=num_workers):
+    for image in F._read_images_from_paths(bin_paths, num_workers=num_workers):
         if resize_shape is None and image is not None:
             resize_shape = image.shape
         all_images.append(image)

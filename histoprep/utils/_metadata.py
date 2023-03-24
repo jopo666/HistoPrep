@@ -10,8 +10,9 @@ from PIL import Image
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.decomposition import PCA
 
+from histoprep import functional as F
+
 from ._histogram import _get_bin_collages, _plot_histogram
-from ._images import _create_collage, _read_images
 
 ERROR_NO_METRICS = (
     "Metadata does not contain any metrics, make sure tiles are saved "
@@ -99,8 +100,8 @@ class TileMetadata:
         self,
         selection: np.ndarray,
         *,
-        n_rows: int = 4,
-        n_cols: int = 16,
+        num_rows: int = 4,
+        num_cols: int = 16,
         shape: tuple[int, int] = (64, 64),
         num_workers: int = 1,
     ) -> Image.Image:
@@ -108,8 +109,8 @@ class TileMetadata:
 
         Args:
             selection: `TileMetadata["path"][selection]`.
-            n_rows: Number of rows in the collage image. Defaults to 4.
-            n_cols: Number of columns in the collage image. Defaults to 16.
+            num_rows: Number of rows in the collage image. Defaults to 4.
+            num_cols: Number of columns in the collage image. Defaults to 16.
             shape: Size of each image in the collage. Defaults to (64, 64).
             num_workers: Number of image loading workers. Defaults to 1.
 
@@ -121,19 +122,21 @@ class TileMetadata:
         rng = np.random.default_rng()
         sampled_paths = rng.choice(
             self["path"][selection],
-            size=min(selection.sum(), n_cols * n_rows),
+            size=min(selection.sum(), num_cols * num_rows),
             replace=False,
         )
-        return _create_collage(
-            _read_images(sampled_paths, num_workers), n_cols=n_cols, shape=shape
+        return F._create_image_collage(
+            images=F._read_images_from_paths(sampled_paths, num_workers),
+            num_cols=num_cols,
+            shape=shape,
         )
 
-    def cluster_kmeans(self, n_clusters: int, **kwargs) -> np.ndarray:
+    def cluster_kmeans(self, num_clusters: int, **kwargs) -> np.ndarray:
         """Perform kmeans clustering on the metrics and order the clusters based on the
         distance from the mean cluster center.
 
         Args:
-            n_clusters: Number of clusters.
+            num_clusters: Number of clusters.
             kwargs: Passed on to `sklearn.cluster.MiniBatchKMeans`.
 
         Returns:
@@ -141,7 +144,7 @@ class TileMetadata:
         """
         if "n_init" not in kwargs:
             kwargs["n_init"] = "auto"
-        clust = MiniBatchKMeans(n_clusters=n_clusters, **kwargs)
+        clust = MiniBatchKMeans(n_clusters=num_clusters, **kwargs)
         clusters = clust.fit_predict(self.metrics / 255)
         # Reorder based on distances from the mean cluster center.
         mean_center = clust.cluster_centers_.mean(0)
@@ -197,6 +200,7 @@ class TileMetadata:
             num_workers: Number of image loading workers. Defaults to 1.
             ax: Axis for histogram. Cannot be passed when `num_images>0`. Defaults to
                 None.
+            kwargs: Passed to `plt.hist`.
 
         Raises:
             ValueError: No difference between min and max values.
