@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from ._utils import (
     SLIDE_PATH_JPEG,
-    SLIDE_PATH_SVS,
     TMP_DIRECTORY,
     clean_temporary_directory,
 )
@@ -23,6 +22,9 @@ def test_run(script_runner) -> None:  # noqa
     assert ret.success
     assert [x.name for x in (TMP_DIRECTORY / "slide").iterdir()] == [
         "properties.json",
+        "thumbnail.jpeg",
+        "thumbnail_tiles.jpeg",
+        "thumbnail_tissue.jpeg",
         "tiles",
         "metadata.parquet",
     ]
@@ -56,6 +58,9 @@ def test_overwrite(script_runner) -> None:  # noqa
     assert ret.success
     assert [x.name for x in (TMP_DIRECTORY / "slide").iterdir()] == [
         "properties.json",
+        "thumbnail.jpeg",
+        "thumbnail_tiles.jpeg",
+        "thumbnail_tissue.jpeg",
         "tiles",
         "metadata.parquet",
     ]
@@ -78,6 +83,9 @@ def test_unfinished(script_runner) -> None:  # noqa
     assert ret.success
     assert [x.name for x in (TMP_DIRECTORY / "slide").iterdir()] == [
         "properties.json",
+        "thumbnail.jpeg",
+        "thumbnail_tiles.jpeg",
+        "thumbnail_tissue.jpeg",
         "tiles",
         "metadata.parquet",
     ]
