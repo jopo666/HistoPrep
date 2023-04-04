@@ -144,7 +144,7 @@ def get_overlap_index(xywh: XYWH, coordinates: list[XYWH]) -> np.ndarray:
 
     Args:
         xywh: Coordinates.
-        tile_coordinates: List of tile coordinates.
+        coordinates: List of tile coordinates.
 
     Returns:
         Indices of tiles which overlap with xywh.
@@ -176,12 +176,16 @@ def get_overlap_area(
     x, y, w, h = xywh
     if not isinstance(coordinates, np.ndarray):
         coordinates = np.array(coordinates)
-    areas = np.zeros(len(coordinates))
-    overlap_index = get_overlap_index(xywh, coordinates)
-    x_overlap = coordinates[overlap_index, 0] + coordinates[overlap_index, 2] - w
-    y_overlap = coordinates[overlap_index, 1] + coordinates[overlap_index, 3] - h
-    areas[overlap_index] = np.minimum(x_overlap, w) * np.minimum(y_overlap, h)
-    return areas.astype(int)
+    x_other, y_other, w_other, h_other = (coordinates[:, i] for i in range(4))
+    # Exclude non overlapping.
+    exclude = np.array([True] * len(coordinates), dtype=bool)
+    exclude[get_overlap_index(xywh, coordinates)] = False
+    # Caluculate overlap.
+    x_overlap = np.maximum(np.minimum(x_other + w_other - x, w), 0)
+    y_overlap = np.maximum(np.minimum(y_other + h_other - y, h), 0)
+    areas = x_overlap * y_overlap
+    areas[exclude] = 0
+    return areas
 
 
 def get_downsample(

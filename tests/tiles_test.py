@@ -87,8 +87,22 @@ def test_background_percentages() -> None:
 
 
 def test_overlap_area() -> None:
-    coordinates = [[0, 0, 100, 100], [0, 0, 4, 4], [4, 4, 2, 2], [11, 11, 2, 2]]
-    assert F.get_overlap_area((5, 5, 5, 5), coordinates).tolist() == [25, 0, 1, 0]
+    coordinates = [
+        [5, 5, 4, 3],
+        [0, 0, 100, 100],
+        [0, 0, 4, 4],
+        [4, 4, 2, 2],
+        [11, 11, 2, 2],
+        [3, 3, 3, 3],
+    ]
+    assert F.get_overlap_area((5, 5, 4, 5), coordinates).tolist() == [
+        4 * 3,
+        4 * 5,
+        1 * 0,
+        1 * 1,
+        0 * 0,
+        1 * 1,
+    ]
 
 
 def test_overlap_index() -> None:
