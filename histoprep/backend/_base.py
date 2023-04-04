@@ -13,7 +13,7 @@ class BaseBackend(ABC):
         if not isinstance(path, Path):
             path = Path(path)
         if not path.exists():
-            raise FileNotFoundError(str(path))
+            raise FileNotFoundError(str(path.resolve()))
         self.__path = path if isinstance(path, Path) else Path(path)
 
         self.__name = self.__path.name.removesuffix(self.__path.suffix)

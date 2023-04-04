@@ -28,6 +28,8 @@ def read_slide(  # noqa
     """Get backend based on file-extension or backend argument."""
     if not isinstance(path, Path):
         path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(str(path.resolve()))
     if backend is None:
         # Based on file-extension.
         if path.name.endswith(OPENSLIDE_READABLE):
