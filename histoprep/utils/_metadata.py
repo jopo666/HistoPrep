@@ -156,11 +156,11 @@ class TileMetadata:
             ordered_clusters[clusters == old_idx] = new_idx
         return ordered_clusters
 
-    def plot_pca(self, labels: np.ndarray | None = None) -> plt.Axes:
+    def plot_pca(self, **kwargs) -> plt.Axes:
         """Plot two first principal components of the normalized image metrics.
 
         Args:
-            labels: Labels for the plot. Defaults to None.
+            kwargs: Passed to `plt.scatter`.
 
         Returns:
             Matplotlib ax for the plot.
@@ -168,9 +168,7 @@ class TileMetadata:
         pca = PCA()
         principal_components = pca.fit_transform(self.metrics / 255)
         plt.scatter(
-            y=principal_components[:, 0],
-            x=principal_components[:, 1],
-            c=None if labels is None else labels,
+            y=principal_components[:, 0], x=principal_components[:, 1], **kwargs
         )
         ax = plt.gca()
         ax.set_ylabel(f"PC1 - {100*pca.explained_variance_ratio_[0]:.3f}% explained")
