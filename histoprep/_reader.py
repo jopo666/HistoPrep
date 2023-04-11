@@ -100,22 +100,24 @@ class SlideReader:
             ValueError: Invalid level argument.
 
         Returns:
-            Array containing image data for the `level`.
+            Array containing image data from `level`.
         """
         return self.backend.read_level(level=level)
 
-    def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        """Read region based on xywh-coordinates.
+    def read_region(
+        self, xywh: tuple[int, int, int, int], level: int = 0
+    ) -> np.ndarray:
+        """Read region based on `xywh`-coordinates.
 
         Args:
             xywh: Coordinates for the region.
-            level: Slide level to read from.
+            level: Slide level to read from. Defaults to 0.
 
         Raises:
             ValueError: Invalid level argument.
 
         Returns:
-            Array containing image data from the region.
+            Array containing image data from `xywh`-region.
         """
         return self.backend.read_region(xywh=xywh, level=level)
 
@@ -126,7 +128,7 @@ class SlideReader:
             max_dimension: Maximum dimension for the level. Defaults to 4096.
 
         Returns:
-            Level with both dimensions less than `max_dimension`, or the smallest level.
+            Slide level.
         """
         return F._level_from_max_dimension(
             max_dimension=max_dimension, level_dimensions=self.level_dimensions
@@ -139,7 +141,7 @@ class SlideReader:
             dimensions: Height and width to match.
 
         Returns:
-            Level which is closest to `dimensions`.
+            Slide level.
         """
         return F._level_from_dimensions(
             dimensions=dimensions, level_dimensions=self.level_dimensions
