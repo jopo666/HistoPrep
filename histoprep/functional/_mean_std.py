@@ -24,7 +24,6 @@ def get_mean_and_std_from_images(images: Iterable[np.ndarray]) -> tuple[MEAN, ST
 
     Args:
         images: Iterable of array images.
-        verbose: Enable progress bar. Defaults to False.
 
     Returns:
         Tuple of channel mean and std values.
@@ -43,7 +42,7 @@ def get_mean_and_std_from_paths(
     """Get channel mean and std values for an iterable of image paths.
 
     Args:
-        images: Iterable of array image paths.
+        filepaths: Iterable of image paths.
         num_workers: Number of image reading processes.
 
     Returns:

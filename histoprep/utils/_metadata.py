@@ -137,7 +137,7 @@ class TileMetadata:
 
         Args:
             num_clusters: Number of clusters.
-            kwargs: Passed on to `sklearn.cluster.MiniBatchKMeans`.
+            **kwargs: Passed on to `sklearn.cluster.MiniBatchKMeans`.
 
         Returns:
             Cluster assignments.
@@ -160,7 +160,7 @@ class TileMetadata:
         """Plot two first principal components of the normalized image metrics.
 
         Args:
-            kwargs: Passed to `plt.scatter`.
+            **kwargs: Passed to `plt.scatter`.
 
         Returns:
             Matplotlib ax for the plot.
@@ -198,7 +198,7 @@ class TileMetadata:
             num_workers: Number of image loading workers. Defaults to 1.
             ax: Axis for histogram. Cannot be passed when `num_images>0`. Defaults to
                 None.
-            kwargs: Passed to `plt.hist`.
+            **kwargs: Passed to `plt.hist`.
 
         Raises:
             ValueError: No difference between min and max values.

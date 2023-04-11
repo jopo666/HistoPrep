@@ -45,7 +45,6 @@ def draw_tiles(
         highlight_outline: Highlight color for the first tile. Defaults to "black".
         text_items: Text items for each tile. Length must match `coordinates`.
             Defaults to None.
-        text_offset: Offset pixels from the lower left corner. Defaults to 5.
         text_color: Text color. Defaults to "black".
         text_proportion: Proportion of space the text takes in each tile.
             Defaults to 0.75.
