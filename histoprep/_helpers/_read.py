@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 
 from histoprep.backend import (
-    OPENSLIDE_READABLE,
+    OPENSLIDE_READABLE_FORMATS,
     CziBackend,
     OpenSlideBackend,
     PillowBackend,
@@ -32,7 +32,7 @@ def read_slide(  # noqa
         raise FileNotFoundError(str(path.resolve()))
     if backend is None:
         # Based on file-extension.
-        if path.name.endswith(OPENSLIDE_READABLE):
+        if path.name.endswith(OPENSLIDE_READABLE_FORMATS):
             return OpenSlideBackend(path)
         if path.name.endswith(("jpeg", "jpg")):
             return PillowBackend(path)

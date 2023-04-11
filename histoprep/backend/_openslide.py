@@ -1,4 +1,4 @@
-__all__ = ["OpenSlideBackend", "OPENSLIDE_READABLE"]
+__all__ = ["OpenSlideBackend", "OPENSLIDE_READABLE_FORMATS"]
 
 import numpy as np
 
@@ -10,7 +10,7 @@ ERROR_OPENSLIDE_IMPORT = (
     "Could not import `openslide-python`, make sure `OpenSlide` is installed "
     "(https://openslide.org/api/python/)."
 )
-OPENSLIDE_READABLE = (
+OPENSLIDE_READABLE_FORMATS = (
     "svs",
     "vms",
     "vmu",
