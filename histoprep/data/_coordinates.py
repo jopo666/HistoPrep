@@ -13,12 +13,12 @@ class TileCoordinates:
     """Data class representing a collection of tile coordinates.
 
     Args:
-        coordinates: List of XYWH-coordinates.
+        coordinates: List of `xywh`-coordinates.
         width: Tile width.
         height: Tile height.
         overlap: Overlap between neighbouring tiles.
         max_background: Maximum amount of background in each tile.
-        tissue_mask: Tissue mask used to filter tiles with background.
+        tissue_mask: Tissue mask used for filtering tiles based on `max_background`.
     """
 
     coordinates: list[tuple[int, int, int, int]]
@@ -29,7 +29,7 @@ class TileCoordinates:
     tissue_mask: np.ndarray | None = field(default=None)
 
     def get_properties(self, level: int, level_downsample: tuple[float, float]) -> dict:
-        """Generate dictonary of properties."""
+        """Generate dictonary of properties for `SlideReader.save_regions` function."""
         return {
             "num_tiles": len(self),
             "level": level,
@@ -58,12 +58,12 @@ class TileCoordinates:
 
 @dataclass(frozen=True)
 class SpotCoordinates:
-    """Data class representing a collection of TMA spot coordinates.
+    """Data class representing a collection of spot coordinates.
 
     Args:
         coordinates: List of XYWH-coordinates.
         spot_names: Spot numbers.
-        tissue_mask: Tissue mask used to dearray spots.
+        tissue_mask: Tissue mask used to detect spots.
     """
 
     coordinates: tuple[int, int, int, int] = field(repr=False)
