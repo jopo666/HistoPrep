@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 
 
-class BaseBackend(ABC):
-    """Base class for all slide-reader backends."""
+class SlideReaderBackend(ABC):
+    """Base class for all backends."""
 
     def __init__(self, path: str | Path) -> None:
         if not isinstance(path, Path):
@@ -15,30 +15,32 @@ class BaseBackend(ABC):
         if not path.exists():
             raise FileNotFoundError(str(path.resolve()))
         self.__path = path if isinstance(path, Path) else Path(path)
-
         self.__name = self.__path.name.removesuffix(self.__path.suffix)
 
     @property
     def path(self) -> str:
+        """Full slide filepath."""
         return str(self.__path.resolve())
 
     @property
     def name(self) -> str:
-        return self.__path.name.removesuffix(self.__path.suffix)
+        """Slide filename without an extension."""
+        return self.__name
 
     @property
     def suffix(self) -> str:
+        """Slide file-extension."""
         return self.__path.suffix
 
     @property
     @abstractmethod
-    def reader(self) -> tuple[int, int, int, int]:
-        """xywh-coordinates at `level=0` defining the area containing data."""
+    def reader(self):  # noqa
+        pass
 
     @property
     @abstractmethod
     def data_bounds(self) -> tuple[int, int, int, int]:
-        """xywh-coordinates at `level=0` defining the area containing data."""
+        """Data bounds defined by `xywh`-coordinates at `level=0`."""
 
     @property
     @abstractmethod
@@ -62,29 +64,29 @@ class BaseBackend(ABC):
 
     @abstractmethod
     def read_level(self, level: int) -> np.ndarray:
-        """Read level to memory.
+        """Read full level data.
 
         Args:
-            level: Image level to read.
+            level: Slide pyramid `.
 
         Raises:
             ValueError: Invalid level argument.
 
         Returns:
-            Array containing image data for the level.
+            Array containing image data from `level`.
         """
 
     @abstractmethod
     def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        """Read region based on xywh-coordinates.
+        """Read region based on `xywh`-coordinates.
 
         Args:
             xywh: Coordinates for the region.
-            level: Slide level to read from.
+            level: Slide level to read from. Defaults to 0.
 
         Raises:
             ValueError: Invalid level argument.
 
         Returns:
-            Array containing image data from the region.
+            Array containing image data from `xywh`-region.
         """

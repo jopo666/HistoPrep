@@ -6,23 +6,24 @@ from aicspylibczi import CziFile
 
 from histoprep import functional as F
 
-from ._base import BaseBackend
+from ._base import SlideReaderBackend
 
 ERROR_NON_MOSAIC = "HistoPrep does not support reading non-mosaic czi-files."
 BACKGROUND_COLOR = (1.0, 1.0, 1.0)
 MIN_LEVEL_DIMENSION = 1024
 
 
-class CziBackend(BaseBackend):
+class CziBackend(SlideReaderBackend):
+    """Slide reader using `aicspylibczi.CziFile` as a backend (by Allen Institute
+    for Cell Science).
+
+    Args:
+        path: Path to the slide image.
+    """
+
     BACKEND_NAME = "CZI"
 
     def __init__(self, path: str) -> None:
-        """Slide reader using `aicspylibczi.CziFile` as a backend (by Allen Institute
-        for Cell Science).
-
-        Args:
-            path: Path to the slide image.
-        """
         super().__init__(path)
         self.__reader = CziFile(path)
         if not self.__reader.is_mosaic():

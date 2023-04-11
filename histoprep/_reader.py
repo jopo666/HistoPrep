@@ -60,6 +60,11 @@ class SlideReader:
         return self.backend.name
 
     @property
+    def suffix(self) -> str:
+        """Slide file-extension."""
+        return self.backend.suffix
+
+    @property
     def data_bounds(self) -> tuple[int, int, int, int]:
         """Data bounds defined by `xywh`-coordinates at `level=0`.
 

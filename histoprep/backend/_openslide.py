@@ -4,7 +4,7 @@ import numpy as np
 
 from histoprep import functional as F
 
-from ._base import BaseBackend
+from ._base import SlideReaderBackend
 
 ERROR_OPENSLIDE_IMPORT = (
     "Could not import `openslide-python`, make sure `OpenSlide` is installed "
@@ -29,15 +29,16 @@ except ImportError as e:
     raise ImportError(ERROR_OPENSLIDE_IMPORT) from e
 
 
-class OpenSlideBackend(BaseBackend):
+class OpenSlideBackend(SlideReaderBackend):
+    """Slide reader using `OpenSlide` as a backend.
+
+    Args:
+        path: Path to the slide image.
+    """
+
     BACKEND_NAME = "OPENSLIDE"
 
     def __init__(self, path: str) -> None:
-        """Slide reader using OpenSlide as a backend.
-
-        Args:
-            path: Path to the slide image.
-        """
         super().__init__(path)
         self.__reader = openslide.OpenSlide(path)
         # Openslide has (width, height) dimensions.

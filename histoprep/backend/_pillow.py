@@ -5,21 +5,25 @@ from PIL import Image
 
 from histoprep import functional as F
 
-from ._base import BaseBackend
+from ._base import SlideReaderBackend
 
 MIN_LEVEL_DIMENSION = 512
 Image.MAX_IMAGE_PIXELS = 20_000 * 20_000
 
 
-class PillowBackend(BaseBackend):
+class PillowBackend(SlideReaderBackend):
+    """Slide reader using `Pillow` as a backend.
+
+    `Pillow` reads the the whole slide into memory and is thus not suitable for large
+    images.
+
+    Args:
+        path: Path to the slide image.
+    """
+
     BACKEND_NAME = "PILLOW"
 
     def __init__(self, path: str) -> None:
-        """PIL reader backend, requires that the whole image is read into memory.
-
-        Args:
-            path: Path to the slide image.
-        """
         super().__init__(path)
         # Read full image.
         self.__pyramid = {0: Image.open(path)}
