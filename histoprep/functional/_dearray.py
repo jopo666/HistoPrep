@@ -1,4 +1,4 @@
-__all__ = ["dearray_tma"]
+__all__ = ["get_spot_coordinates"]
 
 import warnings
 
@@ -8,7 +8,9 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 
 
-def dearray_tma(spot_mask: np.ndarray) -> dict[str, tuple[int, int, int, int]]:
+def get_spot_coordinates(
+    spot_mask: np.ndarray,
+) -> dict[str, tuple[int, int, int, int]]:
     """Dearray tissue microarray spots based on a spot mask.
 
     Numbers each spot from top-left and takes into account missing spots etc in the

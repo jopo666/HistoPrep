@@ -67,7 +67,7 @@ def test_split_stains() -> None:
 
 
 def test_adjust_stains() -> None:
-    adjusted = F.adjust_stains(
+    adjusted = F.adjust_stain_concentrations(
         IMAGE_1,
         F.get_macenko_stain_matrix(IMAGE_1),
         haematoxylin_magnitude=0.5,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ["calculate_metrics"]
+__all__ = ["calculate_image_metrics"]
 
 
 import cv2
@@ -21,7 +21,7 @@ BLACK_PIXEL = 0
 WHITE_PIXEL = 255
 
 
-def calculate_metrics(
+def calculate_image_metrics(
     image: Image.Image | np.ndarray,
     tissue_mask: np.ndarray,
     quantiles: tuple[float, ...] = DEFAULT_QUANTILES,

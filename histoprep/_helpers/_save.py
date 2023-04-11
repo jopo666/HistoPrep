@@ -137,7 +137,7 @@ def load_region_data(
     if save_masks or save_metrics:
         __, tissue_mask = F.get_tissue_mask(image=image, threshold=threshold)
     if save_metrics:
-        metrics = F.calculate_metrics(image=image, tissue_mask=tissue_mask)
+        metrics = F.calculate_image_metrics(image=image, tissue_mask=tissue_mask)
     return RegionData(
         image=image, mask=tissue_mask if save_masks else None, metrics=metrics
     )

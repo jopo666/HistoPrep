@@ -14,14 +14,14 @@ def test_dearray_good_mask() -> None:
     tissue_mask_clean = F.clean_tissue_mask(tissue_mask)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        spots = F.dearray_tma(tissue_mask_clean)
+        spots = F.get_spot_coordinates(tissue_mask_clean)
     assert len(spots) == 94
 
 
 def test_dearray_bad_mask() -> None:
     __, tissue_mask = F.get_tissue_mask(IMAGE, sigma=0.0)
     with pytest.warns():
-        F.dearray_tma(tissue_mask)
+        F.get_spot_coordinates(tissue_mask)
 
 
 def test_dearray_empty_mask() -> None:
@@ -29,5 +29,5 @@ def test_dearray_empty_mask() -> None:
     tissue_mask[...] = 0
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        spots = F.dearray_tma(tissue_mask)
+        spots = F.get_spot_coordinates(tissue_mask)
     assert len(spots) == 0

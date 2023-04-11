@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = [
     "_get_stain_consentrations",
     "_normalize_stains",
-    "adjust_stains",
+    "adjust_stain_concentrations",
     "get_macenko_stain_matrix",
     "get_vahadane_stain_matrix",
     "separate_stains",
@@ -21,7 +21,7 @@ REF_STAIN_MATRIX = np.array([[0.5626, 0.7201, 0.4062], [0.2159, 0.8012, 0.5581]]
 REF_MAX_CONCENTRATIONS = np.array([[1.9705, 1.0308]])
 
 
-def adjust_stains(
+def adjust_stain_concentrations(
     image: np.ndarray,
     stain_matrix: np.ndarray,
     haematoxylin_magnitude: float = 1.0,

@@ -30,35 +30,44 @@ ERROR_NO_THRESHOLD = "Threshold argument is required to save masks/metrics."
 
 
 class SlideReader:
+    """Reader class for histological slide images.
+
+    This class wraps around `histoprep.backend` image readers and extends them with
+    functionality for extracting and saving image regions and much more!
+
+    Args:
+        path: Path to slide image.
+        backend: Backend to use for reading slide images. If None, attempts to
+            assing the correct backend based on file extension. Defaults to None.
+    """
+
     def __init__(
         self,
         path: str | Path,
         backend: str | OpenSlideBackend | PillowBackend | CziBackend | None = None,
     ) -> None:
-        """Reader class for histological slide images, with a lot of useful
-        functionalty.
-
-        Args:
-            path: Path to slide image.
-            backend: Backend to use for reading slide images. If None, attempts to
-                assing the correct backend based on file extension. Defaults to None.
-        """
         super().__init__()
         self.backend = read_slide(path=path, backend=backend)
 
     @property
     def path(self) -> str:
-        """Resolved path to slide."""
+        """Full slide filepath."""
         return self.backend.path
 
     @property
     def name(self) -> str:
-        """Path basename without an extension."""
+        """Slide filename without an extension."""
         return self.backend.name
 
     @property
     def data_bounds(self) -> tuple[int, int, int, int]:
-        """xywh-coordinates at `level=0` defining the area containing data."""
+        """Data bounds defined by `xywh`-coordinates at `level=0`.
+
+        Some image formats (eg. `.mrxs`) define a bounding box where image data resides,
+        which may differ from the actual image dimensions. `HistoPrep` always uses the
+        full image dimensions, but other software (such as `QuPath`) uses the image
+        dimensions defined by this data bound.
+        """
         return self.backend.data_bounds
 
     @property
@@ -82,16 +91,16 @@ class SlideReader:
         return self.backend.level_downsamples
 
     def read_level(self, level: int) -> np.ndarray:
-        """Read level to memory.
+        """Read full level data.
 
         Args:
-            level: Image level to read.
+            level: Slide pyramid `.
 
         Raises:
             ValueError: Invalid level argument.
 
         Returns:
-            Array containing image data for the level.
+            Array containing image data for the `level`.
         """
         return self.backend.read_level(level=level)
 
@@ -269,7 +278,7 @@ class SlideReader:
             max_area_relative=max_area_relative,
         )
         # Dearray spots.
-        spot_info = F.dearray_tma(spot_mask)
+        spot_info = F.get_spot_coordinates(spot_mask)
         spot_coordinates = [  # upsample to level zero.
             F._multiply_xywh(x, F.get_downsample(tissue_mask, self.dimensions))
             for x in spot_info.values()

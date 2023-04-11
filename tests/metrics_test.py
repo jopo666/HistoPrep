@@ -11,7 +11,7 @@ def test_grayscale_metrics() -> None:
     image[80:, 80:] = 120
     # Detect tissue.
     __, tissue_mask = F.get_tissue_mask(image, threshold=200)
-    metrics = F.calculate_metrics(image, tissue_mask)
+    metrics = F.calculate_image_metrics(image, tissue_mask)
     assert int(metrics.pop("laplacian_std")) == 29
     assert metrics == {
         "background": 0.886,
@@ -43,7 +43,7 @@ def test_rgb_metrics() -> None:
     # Detect tissue.
     __, tissue_mask = F.get_tissue_mask(image, threshold=200)
     # Check metrics.
-    metrics = F.calculate_metrics(image, tissue_mask, quantiles=[0.9])
+    metrics = F.calculate_image_metrics(image, tissue_mask, quantiles=[0.9])
     assert int(metrics.pop("laplacian_std")) == 33
     assert metrics == {
         "background": 0.886,
