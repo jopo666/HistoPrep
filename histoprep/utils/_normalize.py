@@ -52,12 +52,13 @@ class StainNormalizer:
 
 
 class MachenkoStainNormalizer(StainNormalizer):
-    def __init__(self, angular_percentile: float = 0.99) -> None:
-        """Stain normalizer based on the macenko method.
+    """Stain normalizer based on the macenko method.
 
-        Args:
-            angular_percentile: Hyperparameter. Defaults to 0.99.
-        """
+    Args:
+        angular_percentile: Hyperparameter. Defaults to 0.99.
+    """
+
+    def __init__(self, angular_percentile: float = 0.99) -> None:
         super().__init__(
             stain_matrix_fn=F.get_macenko_stain_matrix,
             angular_percentile=angular_percentile,
@@ -65,13 +66,14 @@ class MachenkoStainNormalizer(StainNormalizer):
 
 
 class VahadaneStainNormalizer(StainNormalizer):
-    def __init__(self, alpha: float = 0.1, max_iter: int = 3) -> None:
-        """Stain normalizer based on the vahadane method.
+    """Stain normalizer based on the vahadane method.
 
-        Args:
-            alpha: Regulariser for lasso. Defaults to 0.1.
-            max_iter: Maximum training iterations. Defaults to 3.
-        """
+    Args:
+        alpha: Regulariser for lasso. Defaults to 0.1.
+        max_iter: Maximum training iterations. Defaults to 3.
+    """
+
+    def __init__(self, alpha: float = 0.1, max_iter: int = 3) -> None:
         super().__init__(
             stain_matrix_fn=F.get_vahadane_stain_matrix, alpha=alpha, max_iter=max_iter
         )

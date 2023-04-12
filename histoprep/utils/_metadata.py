@@ -28,12 +28,13 @@ RGB_STD_COLUMNS = ["red_std", "green_std", "blue_std"]
 
 
 class TileMetadata:
-    def __init__(self, dataframe: pl.DataFrame) -> None:
-        """Class for exploring tile metadata.
+    """Class for exploring tile metadata.
 
-        Args:
-            dataframe: Polars dataframe containing tile metadata with image metrics.
-        """
+    Args:
+        dataframe: Polars dataframe containing tile metadata with image metrics.
+    """
+
+    def __init__(self, dataframe: pl.DataFrame) -> None:
         self.__dataframe = dataframe
         self.__outliers = np.repeat([False], repeats=len(dataframe))
         self.__outlier_selections = []
