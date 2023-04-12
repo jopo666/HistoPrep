@@ -4,104 +4,119 @@
 Preprocessing large medical images for machine learning made easy!
 
 <p align="center">
-    <a href="#version" alt="Version">
-        <img src="https://img.shields.io/pypi/v/histoprep"/></a>
-    <a href="#licence" alt="Licence">
-        <img src="https://img.shields.io/github/license/jopo666/HistoPrep"/></a>
-    <a href="#issues" alt="Issues">
-        <img src="https://img.shields.io/github/issues/jopo666/HistoPrep"/></a>
-    <a href="#activity" alt="Activity">
-        <img src="https://img.shields.io/github/last-commit/jopo666/HistoPrep"/></a>
-</p>
-
-<p align="center">
   <a href="#description">Description</a> •
   <a href="#installation">Installation</a> •
-  <a href="https://jopo666.github.io/HistoPrep/">Documentation</a> •
-  <a href="#how-to-use">How To Use</a> •
-  <a href="#examples">Examples</a> •
-  <a href="#whats-coming">What's coming?</a> •
+  <a href="#usage">Usage</a> •
+  <a href="https://jopo666.github.io/HistoPrep/">API Documentation</a> •
   <a href="#citation">Citation</a>
 </p>
 
 </div>
 
-
 ## Description
 
-This module allows you to easily **cut** and **preprocess** large histological slides.
-
-- Cut tiles from large slide images.
-- Dearray TMA spots (and cut tiles from individual spots).
-- Preprocess extracted tiles **automatically**.
+`HistoPrep` makes is easy to prepare your histological slide images for deep
+learning models. You can easily cut large slide images into smaller tiles and then
+preprocess those tiles (remove tiles with shitty tissue, finger  marks etc).
 
 ## Installation 
 
-```bash 
+Install [`OpenSlide`](https://openslide.org/download/) on your system and then install histoprep with `pip`!
+
+```bash
 pip install histoprep
 ```
 
-## Cutting slide into tiles
+## Usage
 
-``HistoPrep`` can be used easily to prepare histological slide images for machine learning tasks.
+Typical workflow for training deep learning models with histological images is the
+following:
 
-You can either use `HistoPrep` as a python module...
+1. Cut each slide image into smaller tile images.
+2. Preprocess smaller tile images by removing tiles with bad tissue, staining artifacts.
+3. Overfit a pretrained ResNet50 model, report 100% validation accuracy and publish it
+   in [Nature](https://www.nature.com) like everyone else. 
+
+With `HistoPrep`, steps 1. and 2. are as easy as accidentally drinking too much at the
+research group christmas party and proceeding to work remotely until June.
+
+Let's start by cutting a slide from the
+[PANDA](https://www.kaggle.com/c/prostate-cancer-grade-assessment) kaggle challenge into
+small tiles. 
 
 ```python
-import histoprep
+from histoprep import SlideReader
 
-# Cutting tiles is super easy!
-reader = histoprep.SlideReader('/path/to/slide')
-metadata = reader.save_tiles(
-    '/path/to/output_folder',
-    coordinates=reader.get_tile_coordinates(
-        width=512, 
-        overlap=0.1, 
-        max_background=0.96
-    ),
+# Read slide image.
+reader = SlideReader("./slides/slide_with_ink.jpeg")
+# Detect tissue.
+threshold, tissue_mask = reader.get_tissue_mask(level=-1)
+# Extract overlapping tile coordinates with less than 50% background.
+tile_coordinates = reader.get_tile_coordinates(
+    tissue_mask, width=512, overlap=0.5, max_background=0.5
+)
+# Save tile images with image metrics for preprocessing.
+tile_metadata = reader.save_regions(
+    "./train_tiles/", tile_coordinates, threshold=threshold, save_metrics=True
 )
 ```
-or as an excecutable from your command line!
+```
+slide_with_ink: 100%|██████████| 390/390 [00:01<00:00, 295.90it/s]
+```
+
+Let's take a look at the output and visualise the thumbnails.
 
 ```bash
-jopo666@MacBookM1$ HistoPrep input_dir output_dir width {optional arguments}
+jopo666@~$ tree train_tiles
+train_tiles
+└── slide_with_ink
+    ├── metadata.parquet       # tile metadata
+    ├── properties.json        # tile properties
+    ├── thumbnail.jpeg         # thumbnail image
+    ├── thumbnail_tiles.jpeg   # thumbnail with tiles
+    ├── thumbnail_tissue.jpeg  # thumbnail of the tissue mask
+    └── tiles [390 entries exceeds filelimit, not opening dir]
 ```
 
-### Preprocessing
+![Prostate biopsy sample](images/thumbnail.jpeg)
+![Tissue mask](images/thumbnail_tissue.jpeg)
+![Thumbnail with tiles](images/thumbnail_tiles.jpeg)
 
-After the tiles have been saved, preprocessing is just a simple outlier detection from the preprocessing metrics saved in `tile_metadata.csv`!
+That was easy, but it can be annoying to whip up a new python script every time you want
+to cut slides, and thus it is recommended to use the `HistoPrep` CLI program!
+
+```bash
+# Repeat the above code for all images in the PANDA dataset!
+jopo666@~$ HistoPrep --input './train_images/*.tiff' --output ./tiles --width 512 --overlap 0.5 --max-background 0.5
+```
+
+As we can see from the above images, histological slide images often contain areas that
+we would not like to include into our training data. Might seem like a daunting task but
+let's try it out!
+
 
 ```python
-from histoprep import OutlierDetector
-from histoprep.helpers import combine metadata
+from histoprep.utils import TileMetadata
 
-# Let's combine all metadata from the cut slides
-metadata = collect_metadata("/path/to/output_folder", "tile_metadata.csv")
-metadata["outlier"] = False 
-# Then mark any outlying values!
-metadata.loc[metadata['sharpness_max'] < 5, "outlier"] = True     # blurry
-metadata.loc[metadata['black_pixels'] > 0.05, "outlier"] = True   # data loss
-metadata.loc[metadata['saturation_mean'] > 230, "outlier"] = True # weird blue shit
-
-# This can also be done automatically!
-detector = OutlierDetector(metadata, num_clusters=10)
-# Plot clusters from most likely outlier to least likely outlier
-detector.plot_clusters()
-# After visual inspection we can discard some clusters as outliers.
-metadata.loc[detector.clusters < 2, "outlier"] = True 
+# Let's wrap the tile metadata with a helper class.
+metadata = TileMetadata(tile_metadata)
+# Cluster tiles based on image metrics.
+clusters = metadata.cluster_kmeans(num_clusters=4, random_state=666)
+# Visualise first cluster.
+reader.get_annotated_thumbnail(
+    image=reader.read_level(-1), coordinates=metadata.coordinates[clusters == 0]
+)
 ```
+![Tiles in cluster 0](images/thumbnail_blue.jpeg)
 
-## Examples
-
-Examples can be found in the [docs](https://github.io/jopo666/HistoPrep/).
-
-## What's coming?
-
-`HistoPrep` is under constant development. If there are some features you would like to be added, just submit an [issue](https://github.com/jopo666/HistoPrep/issues) and we'll start working on the feature!
+I said it was gonna be easy! Now we can mark tiles in cluster `0` as outliers and
+start overfitting our neural network! This was a simple example but the same code can be
+used to cluster all several _million_ tiles extracted from the `PANDA` dataset and discard
+outliers simultaneously!
 
 ## Citation
 
-If you use `HistoPrep` in a publication, please cite the github repository.
+If you use `HistoPrep` to process the images for your publication, please cite the github repository.
 
 ```
 @misc{histoprep,
@@ -110,6 +125,6 @@ If you use `HistoPrep` in a publication, please cite the github repository.
   year = {2022},
   publisher = {GitHub},
   journal = {GitHub repository},
-  howpublished = {\url{https://github.com/jopo666/HistoPrep}},
+  howpublished = {https://github.com/jopo666/HistoPrep},
 }
 ```

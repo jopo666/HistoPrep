@@ -1,11 +1,33 @@
-from ._coordinates import filter_coordinates, tile_coordinates
-from ._dearray import dearray
-from ._helpers import arr2pil, downsample_image, resize_image, rgb2gray, rgb2hsv
-from ._preprocess import (
-    PreprocessMetrics,
-    channel_quantiles,
-    channel_std,
-    data_loss,
-    sharpness,
+"""Functionals."""
+
+__all__ = [
+    "clean_tissue_mask",
+    "get_annotated_image",
+    "get_background_percentages",
+    "get_downsample",
+    "get_image_metrics",
+    "get_mean_and_std_from_images",
+    "get_mean_and_std_from_paths",
+    "get_overlap_area",
+    "get_overlap_index",
+    "get_random_image_collage",
+    "get_region_from_array",
+    "get_spot_coordinates",
+    "get_tile_coordinates",
+    "get_tissue_mask",
+]
+
+from ._dearray import get_spot_coordinates
+from ._draw import get_annotated_image
+from ._images import get_random_image_collage
+from ._mean_std import get_mean_and_std_from_images, get_mean_and_std_from_paths
+from ._metrics import get_image_metrics
+from ._tiles import (
+    get_background_percentages,
+    get_downsample,
+    get_overlap_area,
+    get_overlap_index,
+    get_region_from_array,
+    get_tile_coordinates,
 )
-from ._tissue import detect_tissue
+from ._tissue import clean_tissue_mask, get_tissue_mask

@@ -1,10 +1,4 @@
-*__pycache__*
-*.ipynb
-*.pytest_cache
-*.egg-info
-dist
-!.gitkeep
-scripts/*
-website/*
-# Test data.
-test/data/*
+__pycache__
+poetry.lock
+tests/data/slide*
+notes.ipynb
