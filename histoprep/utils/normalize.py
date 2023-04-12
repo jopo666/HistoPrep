@@ -9,8 +9,6 @@ import numpy as np
 
 import histoprep.functional as F
 
-ERROR_NO_TARGET = "Please call `fit()` before `normalize()`."
-
 
 class StainNormalizer:
     """Base class for stain normalizers."""
@@ -35,6 +33,20 @@ class StainNormalizer:
             target_max_concentrations=max_concentrations,
         )
 
+    def separate_stains(self, image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Separate haematoxylin and eosin stains into separate images.
+
+        Args:
+            image: Input image.
+
+        Returns:
+            Haematoxylin and eosin stain images.
+        """
+        return F.separate_stains(
+            image=image,
+            stain_matrix=self.__stain_matrix_fn(image=image, tissue_mask=tissue_mask),
+        )
+
     def normalize(
         self, image: np.ndarray, tissue_mask: np.ndarray | None = None
     ) -> None:
@@ -52,13 +64,14 @@ class StainNormalizer:
 
 
 class MachenkoStainNormalizer(StainNormalizer):
-    """Stain normalizer based on the macenko method.
-
-    Args:
-        angular_percentile: Hyperparameter. Defaults to 0.99.
-    """
+    """Stain normalizer based on the macenko method."""
 
     def __init__(self, angular_percentile: float = 0.99) -> None:
+        """Initialize `MachenkoStainNormalizer` instance.
+
+        Args:
+            angular_percentile:  Hyperparameter. Defaults to 0.99.
+        """
         super().__init__(
             stain_matrix_fn=F.get_macenko_stain_matrix,
             angular_percentile=angular_percentile,
@@ -66,14 +79,15 @@ class MachenkoStainNormalizer(StainNormalizer):
 
 
 class VahadaneStainNormalizer(StainNormalizer):
-    """Stain normalizer based on the vahadane method.
-
-    Args:
-        alpha: Regulariser for lasso. Defaults to 0.1.
-        max_iter: Maximum training iterations. Defaults to 3.
-    """
+    """Stain normalizer based on the vahadane method."""
 
     def __init__(self, alpha: float = 0.1, max_iter: int = 3) -> None:
+        """Initialize `VahadaneStainNormalizer` instance.
+
+        Args:
+            alpha: Regulariser for lasso. Defaults to 0.1.
+            max_iter: Maximum training iterations. Defaults to 3.
+        """
         super().__init__(
             stain_matrix_fn=F.get_vahadane_stain_matrix, alpha=alpha, max_iter=max_iter
         )
