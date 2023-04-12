@@ -25,6 +25,7 @@ ERROR_AX_WITH_IMAGES = "Passing `ax` when `num_images > 0` is not supported."
 FIGURE_WIDTH, FIGURE_HEIGHT = plt.rcParams["figure.figsize"]
 RGB_MEAN_COLUMNS = ["red_mean", "green_mean", "blue_mean"]
 RGB_STD_COLUMNS = ["red_std", "green_std", "blue_std"]
+XYWH_COLUMNS = ["x", "y", "w", "h"]
 
 
 class TileMetadata:
@@ -56,6 +57,11 @@ class TileMetadata:
     def dataframe(self) -> pl.DataFrame:
         """Polars dataframe."""
         return self.__dataframe
+
+    @property
+    def coordinates(self) -> np.ndarray:
+        """Array of tile coordinates."""
+        return self.__dataframe[XYWH_COLUMNS].to_numpy()
 
     @property
     def outliers(self) -> np.ndarray:
