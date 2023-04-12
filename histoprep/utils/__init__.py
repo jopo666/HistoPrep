@@ -1,5 +1,3 @@
-"""Slide and tile processing classes/functions."""
+"""Utility functions and classes for processing metadata."""
 
-from ._metadata import *
-from ._normalize import *
-from ._torch import *
+from . import normalize, process, torch

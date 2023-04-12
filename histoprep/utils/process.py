@@ -2,17 +2,13 @@ from __future__ import annotations
 
 __all__ = ["TileMetadata"]
 
-
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 from PIL import Image
 from sklearn.cluster import MiniBatchKMeans
-from sklearn.decomposition import PCA
 
 from histoprep import functional as F
-
-from ._histogram import _get_bin_collages, _plot_histogram
 
 ERROR_NO_METRICS = (
     "Metadata does not contain any metrics, make sure tiles are saved "
@@ -29,11 +25,7 @@ XYWH_COLUMNS = ["x", "y", "w", "h"]
 
 
 class TileMetadata:
-    """Class for exploring tile metadata.
-
-    Args:
-        dataframe: Polars dataframe containing tile metadata with image metrics.
-    """
+    """Class for exploring tile metadata and detecting outliers."""
 
     def __init__(self, dataframe: pl.DataFrame) -> None:
         self.__dataframe = dataframe
@@ -42,6 +34,8 @@ class TileMetadata:
         self.__metric_columns = [
             x for x in dataframe.columns if "_q" in x or (x.endswith(("_mean", "_std")))
         ]
+        if len(self.__metric_columns) == 0:
+            raise ValueError(ERROR_NO_METRICS)
 
     @classmethod
     def from_parquet(cls, *args, **kwargs) -> TileMetadata:
@@ -55,13 +49,20 @@ class TileMetadata:
 
     @property
     def dataframe(self) -> pl.DataFrame:
-        """Polars dataframe."""
+        """Polars dataframe with metadata."""
         return self.__dataframe
+
+    @property
+    def dataframe_without_metrics(self) -> pl.DataFrame:
+        """Polars dataframe without metadata."""
+        return self.dataframe[
+            [x for x in self.dataframe.columns if x not in self.metric_columns]
+        ]
 
     @property
     def coordinates(self) -> np.ndarray:
         """Array of tile coordinates."""
-        return self.__dataframe[XYWH_COLUMNS].to_numpy()
+        return self.dataframe[XYWH_COLUMNS].to_numpy()
 
     @property
     def outliers(self) -> np.ndarray:
@@ -80,7 +81,7 @@ class TileMetadata:
 
     @property
     def metrics(self) -> np.ndarray:
-        """Image metrics (divided by 255)."""
+        """Array of normalized image metrics (divided by 255)."""
         return self.dataframe[self.metric_columns].to_numpy() / 255
 
     @property
@@ -103,7 +104,7 @@ class TileMetadata:
         self.__outliers[selection] = True
         self.__outlier_selections.append({"selection": selection, "desc": desc})
 
-    def random_collage(
+    def random_image_collage(
         self,
         selection: np.ndarray,
         *,
@@ -115,7 +116,7 @@ class TileMetadata:
         """Generate a random collage from `paths[selection]`.
 
         Args:
-            selection: `TileMetadata["path"][selection]`.
+            selection: Selection for paths.
             num_rows: Number of rows in the collage image. Defaults to 4.
             num_cols: Number of columns in the collage image. Defaults to 16.
             shape: Size of each image in the collage. Defaults to (64, 64).
@@ -162,25 +163,6 @@ class TileMetadata:
         for new_idx, old_idx in enumerate(distances.argsort()[::-1]):
             ordered_clusters[clusters == old_idx] = new_idx
         return ordered_clusters
-
-    def plot_pca(self, **kwargs) -> plt.Axes:
-        """Plot two first principal components of the normalized image metrics.
-
-        Args:
-            **kwargs: Passed to `plt.scatter`.
-
-        Returns:
-            Matplotlib ax for the plot.
-        """
-        pca = PCA()
-        principal_components = pca.fit_transform(self.metrics / 255)
-        plt.scatter(
-            y=principal_components[:, 0], x=principal_components[:, 1], **kwargs
-        )
-        ax = plt.gca()
-        ax.set_ylabel(f"PC1 - {100*pca.explained_variance_ratio_[0]:.3f}% explained")
-        ax.set_xlabel(f"PC2 - {100*pca.explained_variance_ratio_[1]:.3f}% explained")
-        return ax
 
     def plot_histogram(
         self,
@@ -257,7 +239,6 @@ class TileMetadata:
         return len(self.dataframe)
 
     def __getitem__(self, key: str) -> np.ndarray:
-        """Indexing with column names."""
         return self.dataframe.get_column(key).to_numpy()
 
     def __repr__(self) -> str:
@@ -265,3 +246,85 @@ class TileMetadata:
             f"{self.__class__.__name__}(num_images={len(self.dataframe)}, "
             f"num_outliers={self.outliers.sum()})"
         )
+
+
+def _plot_histogram(
+    values: np.ndarray, n_bins: int, ax: plt.Axes = None, **kwargs
+) -> plt.Axes:
+    """Plot histogram."""
+    if ax is None:
+        plt.hist(values, bins=n_bins, **kwargs)
+        ax = plt.gca()
+    else:
+        ax.hist(values, bins=n_bins, **kwargs)
+    ax.set_xlim(values.min(), values.max())
+    return ax
+
+
+def _get_bin_collages(
+    *,
+    paths: np.ndarray,
+    values: np.ndarray,
+    num_bins: int,
+    num_images: int,
+    num_workers: int,
+    rng: np.random.Generator,
+) -> list[np.ndarray]:
+    """Collect bin image collages."""
+    __, cutoffs = np.histogram(values, bins=num_bins)
+    bin_indices = np.digitize(values, cutoffs[:-1]) - 1
+    bin_paths = _collect_bin_paths(
+        paths, bin_indices=bin_indices, n_images_per_bin=num_images, rng=rng
+    )
+    return _read_bin_paths(
+        bin_paths,
+        n_bins=num_bins,
+        n_images_per_bin=num_images,
+        num_workers=num_workers,
+    )
+
+
+def _collect_bin_paths(
+    paths: np.ndarray,
+    bin_indices: np.ndarray,
+    n_images_per_bin: int,
+    rng: np.random.Generator,
+) -> list[str]:
+    """Collect image paths based on binned values."""
+    output = []
+    for bin_idx in range(bin_indices.max() + 1):
+        bin_paths = paths[bin_indices == bin_idx]
+        if len(bin_paths) == 0:
+            output += [None] * n_images_per_bin
+        elif len(bin_paths) < n_images_per_bin:
+            output += bin_paths.tolist()
+            output += [None] * (n_images_per_bin - len(bin_paths))
+        else:
+            output += rng.choice(bin_paths, n_images_per_bin).tolist()
+    return output
+
+
+def _read_bin_paths(
+    bin_paths: list[str | None], n_bins: int, n_images_per_bin: int, num_workers: int
+) -> list[np.ndarray]:
+    """Read paths for each bin and generate vertically stacked array."""
+    all_images = []
+    resize_shape = None
+    for image in F._read_images_from_paths(bin_paths, num_workers=num_workers):
+        if resize_shape is None and image is not None:
+            resize_shape = image.shape
+        all_images.append(image)
+    if resize_shape is None:
+        # No images.
+        empty = np.zeros((2 * n_images_per_bin, 2, 3), dtype=np.uint8) + 255
+        return [empty for __ in range(n_bins)]
+    # Generate collages.
+    output, column = [], []
+    for img in all_images:
+        if img is None:
+            img = np.zeros(resize_shape, dtype=np.uint8) + 255  # noqa
+        column.append(img)
+        if len(column) == n_images_per_bin:
+            output.append(np.vstack(column))
+            column = []
+    return output
