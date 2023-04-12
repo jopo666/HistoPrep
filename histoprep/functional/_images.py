@@ -1,14 +1,7 @@
-from __future__ import annotations
-
-__all__ = [
-    "get_random_image_collage",
-    "_read_images_from_paths",
-    "_create_image_collage",
-]
-
 import random
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Optional, Union
 
 import cv2
 import numpy as np
@@ -17,7 +10,7 @@ from PIL import Image
 
 
 def get_random_image_collage(
-    paths: Iterable[str | Path],
+    paths: Iterable[Union[str, Path]],
     num_rows: int = 4,
     num_cols: int = 16,
     shape: tuple[int, int] = (64, 64),
@@ -38,12 +31,12 @@ def get_random_image_collage(
     """
     if len(paths) > num_cols * num_rows:
         paths = random.choices(paths, k=num_cols * num_rows)  # noqa
-    images = _read_images_from_paths(paths=paths, num_workers=num_workers)
-    return _create_image_collage(images=images, num_cols=num_cols, shape=shape)
+    images = read_images_from_paths(paths=paths, num_workers=num_workers)
+    return create_image_collage(images=images, num_cols=num_cols, shape=shape)
 
 
-def _read_images_from_paths(
-    paths: Iterable[str | Path | None], num_workers: int
+def read_images_from_paths(
+    paths: Iterable[Union[str, Path, None]], num_workers: int
 ) -> list[np.ndarray]:
     """Read images from paths.
 
@@ -61,7 +54,7 @@ def _read_images_from_paths(
     return output  # noqa
 
 
-def _create_image_collage(
+def create_image_collage(
     images: list[np.ndarray], num_cols: int, shape: tuple[int, int]
 ) -> Image.Image:
     """Collect images into a collage.
@@ -90,7 +83,7 @@ def _create_image_collage(
     return Image.fromarray(np.vstack(output))
 
 
-def _read_image(path: str | None) -> np.ndarray:
+def _read_image(path: Optional[str]) -> np.ndarray:
     """Parallisable."""
     if path is None:
         return None

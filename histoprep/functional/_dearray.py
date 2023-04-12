@@ -1,5 +1,3 @@
-__all__ = ["get_spot_coordinates"]
-
 import warnings
 
 import cv2
@@ -65,7 +63,7 @@ def get_spot_coordinates(
                 ]
             current_number += 1
     if same_spot_number:
-        warnings.warn("Some spots were assigned the same number.")
+        warnings.warn("Some spots were assigned the same number.", stacklevel=1)
     # Return bboxes and numbers.
     return {f"spot_{k}": tuple(v) for k, v in zip(numbers, bboxes)}
 

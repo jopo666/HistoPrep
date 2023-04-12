@@ -1,19 +1,5 @@
-from __future__ import annotations
-
-__all__ = [
-    "_divide_xywh",
-    "_get_allowed_dimensions",
-    "_multiply_xywh",
-    "_pad_tile",
-    "get_background_percentages",
-    "get_downsample",
-    "get_overlap_area",
-    "get_overlap_index",
-    "get_region_from_array",
-    "get_tile_coordinates",
-]
-
 import itertools
+from typing import Optional, Union
 
 import numpy as np
 
@@ -34,7 +20,7 @@ def get_tile_coordinates(
     dimensions: tuple[int, int],
     width: int,
     *,
-    height: int | None = None,
+    height: Optional[int] = None,
     overlap: float = 0.0,
     out_of_bounds: bool = False,
 ) -> list[XYWH]:
@@ -89,7 +75,7 @@ def get_tile_coordinates(
 def get_region_from_array(
     image: np.ndarray,
     xywh: XYWH,
-    downsample: float | tuple[float, float] = 1,
+    downsample: Union[float, tuple[float, float]] = 1,
     fill: int = 0,
 ) -> np.ndarray:
     """Read region from image array.
@@ -118,7 +104,7 @@ def get_region_from_array(
 def get_background_percentages(
     tile_coordinates: list[XYWH],
     tissue_mask: np.ndarray,
-    downsample: float | tuple[float, float],
+    downsample: Union[float, tuple[float, float]],
 ) -> list[float]:
     """Calculate background percentages for tile coordinates.
 
@@ -225,7 +211,7 @@ def _get_allowed_dimensions(
 
 
 def _divide_xywh(
-    xywh: tuple[int, int, int, int], divisor: float | tuple[float, float]
+    xywh: tuple[int, int, int, int], divisor: Union[float, tuple[float, float]]
 ) -> tuple[int, int, int, int]:
     """Divide xywh-coordinates with a divisor."""
     if not isinstance(divisor, (tuple, list)):
@@ -236,7 +222,7 @@ def _divide_xywh(
 
 
 def _multiply_xywh(
-    xywh: tuple[int, int, int, int], multiplier: float | tuple[float, float]
+    xywh: tuple[int, int, int, int], multiplier: Union[float, tuple[float, float]]
 ) -> tuple[int, int, int, int]:
     """Divide xywh-coordinates with divisor(s)."""
     if not isinstance(multiplier, (tuple, list)):

@@ -2,7 +2,7 @@ import numpy as np
 
 import histoprep.functional as F
 from histoprep import SlideReader
-from histoprep.utils.normalize import MachenkoStainNormalizer, VahadaneStainNormalizer
+from histoprep.utils import MachenkoStainNormalizer, VahadaneStainNormalizer
 
 from ._utils import IMAGE, SLIDE_PATH_SVS
 

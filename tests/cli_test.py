@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from ._utils import (
     SLIDE_PATH_JPEG,
     TMP_DIRECTORY,

@@ -121,7 +121,7 @@ def test_draw_tiles() -> None:
     image = np.zeros((200, 200), dtype=np.uint8)
     dimensions = image.shape[:2]
     coords = F.get_tile_coordinates(dimensions, width=40)
-    img = F.draw_tiles(
+    img = F.get_annotated_image(
         image=image,
         coordinates=coords,
         downsample=1.0,

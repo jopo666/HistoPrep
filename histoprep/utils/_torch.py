@@ -1,4 +1,4 @@
-from __future__ import annotations
+"""Datasets for pytorch."""
 
 __all__ = ["SlideReaderDataset", "TileImageDataset"]
 
@@ -7,12 +7,12 @@ import math
 import multiprocessing
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Union
 
 import numpy as np
 from PIL import Image
 
-from histoprep.reader import SlideReader
+from histoprep._reader import SlideReader
 
 try:
     from torch.utils.data import Dataset
@@ -35,7 +35,7 @@ class SlideReaderDataset(Dataset):
         reader: SlideReader,
         coordinates: Iterator[tuple[int, int, int, int]],
         level: int = 0,
-        transform: Callable[[np.ndarray], Any] | None = None,
+        transform: Optional[Callable[[np.ndarray], Any]] = None,
     ) -> None:
         """Initialize SlideReaderDataset.
 
@@ -59,7 +59,7 @@ class SlideReaderDataset(Dataset):
     def __len__(self) -> int:
         return len(self.coordinates)
 
-    def __getitem__(self, index: int) -> tuple[np.ndarray | Any, np.ndarray]:
+    def __getitem__(self, index: int) -> tuple[Union[np.ndarray, Any], np.ndarray]:
         xywh = self.coordinates[index]
         tile = self.reader.read_region(xywh, level=self.level)
         if self.transform is not None:
@@ -72,12 +72,12 @@ class TileImageDataset(Dataset):
 
     def __init__(
         self,
-        paths: list[str | Path],
+        paths: list[Union[str, Path]],
         *,
-        labels: list[str] | None = None,
-        transform: Callable[[np.ndarray], Any] | None = None,
+        labels: Optional[list[str]] = None,
+        transform: Optional[Callable[[np.ndarray], Any]] = None,
         use_cache: bool = False,
-        tile_shape: tuple[int, ...] | None = None,
+        tile_shape: Optional[tuple[int, ...]] = None,
     ) -> None:
         """Torch dataset yielding tile images from paths (requires `PyTorch`).
 
@@ -108,14 +108,14 @@ class TileImageDataset(Dataset):
         self._cached_indices = set()
         self._cache_array = None
         if self._use_cache:
-            self._cache_array = create_shared_array(
+            self._cache_array = _create_shared_array(
                 num_samples=len(self.paths), shape=tile_shape
             )
 
     def __len__(self) -> int:
         return len(self.paths)
 
-    def __getitem__(self, index: int) -> tuple[np.ndarray, str] | tuple[Any, str]:
+    def __getitem__(self, index: int) -> tuple[Union[np.ndarray, Any], str]:
         path = self.paths[index]
         if self._use_cache:
             if index not in self._cached_indices:
@@ -132,7 +132,7 @@ class TileImageDataset(Dataset):
         return image, path, *labels
 
 
-def create_shared_array(num_samples: int, shape: tuple[int, ...]) -> np.ndarray:
+def _create_shared_array(num_samples: int, shape: tuple[int, ...]) -> np.ndarray:
     shared_array_base = multiprocessing.Array(
         ctypes.c_uint8, num_samples * math.prod(shape)
     )

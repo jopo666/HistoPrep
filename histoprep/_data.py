@@ -1,9 +1,10 @@
-from __future__ import annotations
+"""Data classes for representing a set of slide regions."""
 
 __all__ = ["TileCoordinates", "SpotCoordinates"]
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from typing import Optional
 
 import numpy as np
 
@@ -25,8 +26,8 @@ class TileCoordinates:
     width: int
     height: int
     overlap: float
-    max_background: float | None = field(default=None)
-    tissue_mask: np.ndarray | None = field(default=None)
+    max_background: Optional[float] = field(default=None)
+    tissue_mask: Optional[np.ndarray] = field(default=None)
 
     def get_properties(self, level: int, level_downsample: tuple[float, float]) -> dict:
         """Generate dictonary of properties for `SlideReader.save_regions` function."""

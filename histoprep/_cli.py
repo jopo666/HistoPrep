@@ -1,17 +1,17 @@
-from __future__ import annotations
+"""CLI interface for cutting slides into small tile images."""
 
 __all__ = ["cut_slides"]
 
 import functools
 import glob
+import sys
 from pathlib import Path
+from typing import NoReturn, Optional, Union
 
 import mpire
 import rich_click as click
 
 from histoprep import SlideReader
-
-from ._utils import error, info, warning
 
 LOGO = """
 ██╗  ██╗██╗███████╗████████╗ ██████╗ ██████╗ ██████╗ ███████╗██████╗
@@ -278,20 +278,20 @@ def glob_pattern(*args) -> list[Path]:
     help="Sigma for gaussian blurring during tissue detection.",
 )
 def cut_slides(
-    paths: list[str | Path],
-    parent_dir: str | Path,
+    paths: list[Union[str, Path]],
+    parent_dir: Union[str, Path],
     *,
-    backend: str | None = None,
+    backend: Optional[str] = None,
     # Tissue detection.
-    threshold: float | None = None,
+    threshold: Optional[float] = None,
     multiplier: float = 1.05,
-    tissue_level: int | None = None,
+    tissue_level: Optional[int] = None,
     max_dimension: int = 8192,
     sigma: float = 1.0,
     # Tile extraction.
     level: int = 0,
     width: int = 640,
-    height: int | None = None,
+    height: Optional[int] = None,
     overlap: float = 0.0,
     max_background: float = 0.75,
     out_of_bounds: bool = True,
@@ -304,7 +304,7 @@ def cut_slides(
     image_format: str = "jpeg",
     quality: int = 80,
     use_csv: bool = False,
-    num_workers: int | None = None,
+    num_workers: Optional[int] = None,
 ) -> None:
     """CLI interface to extract tile images from slides."""
     # Filter slide paths.
@@ -360,7 +360,7 @@ def cut_slides(
                 )
 
 
-def filter_slide_paths(
+def filter_slide_paths(  # noqa
     *,
     all_paths: list[Path],
     parent_dir: Path,
@@ -408,7 +408,7 @@ def cut_slide(
     tissue_kwargs: dict,
     tile_kwargs: dict,
     save_kwargs: dict,
-) -> tuple[Path, Exception | None]:
+) -> tuple[Path, Optional[Exception]]:
     try:
         reader = SlideReader(path, **reader_kwargs)
         if tissue_kwargs["level"] is None:
@@ -419,3 +419,22 @@ def cut_slide(
     except Exception as e:  # noqa
         return path, e
     return path, None
+
+
+def info(msg: str) -> None:
+    """Display info message."""
+    prefix = click.style("INFO: ", bold=True, fg="cyan")
+    click.echo(prefix + msg)
+
+
+def warning(msg: str) -> None:
+    """Display warning message."""
+    prefix = click.style("WARNING: ", bold=True, fg="yellow")
+    click.echo(prefix + msg)
+
+
+def error(msg: str, exit_integer: int = 1) -> NoReturn:
+    """Display error message and exit."""
+    prefix = click.style("ERROR: ", bold=True, fg="red")
+    click.echo(prefix + msg)
+    sys.exit(exit_integer)

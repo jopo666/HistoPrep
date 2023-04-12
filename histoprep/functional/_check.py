@@ -1,4 +1,4 @@
-from __future__ import annotations
+from typing import Union
 
 import numpy as np
 from PIL import Image
@@ -11,7 +11,7 @@ GRAYSCALE_NDIM = 2
 RGB_NDIM = 3
 
 
-def check_image(image: np.ndarray | Image.Image) -> np.ndarray:
+def check_image(image: Union[np.ndarray, Image.Image]) -> np.ndarray:
     """Check that input is a valid RGB/L image and convert to it to an array."""
     if isinstance(image, Image.Image):
         image = np.array(image)

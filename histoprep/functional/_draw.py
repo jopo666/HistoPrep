@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-__all__ = ["draw_tiles"]
+from typing import Optional, Union
 
 import numpy as np
 from matplotlib.font_manager import fontManager
@@ -14,17 +12,17 @@ ERROR_TEXT_ITEM_LENGTH = (
 )
 
 
-def draw_tiles(
-    image: np.ndarray | Image.Image,
+def get_annotated_image(
+    image: Union[np.ndarray, Image.Image],
     coordinates: list[tuple[int, int, int, int]],
-    downsample: float | tuple[float, float],
+    downsample: Union[float, tuple[float, float]],
     *,
     rectangle_outline: str = "red",
-    rectangle_fill: str | None = None,
+    rectangle_fill: Optional[str] = None,
     rectangle_width: int = 1,
     highlight_first: bool = False,
     highlight_outline: str = "blue",
-    text_items: list[str] | None = None,
+    text_items: Optional[list[str]] = None,
     text_color: str = "black",
     text_proportion: float = 0.75,
     text_font: str = "monospace",

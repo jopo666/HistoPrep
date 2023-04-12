@@ -1,10 +1,7 @@
-from __future__ import annotations
-
-__all__ = ["worker_init", "prepare_worker_pool", "close_pool"]
-
 from collections.abc import Callable, Iterable
 from functools import partial
 from pathlib import Path
+from typing import Optional
 
 from mpire import WorkerPool
 
@@ -20,7 +17,7 @@ def prepare_worker_pool(
     iterable_of_args: Iterable,
     iterable_length: int,
     num_workers: int,
-) -> tuple[WorkerPool | None, Iterable]:
+) -> tuple[Optional[WorkerPool], Iterable]:
     """Prepare worker pool and iterable."""
     if num_workers <= 1:
         return None, (worker_fn({"reader": reader}, *args) for args in iterable_of_args)
@@ -29,7 +26,7 @@ def prepare_worker_pool(
         worker_init,
         reader_class=reader.__class__,
         path=reader.path,
-        backend=reader.backend.BACKEND_NAME,
+        backend=reader._backend.BACKEND_NAME,
     )
     pool = WorkerPool(n_jobs=num_workers, use_worker_state=True)
     iterable_of_args = pool.imap(
@@ -41,6 +38,6 @@ def prepare_worker_pool(
     return pool, iterable_of_args
 
 
-def close_pool(pool: WorkerPool | None) -> None:
+def close_pool(pool: Optional[WorkerPool]) -> None:
     if pool is not None:
         pool.terminate()

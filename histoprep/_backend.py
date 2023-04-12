@@ -1,22 +1,14 @@
-"""Slide reader backends for `histoprep`."""
-
-from __future__ import annotations
-
-__all__ = [
-    "CziBackend",
-    "OpenSlideBackend",
-    "PillowBackend",
-]
-
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Union
 
 import cv2
 import numpy as np
 from aicspylibczi import CziFile
 from PIL import Image
 
-from histoprep import functional as F
+from histoprep.functional._level import format_level
+from histoprep.functional._tiles import _divide_xywh, _get_allowed_dimensions, _pad_tile
 
 try:
     import openslide
@@ -36,24 +28,12 @@ ERROR_OPENSLIDE_IMPORT = (
 )
 ERROR_NON_MOSAIC = "HistoPrep does not support reading non-mosaic czi-files."
 BACKGROUND_COLOR = (1.0, 1.0, 1.0)
-OPENSLIDE_READABLE_FORMATS = (
-    "svs",
-    "vms",
-    "vmu",
-    "ndpi",
-    "scn",
-    "mrxs",
-    "tiff",
-    "svslide",
-    "tif",
-    "bif",
-)
 
 
 class SlideReaderBackend(ABC):
     """Base class for all backends."""
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: Union[str, Path]) -> None:
         if not isinstance(path, Path):
             path = Path(path)
         if not path.exists():
@@ -199,16 +179,14 @@ class CziBackend(SlideReaderBackend):
         return self.__level_downsamples
 
     def read_level(self, level: int) -> np.ndarray:
-        level = F._format_level(level, available=list(self.level_dimensions))
+        level = format_level(level, available=list(self.level_dimensions))
         return self.read_region(xywh=self.data_bounds, level=level)
 
     def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        level = F._format_level(level, available=list(self.level_dimensions))
+        level = format_level(level, available=list(self.level_dimensions))
         x, y, w, h = xywh
         # Define allowed dims, output dims and expected dims.
-        allowed_h, allowed_w = F._get_allowed_dimensions(
-            xywh, dimensions=self.dimensions
-        )
+        allowed_h, allowed_w = _get_allowed_dimensions(xywh, dimensions=self.dimensions)
         output_h, output_w = round(h / 2**level), round(w / 2**level)
         # Read allowed reagion.
         scale_factor = 1 / 2**level
@@ -232,7 +210,7 @@ class CziBackend(SlideReaderBackend):
                 tile, dsize=(excepted_w, excepted_h), interpolation=cv2.INTER_NEAREST
             )
         # Convert to RGB and pad.
-        return F._pad_tile(
+        return _pad_tile(
             cv2.cvtColor(tile, cv2.COLOR_BGR2RGB), shape=(excepted_h, excepted_w)
         )
 
@@ -296,23 +274,23 @@ class OpenSlideBackend(SlideReaderBackend):
         return self.__level_downsamples
 
     def read_level(self, level: int) -> np.ndarray:
-        level = F._format_level(level, available=list(self.level_dimensions))
+        level = format_level(level, available=list(self.level_dimensions))
         level_h, level_w = self.level_dimensions[level]
         return np.array(self.__reader.get_thumbnail(size=(level_w, level_h)))
 
     def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        level = F._format_level(level, available=list(self.level_dimensions))
+        level = format_level(level, available=list(self.level_dimensions))
         # Only width and height have to be adjusted for the level.
         x, y, *__ = xywh
-        *__, w, h = F._divide_xywh(xywh, self.level_downsamples[level])
+        *__, w, h = _divide_xywh(xywh, self.level_downsamples[level])
         # Read allowed region.
-        allowed_h, allowed_w = F._get_allowed_dimensions((x, y, w, h), self.dimensions)
+        allowed_h, allowed_w = _get_allowed_dimensions((x, y, w, h), self.dimensions)
         tile = self.__reader.read_region(
             location=(x, y), level=level, size=(allowed_w, allowed_h)
         )
         tile = np.array(tile)[..., :3]  # only rgb channels
         # Pad tile.
-        return F._pad_tile(tile, shape=(h, w))
+        return _pad_tile(tile, shape=(h, w))
 
 
 class PillowBackend(SlideReaderBackend):
@@ -372,23 +350,23 @@ class PillowBackend(SlideReaderBackend):
         return self.__level_downsamples
 
     def read_level(self, level: int) -> np.ndarray:
-        level = F._format_level(level, available=list(self.level_dimensions))
+        level = format_level(level, available=list(self.level_dimensions))
         self.__lazy_load(level)
         return np.array(self.__pyramid[level])
 
     def read_region(self, xywh: tuple[int, int, int, int], level: int) -> np.ndarray:
-        level = F._format_level(level, available=list(self.level_dimensions))
+        level = format_level(level, available=list(self.level_dimensions))
         self.__lazy_load(level)
         # Read allowed region.
-        x, y, output_w, output_h = F._divide_xywh(xywh, self.level_downsamples[level])
-        allowed_h, allowed_w = F._get_allowed_dimensions(
+        x, y, output_w, output_h = _divide_xywh(xywh, self.level_downsamples[level])
+        allowed_h, allowed_w = _get_allowed_dimensions(
             xywh=(x, y, output_w, output_h), dimensions=self.level_dimensions[level]
         )
         tile = np.array(
             self.__pyramid[level].crop((x, y, x + allowed_w, y + allowed_h))
         )
         # Pad tile.
-        return F._pad_tile(tile, shape=(output_h, output_w))
+        return _pad_tile(tile, shape=(output_h, output_w))
 
     def __lazy_load(self, level: int) -> None:
         if level not in self.__pyramid:

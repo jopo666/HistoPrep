@@ -5,7 +5,7 @@ from aicspylibczi import CziFile
 from openslide import OpenSlide, OpenSlideUnsupportedFormatError
 from PIL import Image, UnidentifiedImageError
 
-from histoprep.backend import CziBackend, OpenSlideBackend, PillowBackend
+from histoprep._backend import CziBackend, OpenSlideBackend, PillowBackend
 from tests._utils import (
     SLIDE_PATH_CZI,
     SLIDE_PATH_JPEG,

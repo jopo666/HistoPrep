@@ -26,6 +26,11 @@ def generate_metadata(*, clean_tmp: bool = True, **kwargs) -> pl.DataFrame:
 def test_metadata_properties() -> None:
     metadata = TileMetadata(generate_metadata())
     assert isinstance(metadata.dataframe, pl.DataFrame)
+    assert isinstance(metadata.dataframe_without_metrics, pl.DataFrame)
+    assert metadata.dataframe_without_metrics.columns == [
+        *list("xywh"),
+        "path",
+    ]
     assert metadata.outliers.sum() == 0
     assert len(metadata.outlier_selections) == 0
     assert len(metadata.metric_columns) == 64
@@ -70,17 +75,24 @@ def test_metadata_plot_histogram_fail() -> None:
         metadata.plot_histogram("black_pixels", num_images=0)
 
 
-def test_metadata_plot_pca() -> None:
-    metadata = TileMetadata(generate_metadata())
-    metadata.plot_pca()
+def test_metadata_no_metrics_fail() -> None:
+    dataframe = generate_metadata()
+    with pytest.raises(ValueError, match="Metadata does not contain any metrics"):
+        TileMetadata(dataframe["x", "y", "w", "h", "path"])
 
 
 def test_metadata_plot_collage() -> None:
     metadata = TileMetadata(generate_metadata(clean_tmp=False))
-    assert metadata.random_collage(~metadata.outliers, num_rows=4).size == (1024, 256)
-    assert metadata.random_collage(~metadata.outliers, num_rows=2).size == (1024, 128)
+    assert metadata.random_image_collage(~metadata.outliers, num_rows=4).size == (
+        1024,
+        256,
+    )
+    assert metadata.random_image_collage(~metadata.outliers, num_rows=2).size == (
+        1024,
+        128,
+    )
     with pytest.raises(ValueError, match="Empty selection"):
-        metadata.random_collage(metadata.outliers)
+        metadata.random_image_collage(metadata.outliers)
     clean_temporary_directory()
 
 

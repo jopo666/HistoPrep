@@ -1,7 +1,4 @@
-from __future__ import annotations
-
-__all__ = ["get_tissue_mask", "clean_tissue_mask"]
-
+from typing import Optional, Union
 
 import cv2
 import numpy as np
@@ -19,9 +16,9 @@ GRAY_NDIM = 2
 
 
 def get_tissue_mask(
-    image: Image.Image | np.ndarray,
+    image: Union[Image.Image, np.ndarray],
     *,
-    threshold: int | None = None,
+    threshold: Optional[int] = None,
     multiplier: float = 1.0,
     sigma: float = 1.0,
 ) -> tuple[int, np.ndarray]:
@@ -65,9 +62,9 @@ def get_tissue_mask(
 def clean_tissue_mask(
     tissue_mask: np.ndarray,
     min_area_pixel: int = 10,
-    max_area_pixel: int | None = None,
+    max_area_pixel: Optional[int] = None,
     min_area_relative: float = 0.2,
-    max_area_relative: float | None = 2.0,
+    max_area_relative: Optional[float] = 2.0,
 ) -> np.ndarray:
     """Remove too small/large contours from tissue mask.
 

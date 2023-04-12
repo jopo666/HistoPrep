@@ -1,13 +1,6 @@
-from __future__ import annotations
-
-__all__ = [
-    "get_mean_and_std_from_images",
-    "get_mean_and_std_from_paths",
-    "_get_mean_and_std",
-]
-
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Union
 
 import mpire
 import numpy as np
@@ -37,7 +30,7 @@ def get_mean_and_std_from_images(images: Iterable[np.ndarray]) -> tuple[MEAN, ST
 
 
 def get_mean_and_std_from_paths(
-    filepaths: Iterable[str | Path], num_workers: int = 1
+    filepaths: Iterable[Union[str, Path]], num_workers: int = 1
 ) -> tuple[MEAN, STD]:
     """Get channel mean and std values for an iterable of image paths.
 
@@ -58,14 +51,7 @@ def get_mean_and_std_from_paths(
 
 
 def _get_mean_and_std(image: np.ndarray) -> tuple[MEAN, STD]:
-    """Calculate mean and standard deviation for each image channel (between [0, 1]).
-
-    Args:
-        images: Iterable of images.
-
-    Returns:
-        Mean and standard deviation for each channel.
-    """
+    """Calculate mean and standard deviation for each image channel (between [0, 1])."""
     check_image(image)
     if image.ndim == 2:  # noqa
         image = np.expand_dims(tile, -1)  # noqa
@@ -75,5 +61,5 @@ def _get_mean_and_std(image: np.ndarray) -> tuple[MEAN, STD]:
     )
 
 
-def _read_image(path: str | Path) -> np.ndarray:
+def _read_image(path: Union[str, Path]) -> np.ndarray:
     return np.array(Image.open(path))

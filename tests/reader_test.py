@@ -8,8 +8,8 @@ from PIL import Image, UnidentifiedImageError
 
 import histoprep.functional as F
 from histoprep import SlideReader
-from histoprep.backend import CziBackend, OpenSlideBackend, PillowBackend
-from histoprep.data import SpotCoordinates, TileCoordinates
+from histoprep._backend import CziBackend, OpenSlideBackend, PillowBackend
+from histoprep._data import SpotCoordinates, TileCoordinates
 
 from ._utils import (
     DATA_DIRECTORY,
@@ -29,7 +29,7 @@ from .backend_test import (
 
 def test_reader_init_no_match() -> None:
     with pytest.raises(ValueError, match="Could not automatically assing reader"):
-        __ = SlideReader("i/have/a/bad/extension.penis")
+        __ = SlideReader(__file__)
 
 
 def test_reader_init_no_file() -> None:
@@ -66,13 +66,13 @@ def test_reader_init_openslide() -> None:
 
 def test_reader_properties_backend() -> None:
     reader = SlideReader(SLIDE_PATH_JPEG)
-    assert reader.path == reader.backend.path
-    assert reader.name == reader.backend.name
-    assert reader.data_bounds == reader.backend.data_bounds
-    assert reader.dimensions == reader.backend.dimensions
-    assert reader.level_count == reader.backend.level_count
-    assert reader.level_dimensions == reader.backend.level_dimensions
-    assert reader.level_downsamples == reader.backend.level_downsamples
+    assert reader.path == reader._backend.path
+    assert reader.name == reader._backend.name
+    assert reader.data_bounds == reader._backend.data_bounds
+    assert reader.dimensions == reader._backend.dimensions
+    assert reader.level_count == reader._backend.level_count
+    assert reader.level_dimensions == reader._backend.level_dimensions
+    assert reader.level_downsamples == reader._backend.level_downsamples
     assert str(reader) == f"SlideReader(path={reader.path}, backend=PILLOW)"
 
 

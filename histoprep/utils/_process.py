@@ -1,6 +1,8 @@
-from __future__ import annotations
+"""Helper class for preprocessing tile images."""
 
 __all__ = ["TileMetadata"]
+
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,7 +10,7 @@ import polars as pl
 from PIL import Image
 from sklearn.cluster import MiniBatchKMeans
 
-from histoprep import functional as F
+from histoprep.functional._images import create_image_collage, read_images_from_paths
 
 ERROR_NO_METRICS = (
     "Metadata does not contain any metrics, make sure tiles are saved "
@@ -38,12 +40,12 @@ class TileMetadata:
             raise ValueError(ERROR_NO_METRICS)
 
     @classmethod
-    def from_parquet(cls, *args, **kwargs) -> TileMetadata:
+    def from_parquet(cls, *args, **kwargs) -> "TileMetadata":
         """Wrapper around `polars.read_parquet` function."""
         return cls(pl.read_parquet(*args, **kwargs))
 
     @classmethod
-    def from_csv(cls, *args, **kwargs) -> TileMetadata:
+    def from_csv(cls, *args, **kwargs) -> "TileMetadata":
         """Wrapper around `polars.read_csv` function."""
         return cls(pl.read_csv(*args, **kwargs))
 
@@ -55,9 +57,8 @@ class TileMetadata:
     @property
     def dataframe_without_metrics(self) -> pl.DataFrame:
         """Polars dataframe without metadata."""
-        return self.dataframe[
-            [x for x in self.dataframe.columns if x not in self.metric_columns]
-        ]
+        forbidden = ["background", "black_pixels", "white_pixels", *self.metric_columns]
+        return self.dataframe[[x for x in self.dataframe.columns if x not in forbidden]]
 
     @property
     def coordinates(self) -> np.ndarray:
@@ -70,7 +71,7 @@ class TileMetadata:
         return self.__outliers
 
     @property
-    def outlier_selections(self) -> list[dict[str, np.ndarray | str]]:
+    def outlier_selections(self) -> list[dict[str, Union[np.ndarray, str]]]:
         """List of dicts with outlier selections and descriptions."""
         return self.__outlier_selections
 
@@ -133,8 +134,8 @@ class TileMetadata:
             size=min(selection.sum(), num_cols * num_rows),
             replace=False,
         )
-        return F._create_image_collage(
-            images=F._read_images_from_paths(sampled_paths, num_workers),
+        return create_image_collage(
+            images=read_images_from_paths(sampled_paths, num_workers),
             num_cols=num_cols,
             shape=shape,
         )
@@ -167,15 +168,15 @@ class TileMetadata:
     def plot_histogram(
         self,
         column: str,
-        min_value: float | None = None,
-        max_value: float | None = None,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
         *,
         num_bins: int = 20,
         num_images: int = 12,
         num_workers: int = 1,
-        ax: plt.Axes | None = None,
+        ax: Optional[plt.Axes] = None,
         **kwargs,
-    ) -> plt.Axes | np.ndarray[plt.Axes]:
+    ) -> Union[plt.Axes, np.ndarray[plt.Axes]]:
         """Plot column values in a histogram with example images.
 
         Args:
@@ -305,12 +306,12 @@ def _collect_bin_paths(
 
 
 def _read_bin_paths(
-    bin_paths: list[str | None], n_bins: int, n_images_per_bin: int, num_workers: int
+    bin_paths: list[Optional[str]], n_bins: int, n_images_per_bin: int, num_workers: int
 ) -> list[np.ndarray]:
     """Read paths for each bin and generate vertically stacked array."""
     all_images = []
     resize_shape = None
-    for image in F._read_images_from_paths(bin_paths, num_workers=num_workers):
+    for image in read_images_from_paths(bin_paths, num_workers=num_workers):
         if resize_shape is None and image is not None:
             resize_shape = image.shape
         all_images.append(image)
