@@ -12,16 +12,15 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
-from histoprep._reader import SlideReader
+from histoprep.reader import SlideReader
 
 try:
-    from torch.utils.data import Dataset, IterableDataset
+    from torch.utils.data import Dataset
 
     HAS_PYTORCH = True
 except ImportError:
     HAS_PYTORCH = False
     Dataset = object
-    IterableDataset = object
 
 ERROR_PYTORCH = "Could not import torch, make sure it has been installed!"
 ERROR_LENGTH_MISMATCH = "Path length ({}) does not match label length ({})."
@@ -29,14 +28,7 @@ ERROR_TILE_SHAPE = "Tile shape must be defined to create a cache array."
 
 
 class SlideReaderDataset(Dataset):
-    """Torch dataset yielding tile images from reader (requires `PyTorch`).
-
-    Args:
-        reader: `SlideReader` instance.
-        coordinates: Iterator of xywh-coordinates.
-        level: Slide level for reading tile image. Defaults to 0.
-        transform: Transform function for tile images. Defaults to None.
-    """
+    """Torch dataset yielding tile images from reader (requires `PyTorch`)."""
 
     def __init__(
         self,
@@ -45,6 +37,17 @@ class SlideReaderDataset(Dataset):
         level: int = 0,
         transform: Callable[[np.ndarray], Any] | None = None,
     ) -> None:
+        """Initialize SlideReaderDataset.
+
+        Args:
+            reader: `SlideReader` instance.
+            coordinates: Iterator of xywh-coordinates.
+            level: Slide level for reading tile image. Defaults to 0.
+            transform: Transform function for tile images. Defaults to None.
+
+        Raises:
+            ImportError: Could not import `PyTorch`.
+        """
         if not HAS_PYTORCH:
             raise ImportError(ERROR_PYTORCH)
         super().__init__()
@@ -65,16 +68,7 @@ class SlideReaderDataset(Dataset):
 
 
 class TileImageDataset(Dataset):
-    """Torch dataset yielding tile images from paths (requires `PyTorch`).
-
-    Args:
-        paths: Paths to tile images.
-        labels: Indexable list of labels for each path. Defaults to None.
-        transform: Transform function for tile images.. Defaults to None.
-        use_cache: Cache each image to shared array, requires that each tile has the
-            same shape. Defaults to False.
-        tile_shape: Tile shape for creating a shared cache array. Defaults to None.
-    """
+    """Torch dataset yielding tile images from paths (requires `PyTorch`)."""
 
     def __init__(
         self,
@@ -85,6 +79,21 @@ class TileImageDataset(Dataset):
         use_cache: bool = False,
         tile_shape: tuple[int, ...] | None = None,
     ) -> None:
+        """Torch dataset yielding tile images from paths (requires `PyTorch`).
+
+        Args:
+            paths: Paths to tile images.
+            labels: Indexable list of labels for each path. Defaults to None.
+            transform: Transform function for tile images. Defaults to None.
+            use_cache: Cache each image to shared array, requires that each tile has the
+                same shape. Defaults to False.
+            tile_shape: Tile shape for creating a shared cache array. Defaults to None.
+
+        Raises:
+            ImportError: Could not import `PyTorch`.
+            ValueError: Label and path lengths differ.
+            ValueError: Tile shape is undefined but `use_cache=True`.
+        """
         super().__init__()
         if not HAS_PYTORCH:
             raise ImportError(ERROR_PYTORCH)
