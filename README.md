@@ -96,15 +96,15 @@ let's try it out!
 
 
 ```python
-from histoprep.utils import TileMetadata
+from histoprep.utils import OutlierDetector
 
 # Let's wrap the tile metadata with a helper class.
-metadata = TileMetadata(tile_metadata)
+detector = OutlierDetector(tile_metadata)
 # Cluster tiles based on image metrics.
-clusters = metadata.cluster_kmeans(num_clusters=4, random_state=666)
+clusters = detector.cluster_kmeans(num_clusters=4, random_state=666)
 # Visualise first cluster.
 reader.get_annotated_thumbnail(
-    image=reader.read_level(-1), coordinates=metadata.coordinates[clusters == 0]
+    image=reader.read_level(-1), coordinates=detector.coordinates[clusters == 0]
 )
 ```
 ![Tiles in cluster 0](images/thumbnail_blue.jpeg)

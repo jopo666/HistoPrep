@@ -1,6 +1,6 @@
 """Helper class for preprocessing tile images."""
 
-__all__ = ["TileMetadata"]
+__all__ = ["OutlierDetector"]
 
 from typing import Optional, Union
 
@@ -26,7 +26,7 @@ RGB_STD_COLUMNS = ["red_std", "green_std", "blue_std"]
 XYWH_COLUMNS = ["x", "y", "w", "h"]
 
 
-class TileMetadata:
+class OutlierDetector:
     """Class for exploring tile metadata and detecting outliers."""
 
     def __init__(self, dataframe: pl.DataFrame) -> None:
