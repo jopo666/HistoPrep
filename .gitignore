@@ -1,4 +1,4 @@
 __pycache__
-poetry.lock
-tests/data/slide*
+tests/data/slide.czi
+tests/data/slide.svs
 notes.ipynb
