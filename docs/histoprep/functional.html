@@ -329,7 +329,7 @@ Defaults to 0.0.</li>
                     <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">get_mean_and_std_from_paths</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">filepaths</span><span class="p">:</span> <span class="n">collections</span><span class="o">.</span><span class="n">abc</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">]]</span>,</span><span class="param">	<span class="n">num_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span>:</span></span>
+        <span class="name">get_mean_and_std_from_paths</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">paths</span><span class="p">:</span> <span class="n">collections</span><span class="o">.</span><span class="n">abc</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">]]</span>,</span><span class="param">	<span class="n">num_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span>:</span></span>
 
         
     </div>
@@ -340,7 +340,7 @@ Defaults to 0.0.</li>
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>filepaths:</strong>  Iterable of image paths.</li>
+<li><strong>paths:</strong>  Iterable of image paths.</li>
 <li><strong>num_workers:</strong>  Number of image reading processes.</li>
 </ul>
 
@@ -425,8 +425,8 @@ Defaults to 0.0.</li>
 
 <ul>
 <li><strong>paths:</strong>  Image paths.</li>
-<li><strong>num_rows:</strong>  Number of rows in the collage. Ignored if there isn't enough images.
-Defaults to 4.</li>
+<li><strong>num_rows:</strong>  Number of rows in the collage. Ignored if there isn't enough images to
+fill enough rows. Defaults to 4.</li>
 <li><strong>num_cols:</strong>  Number of columns in the collage. Defaults to 16.</li>
 <li><strong>shape:</strong>  Shape of each image in the collage. Defaults to (64, 64).</li>
 <li><strong>num_workers:</strong>  Number of image loading workers. Defaults to 1.</li>
@@ -451,7 +451,7 @@ Defaults to 4.</li>
     </div>
     <a class="headerlink" href="#get_region_from_array"></a>
     
-            <div class="docstring"><p>Read region from image array.</p>
+            <div class="docstring"><p>Read region from an image array.</p>
 
 <h6 id="arguments">Arguments:</h6>
 

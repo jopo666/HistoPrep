@@ -136,7 +136,7 @@ histoprep    </h1>
                             <div id="SlideReader.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">SlideReader</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">]</span>,</span><span class="param">	<span class="n">backend</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">histoprep</span><span class="o">.</span><span class="n">_backend</span><span class="o">.</span><span class="n">OpenSlideBackend</span><span class="p">,</span> <span class="n">histoprep</span><span class="o">.</span><span class="n">_backend</span><span class="o">.</span><span class="n">PillowBackend</span><span class="p">,</span> <span class="n">histoprep</span><span class="o">.</span><span class="n">_backend</span><span class="o">.</span><span class="n">CziBackend</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
+        <span class="name">SlideReader</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">]</span>, </span><span class="param"><span class="n">backend</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
         
     </div>
@@ -150,6 +150,14 @@ histoprep    </h1>
 <li><strong>path:</strong>  Path to slide image.</li>
 <li><strong>backend:</strong>  Backend to use for reading slide images. If None, attempts to
 assing the correct backend based on file extension. Defaults to None.</li>
+</ul>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>FileNotFoundError:</strong>  Path does not exist.</li>
+<li><strong>ValueError:</strong>  Cannot automatically assign backend for reader.</li>
+<li><strong>ValueError:</strong>  Backend name not recognised.</li>
 </ul>
 </div>
 
@@ -233,7 +241,7 @@ dimensions defined by this data bound.</p>
     </div>
     <a class="headerlink" href="#SlideReader.level_count"></a>
     
-            <div class="docstring"><p>Number of slide levels.</p>
+            <div class="docstring"><p>Number of slide pyramid levels.</p>
 </div>
 
 
@@ -246,7 +254,7 @@ dimensions defined by this data bound.</p>
     </div>
     <a class="headerlink" href="#SlideReader.level_dimensions"></a>
     
-            <div class="docstring"><p>Image dimensions (height, width) for each level.</p>
+            <div class="docstring"><p>Image dimensions (height, width) for each pyramid level.</p>
 </div>
 
 
@@ -259,7 +267,7 @@ dimensions defined by this data bound.</p>
     </div>
     <a class="headerlink" href="#SlideReader.level_downsamples"></a>
     
-            <div class="docstring"><p>Image downsample factors (height, width) for each level.</p>
+            <div class="docstring"><p>Image downsample factors (height, width) for each pyramid level.</p>
 </div>
 
 
@@ -274,12 +282,12 @@ dimensions defined by this data bound.</p>
     </div>
     <a class="headerlink" href="#SlideReader.read_level"></a>
     
-            <div class="docstring"><p>Read full level data.</p>
+            <div class="docstring"><p>Read full pyramid level data.</p>
 
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>level:</strong>  Slide pyramid `.</li>
+<li><strong>level:</strong>  Slide pyramid level to read.</li>
 </ul>
 
 <h6 id="raises">Raises:</h6>
@@ -313,13 +321,13 @@ dimensions defined by this data bound.</p>
 
 <ul>
 <li><strong>xywh:</strong>  Coordinates for the region.</li>
-<li><strong>level:</strong>  Slide level to read from. Defaults to 0.</li>
+<li><strong>level:</strong>  Slide pyramid level to read from. Defaults to 0.</li>
 </ul>
 
 <h6 id="raises">Raises:</h6>
 
 <ul>
-<li><strong>ValueError:</strong>  Invalid level argument.</li>
+<li><strong>ValueError:</strong>  Invalid <code>level</code> argument.</li>
 </ul>
 
 <h6 id="returns">Returns:</h6>
@@ -341,7 +349,8 @@ dimensions defined by this data bound.</p>
     </div>
     <a class="headerlink" href="#SlideReader.level_from_max_dimension"></a>
     
-            <div class="docstring"><p>Find level with both dimensions less or equal to <code>max_dimension</code>.</p>
+            <div class="docstring"><p>Find pyramid level with <em>both</em> dimensions less or equal to <code>max_dimension</code>.
+If one isn't found, return the last pyramid level.</p>
 
 <h6 id="arguments">Arguments:</h6>
 
@@ -352,7 +361,7 @@ dimensions defined by this data bound.</p>
 <h6 id="returns">Returns:</h6>
 
 <blockquote>
-  <p>Slide level.</p>
+  <p>Slide pyramid level.</p>
 </blockquote>
 </div>
 
@@ -368,18 +377,18 @@ dimensions defined by this data bound.</p>
     </div>
     <a class="headerlink" href="#SlideReader.level_from_dimensions"></a>
     
-            <div class="docstring"><p>Find level which is closest to <code><a href="#SlideReader.dimensions">dimensions</a></code>.</p>
+            <div class="docstring"><p>Find pyramid level which is closest to <code><a href="#SlideReader.dimensions">dimensions</a></code>.</p>
 
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>dimensions:</strong>  Height and width to match.</li>
+<li><strong>dimensions:</strong>  Height and width.</li>
 </ul>
 
 <h6 id="returns">Returns:</h6>
 
 <blockquote>
-  <p>Slide level.</p>
+  <p>Slide pyramid level.</p>
 </blockquote>
 </div>
 
@@ -395,20 +404,19 @@ dimensions defined by this data bound.</p>
     </div>
     <a class="headerlink" href="#SlideReader.get_tissue_mask"></a>
     
-            <div class="docstring"><p>Detect tissue from slide level image.</p>
+            <div class="docstring"><p>Detect tissue from slide pyramid level image.</p>
 
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>level:</strong>  Slide level to use for tissue detection. If None, uses the
+<li><strong>level:</strong>  Slide pyramid level to use for tissue detection. If None, uses the
 <code><a href="#SlideReader.level_from_max_dimension">level_from_max_dimension</a></code> method. Defaults to None.</li>
 <li><strong>threshold:</strong>  Threshold for tissue detection. If set, will detect tissue by
-global thresholding, and otherwise Otsu's method is used to find
-a threshold. Defaults to None.</li>
-<li><strong>multiplier:</strong>  Otsu's method is used to find an optimal threshold by
-minimizing the weighted within-class variance. This threshold is
-then multiplied with <code>multiplier</code>. Ignored if <code>threshold</code> is not None.
-Defaults to 1.0.</li>
+global thresholding. Otherwise Otsu's method is used to find a
+threshold. Defaults to None.</li>
+<li><strong>multiplier:</strong>  Otsu's method finds an optimal threshold by minimizing the
+weighted within-class variance. This threshold is then multiplied with
+<code>multiplier</code>. Ignored if <code>threshold</code> is not None. Defaults to 1.0.</li>
 <li><strong>sigma:</strong>  Sigma for gaussian blurring. Defaults to 0.0.</li>
 </ul>
 
@@ -442,8 +450,8 @@ Defaults to 1.0.</li>
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>tissue_mask:</strong>  Tissue mask for filtering tiles with too much background. Set
-to None if you wish to skip filtering.</li>
+<li><strong>tissue_mask:</strong>  Tissue mask for filtering tiles with too much background. If
+None, the filtering is disabled.</li>
 <li><strong>width:</strong>  Width of a tile.</li>
 <li><strong>height:</strong>  Height of a tile. If None, will be set to <code>width</code>. Defaults to None.</li>
 <li><strong>overlap:</strong>  Overlap between neighbouring tiles. Defaults to 0.0.</li>
@@ -552,7 +560,7 @@ contour area after filtering contours with <code>[min,max]_pixel</code> argument
 
 <ul>
 <li><strong>coordinates:</strong>  List of xywh-coordinates.</li>
-<li><strong>level:</strong>  Slide level for reading tile image. Defaults to 0.</li>
+<li><strong>level:</strong>  Slide pyramid level for reading tile images. Defaults to 0.</li>
 <li><strong>transform:</strong>  Transform function for tile image. Defaults to None.</li>
 <li><strong>num_workers:</strong>  Number of worker processes. Defaults to 1.</li>
 <li><strong>return_exception:</strong>  Whether to return exception in case there is a failure to
@@ -585,7 +593,7 @@ read region, instead of raising the exception. Defaults to False.</li>
 
 <ul>
 <li><strong>coordinates:</strong>  <code>TileCoordinates</code> instance or a list of xywh-coordinates.</li>
-<li><strong>level:</strong>  Slide level for reading tile image. Defaults to 0.</li>
+<li><strong>level:</strong>  Slide pyramid level for reading tile images. Defaults to 0.</li>
 <li><strong>max_samples:</strong>  Maximum tiles to load. Defaults to 1000.</li>
 <li><strong>num_workers:</strong>  Number of worker processes for yielding tiles. Defaults to 1.</li>
 <li><strong>raise_exception:</strong>  Whether to raise an exception if there are problems with
@@ -619,7 +627,7 @@ reading tile regions. Defaults to True.</li>
 <li><strong>parent_dir:</strong>  Parent directory for output. All output is saved to
 <code>parent_dir/{self.name}/</code>.</li>
 <li><strong>coordinates:</strong>  Iterator of xywh-coordinates.</li>
-<li><strong>level:</strong>  Slide level for extracting xywh-regions. Defaults to 0.</li>
+<li><strong>level:</strong>  Slide pyramid level for extracting xywh-regions. Defaults to 0.</li>
 <li><strong>threshold:</strong>  Tissue detection threshold. Required when either <code>save_masks</code> or
 <code>save_metrics</code> is True. Defaults to None.</li>
 <li><strong>overwrite:</strong>  Overwrite everything in <code>parent_dir/{slide_name}/</code> if it exists.
@@ -630,7 +638,7 @@ set. Defaults to False.</li>
 set. Defaults to False.</li>
 <li><strong>save_thumbnails:</strong>  Save slide thumbnail with and without region annotations.
 Defaults to True.</li>
-<li><strong>thumbnail_level:</strong>  Level for thumbnail images. If None, uses the
+<li><strong>thumbnail_level:</strong>  Slide pyramid level for thumbnail images. If None, uses the
 <code><a href="#SlideReader.level_from_max_dimension">level_from_max_dimension</a></code> method. Ignored when <code>save_thumbnails=False</code>.
 Defaults to None.</li>
 <li><strong>image_format:</strong>  File format for <code>Pillow</code> image writer. Defaults to "jpeg".</li>
@@ -646,7 +654,7 @@ reading tile regions. Defaults to True.</li>
 <h6 id="raises">Raises:</h6>
 
 <ul>
-<li><strong>ValueError:</strong>  Invalid level argument.</li>
+<li><strong>ValueError:</strong>  Invalid <code>level</code> argument.</li>
 <li><strong>ValueError:</strong>  Threshold is not between 0 and 255.</li>
 </ul>
 

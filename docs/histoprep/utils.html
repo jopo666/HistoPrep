@@ -58,52 +58,55 @@
 
             </li>
             <li>
-                    <a class="class" href="#TileMetadata">TileMetadata</a>
+                    <a class="class" href="#OutlierDetector">OutlierDetector</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#TileMetadata.__init__">TileMetadata</a>
+                                <a class="function" href="#OutlierDetector.__init__">OutlierDetector</a>
                         </li>
                         <li>
-                                <a class="function" href="#TileMetadata.from_parquet">from_parquet</a>
+                                <a class="function" href="#OutlierDetector.from_parquet">from_parquet</a>
                         </li>
                         <li>
-                                <a class="function" href="#TileMetadata.from_csv">from_csv</a>
+                                <a class="function" href="#OutlierDetector.from_csv">from_csv</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TileMetadata.dataframe">dataframe</a>
+                                <a class="variable" href="#OutlierDetector.dataframe">dataframe</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TileMetadata.dataframe_without_metrics">dataframe_without_metrics</a>
+                                <a class="variable" href="#OutlierDetector.dataframe_without_metrics">dataframe_without_metrics</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TileMetadata.coordinates">coordinates</a>
+                                <a class="variable" href="#OutlierDetector.coordinates">coordinates</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TileMetadata.outliers">outliers</a>
+                                <a class="variable" href="#OutlierDetector.paths">paths</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TileMetadata.outlier_selections">outlier_selections</a>
+                                <a class="variable" href="#OutlierDetector.outliers">outliers</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TileMetadata.metric_columns">metric_columns</a>
+                                <a class="variable" href="#OutlierDetector.outlier_selections">outlier_selections</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TileMetadata.metrics">metrics</a>
+                                <a class="variable" href="#OutlierDetector.metric_columns">metric_columns</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TileMetadata.mean_and_std">mean_and_std</a>
+                                <a class="variable" href="#OutlierDetector.metrics">metrics</a>
                         </li>
                         <li>
-                                <a class="function" href="#TileMetadata.add_outliers">add_outliers</a>
+                                <a class="variable" href="#OutlierDetector.mean_and_std">mean_and_std</a>
                         </li>
                         <li>
-                                <a class="function" href="#TileMetadata.random_image_collage">random_image_collage</a>
+                                <a class="function" href="#OutlierDetector.add_outliers">add_outliers</a>
                         </li>
                         <li>
-                                <a class="function" href="#TileMetadata.cluster_kmeans">cluster_kmeans</a>
+                                <a class="function" href="#OutlierDetector.random_image_collage">random_image_collage</a>
                         </li>
                         <li>
-                                <a class="function" href="#TileMetadata.plot_histogram">plot_histogram</a>
+                                <a class="function" href="#OutlierDetector.cluster_kmeans">cluster_kmeans</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#OutlierDetector.plot_histogram">plot_histogram</a>
                         </li>
                 </ul>
 
@@ -169,7 +172,7 @@ datasets.</p>
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>angular_percentile:</strong>   Hyperparameter. Defaults to 0.99.</li>
+<li><strong>angular_percentile:</strong>  Hyperparameter. Defaults to 0.99.</li>
 </ul>
 </div>
 
@@ -282,169 +285,196 @@ same shape. Defaults to False.</li>
 
                             </div>
                 </section>
-                <section id="TileMetadata">
+                <section id="OutlierDetector">
                     <div class="attr class">
             
     <span class="def">class</span>
-    <span class="name">TileMetadata</span>:
+    <span class="name">OutlierDetector</span>:
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata"></a>
+    <a class="headerlink" href="#OutlierDetector"></a>
     
-            <div class="docstring"><p>Class for exploring tile metadata and detecting outliers.</p>
+            <div class="docstring"><p>Class for exploring tile image metrics and detecting outliers.</p>
 </div>
 
 
-                            <div id="TileMetadata.__init__" class="classattr">
+                            <div id="OutlierDetector.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">TileMetadata</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">dataframe</span><span class="p">:</span> <span class="n">polars</span><span class="o">.</span><span class="n">dataframe</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">DataFrame</span></span>)</span>
+        <span class="name">OutlierDetector</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">dataframe</span><span class="p">:</span> <span class="n">polars</span><span class="o">.</span><span class="n">dataframe</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">DataFrame</span></span>)</span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.__init__"></a>
+    <a class="headerlink" href="#OutlierDetector.__init__"></a>
     
-    
+            <div class="docstring"><p>Initialize <code>TileMetadata</code> class instance.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>dataframe:</strong>  Polars dataframe with image metrics.</li>
+</ul>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  Dataframe does not contain any metric columns.</li>
+</ul>
+</div>
+
 
                             </div>
-                            <div id="TileMetadata.from_parquet" class="classattr">
+                            <div id="OutlierDetector.from_parquet" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@classmethod</div>
 
         <span class="def">def</span>
-        <span class="name">from_parquet</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">cls</span>, </span><span class="param"><span class="o">*</span><span class="n">args</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span><span class="return-annotation">) -> <span class="n"><a href="#TileMetadata">histoprep.utils.TileMetadata</a></span>:</span></span>
+        <span class="name">from_parquet</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">cls</span>, </span><span class="param"><span class="o">*</span><span class="n">args</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span><span class="return-annotation">) -> <span class="n"><a href="#OutlierDetector">histoprep.utils.OutlierDetector</a></span>:</span></span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.from_parquet"></a>
+    <a class="headerlink" href="#OutlierDetector.from_parquet"></a>
     
             <div class="docstring"><p>Wrapper around <code>polars.read_parquet</code> function.</p>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.from_csv" class="classattr">
+                            <div id="OutlierDetector.from_csv" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@classmethod</div>
 
         <span class="def">def</span>
-        <span class="name">from_csv</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">cls</span>, </span><span class="param"><span class="o">*</span><span class="n">args</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span><span class="return-annotation">) -> <span class="n"><a href="#TileMetadata">histoprep.utils.TileMetadata</a></span>:</span></span>
+        <span class="name">from_csv</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">cls</span>, </span><span class="param"><span class="o">*</span><span class="n">args</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span><span class="return-annotation">) -> <span class="n"><a href="#OutlierDetector">histoprep.utils.OutlierDetector</a></span>:</span></span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.from_csv"></a>
+    <a class="headerlink" href="#OutlierDetector.from_csv"></a>
     
             <div class="docstring"><p>Wrapper around <code>polars.read_csv</code> function.</p>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.dataframe" class="classattr">
+                            <div id="OutlierDetector.dataframe" class="classattr">
                                 <div class="attr variable">
             <span class="name">dataframe</span><span class="annotation">: polars.dataframe.frame.DataFrame</span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.dataframe"></a>
+    <a class="headerlink" href="#OutlierDetector.dataframe"></a>
     
             <div class="docstring"><p>Polars dataframe with metadata.</p>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.dataframe_without_metrics" class="classattr">
+                            <div id="OutlierDetector.dataframe_without_metrics" class="classattr">
                                 <div class="attr variable">
             <span class="name">dataframe_without_metrics</span><span class="annotation">: polars.dataframe.frame.DataFrame</span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.dataframe_without_metrics"></a>
+    <a class="headerlink" href="#OutlierDetector.dataframe_without_metrics"></a>
     
             <div class="docstring"><p>Polars dataframe without metadata.</p>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.coordinates" class="classattr">
+                            <div id="OutlierDetector.coordinates" class="classattr">
                                 <div class="attr variable">
             <span class="name">coordinates</span><span class="annotation">: numpy.ndarray</span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.coordinates"></a>
+    <a class="headerlink" href="#OutlierDetector.coordinates"></a>
     
             <div class="docstring"><p>Array of tile coordinates.</p>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.outliers" class="classattr">
+                            <div id="OutlierDetector.paths" class="classattr">
+                                <div class="attr variable">
+            <span class="name">paths</span><span class="annotation">: numpy.ndarray</span>
+
+        
+    </div>
+    <a class="headerlink" href="#OutlierDetector.paths"></a>
+    
+            <div class="docstring"><p>Array of tile paths.</p>
+</div>
+
+
+                            </div>
+                            <div id="OutlierDetector.outliers" class="classattr">
                                 <div class="attr variable">
             <span class="name">outliers</span><span class="annotation">: numpy.ndarray</span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.outliers"></a>
+    <a class="headerlink" href="#OutlierDetector.outliers"></a>
     
             <div class="docstring"><p>Array of outlier indices.</p>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.outlier_selections" class="classattr">
+                            <div id="OutlierDetector.outlier_selections" class="classattr">
                                 <div class="attr variable">
             <span class="name">outlier_selections</span><span class="annotation">: list[dict[str, typing.Union[numpy.ndarray, str]]]</span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.outlier_selections"></a>
+    <a class="headerlink" href="#OutlierDetector.outlier_selections"></a>
     
             <div class="docstring"><p>List of dicts with outlier selections and descriptions.</p>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.metric_columns" class="classattr">
+                            <div id="OutlierDetector.metric_columns" class="classattr">
                                 <div class="attr variable">
             <span class="name">metric_columns</span><span class="annotation">: numpy.ndarray</span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.metric_columns"></a>
+    <a class="headerlink" href="#OutlierDetector.metric_columns"></a>
     
             <div class="docstring"><p>Image metric columns.</p>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.metrics" class="classattr">
+                            <div id="OutlierDetector.metrics" class="classattr">
                                 <div class="attr variable">
             <span class="name">metrics</span><span class="annotation">: numpy.ndarray</span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.metrics"></a>
+    <a class="headerlink" href="#OutlierDetector.metrics"></a>
     
             <div class="docstring"><p>Array of normalized image metrics (divided by 255).</p>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.mean_and_std" class="classattr">
+                            <div id="OutlierDetector.mean_and_std" class="classattr">
                                 <div class="attr variable">
             <span class="name">mean_and_std</span><span class="annotation">: tuple[tuple[float, float, float], tuple[float, float, float]]</span>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.mean_and_std"></a>
+    <a class="headerlink" href="#OutlierDetector.mean_and_std"></a>
     
             <div class="docstring"><p>Means and standard deviations for RGB channels.</p>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.add_outliers" class="classattr">
+                            <div id="OutlierDetector.add_outliers" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
@@ -452,22 +482,22 @@ same shape. Defaults to False.</li>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.add_outliers"></a>
+    <a class="headerlink" href="#OutlierDetector.add_outliers"></a>
     
             <div class="docstring"><p>Set outliers to <code>True</code> with selection, and append the selection to
-<code><a href="#TileMetadata.outlier_selections">outlier_selections</a></code> property.</p>
+<code><a href="#OutlierDetector.outlier_selections">outlier_selections</a></code> property.</p>
 
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>selection:</strong>  Selection for indexing <code><a href="#TileMetadata.outliers">outliers</a></code> property.</li>
+<li><strong>selection:</strong>  Selection for indexing <code><a href="#OutlierDetector.outliers">outliers</a></code> property.</li>
 <li><strong>desc:</strong>  Description for selection.</li>
 </ul>
 </div>
 
 
                             </div>
-                            <div id="TileMetadata.random_image_collage" class="classattr">
+                            <div id="OutlierDetector.random_image_collage" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
@@ -475,7 +505,7 @@ same shape. Defaults to False.</li>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.random_image_collage"></a>
+    <a class="headerlink" href="#OutlierDetector.random_image_collage"></a>
     
             <div class="docstring"><p>Generate a random collage from <code>paths[selection]</code>.</p>
 
@@ -498,7 +528,7 @@ same shape. Defaults to False.</li>
 
 
                             </div>
-                            <div id="TileMetadata.cluster_kmeans" class="classattr">
+                            <div id="OutlierDetector.cluster_kmeans" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
@@ -506,7 +536,7 @@ same shape. Defaults to False.</li>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.cluster_kmeans"></a>
+    <a class="headerlink" href="#OutlierDetector.cluster_kmeans"></a>
     
             <div class="docstring"><p>Perform kmeans clustering on the metrics and order the clusters based on the
 distance from the mean cluster center.</p>
@@ -527,7 +557,7 @@ distance from the mean cluster center.</p>
 
 
                             </div>
-                            <div id="TileMetadata.plot_histogram" class="classattr">
+                            <div id="OutlierDetector.plot_histogram" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
@@ -535,7 +565,7 @@ distance from the mean cluster center.</p>
 
         
     </div>
-    <a class="headerlink" href="#TileMetadata.plot_histogram"></a>
+    <a class="headerlink" href="#OutlierDetector.plot_histogram"></a>
     
             <div class="docstring"><p>Plot column values in a histogram with example images.</p>
 
