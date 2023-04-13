@@ -74,27 +74,27 @@ class SlideReaderBackend(ABC):
     @property
     @abstractmethod
     def level_count(self) -> int:
-        """Number of slide levels."""
+        """Number of slide pyramid levels."""
 
     @property
     @abstractmethod
     def level_dimensions(self) -> dict[int, tuple[int, int]]:
-        """Image dimensions (height, width) for each level."""
+        """Image dimensions (height, width) for each pyramid level."""
 
     @property
     @abstractmethod
     def level_downsamples(self) -> dict[int, tuple[float, float]]:
-        """Image downsample factors (height, width) for each level."""
+        """Image downsample factors (height, width) for each pyramid level."""
 
     @abstractmethod
     def read_level(self, level: int) -> np.ndarray:
-        """Read full level data.
+        """Read full pyramid level data.
 
         Args:
-            level: Slide pyramid `.
+            level: Slide pyramid level.
 
         Raises:
-            ValueError: Invalid level argument.
+            ValueError: Invalid `level` argument.
 
         Returns:
             Array containing image data from `level`.
@@ -106,10 +106,10 @@ class SlideReaderBackend(ABC):
 
         Args:
             xywh: Coordinates for the region.
-            level: Slide level to read from. Defaults to 0.
+            level: Slide pyramid level to read from. Defaults to 0.
 
         Raises:
-            ValueError: Invalid level argument.
+            ValueError: Invalid `level` argument.
 
         Returns:
             Array containing image data from `xywh`-region.

@@ -47,9 +47,7 @@ class SlideReader:
     def __init__(
         self,
         path: Union[str, Path],
-        backend: Optional[
-            Union[str, OpenSlideBackend, PillowBackend, CziBackend]
-        ] = None,
+        backend: Optional[str] = None,
     ) -> None:
         """Initialize `SlideReader` instance.
 
@@ -57,6 +55,11 @@ class SlideReader:
             path: Path to slide image.
             backend: Backend to use for reading slide images. If None, attempts to
                 assing the correct backend based on file extension. Defaults to None.
+
+        Raises:
+            FileNotFoundError: Path does not exist.
+            ValueError: Cannot automatically assign backend for reader.
+            ValueError: Backend name not recognised.
         """
         super().__init__()
         self._backend = _read_slide(path=path, backend=backend)
@@ -94,24 +97,24 @@ class SlideReader:
 
     @property
     def level_count(self) -> int:
-        """Number of slide levels."""
+        """Number of slide pyramid levels."""
         return self._backend.level_count
 
     @property
     def level_dimensions(self) -> dict[int, tuple[int, int]]:
-        """Image dimensions (height, width) for each level."""
+        """Image dimensions (height, width) for each pyramid level."""
         return self._backend.level_dimensions
 
     @property
     def level_downsamples(self) -> dict[int, tuple[float, float]]:
-        """Image downsample factors (height, width) for each level."""
+        """Image downsample factors (height, width) for each pyramid level."""
         return self._backend.level_downsamples
 
     def read_level(self, level: int) -> np.ndarray:
-        """Read full level data.
+        """Read full pyramid level data.
 
         Args:
-            level: Slide pyramid `.
+            level: Slide pyramid level to read.
 
         Raises:
             ValueError: Invalid level argument.
@@ -128,10 +131,10 @@ class SlideReader:
 
         Args:
             xywh: Coordinates for the region.
-            level: Slide level to read from. Defaults to 0.
+            level: Slide pyramid level to read from. Defaults to 0.
 
         Raises:
-            ValueError: Invalid level argument.
+            ValueError: Invalid `level` argument.
 
         Returns:
             Array containing image data from `xywh`-region.
@@ -139,13 +142,14 @@ class SlideReader:
         return self._backend.read_region(xywh=xywh, level=level)
 
     def level_from_max_dimension(self, max_dimension: int = 4096) -> int:
-        """Find level with both dimensions less or equal to `max_dimension`.
+        """Find pyramid level with *both* dimensions less or equal to `max_dimension`.
+        If one isn't found, return the last pyramid level.
 
         Args:
             max_dimension: Maximum dimension for the level. Defaults to 4096.
 
         Returns:
-            Slide level.
+            Slide pyramid level.
         """
         for level, (level_h, level_w) in self.level_dimensions.items():
             if level_h <= max_dimension and level_w <= max_dimension:
@@ -153,13 +157,13 @@ class SlideReader:
         return list(self.level_dimensions.keys())[-1]
 
     def level_from_dimensions(self, dimensions: tuple[int, int]) -> int:
-        """Find level which is closest to `dimensions`.
+        """Find pyramid level which is closest to `dimensions`.
 
         Args:
-            dimensions: Height and width to match.
+            dimensions: Height and width.
 
         Returns:
-            Slide level.
+            Slide pyramid level.
         """
         height, width = dimensions
         available = []
@@ -177,18 +181,17 @@ class SlideReader:
         multiplier: float = 1.05,
         sigma: float = 0.0,
     ) -> tuple[int, np.ndarray]:
-        """Detect tissue from slide level image.
+        """Detect tissue from slide pyramid level image.
 
         Args:
-            level: Slide level to use for tissue detection. If None, uses the
+            level: Slide pyramid level to use for tissue detection. If None, uses the
                 `level_from_max_dimension` method. Defaults to None.
             threshold: Threshold for tissue detection. If set, will detect tissue by
-                global thresholding, and otherwise Otsu's method is used to find
-                a threshold. Defaults to None.
-            multiplier: Otsu's method is used to find an optimal threshold by
-                minimizing the weighted within-class variance. This threshold is
-                then multiplied with `multiplier`. Ignored if `threshold` is not None.
-                Defaults to 1.0.
+                global thresholding. Otherwise Otsu's method is used to find a
+                threshold. Defaults to None.
+            multiplier: Otsu's method finds an optimal threshold by minimizing the
+                weighted within-class variance. This threshold is then multiplied with
+                `multiplier`. Ignored if `threshold` is not None. Defaults to 1.0.
             sigma: Sigma for gaussian blurring. Defaults to 0.0.
 
         Raises:
@@ -222,8 +225,8 @@ class SlideReader:
         """Generate tile coordinates.
 
         Args:
-            tissue_mask: Tissue mask for filtering tiles with too much background. Set
-                to None if you wish to skip filtering.
+            tissue_mask: Tissue mask for filtering tiles with too much background. If
+                None, the filtering is disabled.
             width: Width of a tile.
             height: Height of a tile. If None, will be set to `width`. Defaults to None.
             overlap: Overlap between neighbouring tiles. Defaults to 0.0.
@@ -360,7 +363,7 @@ class SlideReader:
 
         Args:
             coordinates: List of xywh-coordinates.
-            level: Slide level for reading tile image. Defaults to 0.
+            level: Slide pyramid level for reading tile images. Defaults to 0.
             transform: Transform function for tile image. Defaults to None.
             num_workers: Number of worker processes. Defaults to 1.
             return_exception: Whether to return exception in case there is a failure to
@@ -398,7 +401,7 @@ class SlideReader:
 
         Args:
             coordinates: `TileCoordinates` instance or a list of xywh-coordinates.
-            level: Slide level for reading tile image. Defaults to 0.
+            level: Slide pyramid level for reading tile images. Defaults to 0.
             max_samples: Maximum tiles to load. Defaults to 1000.
             num_workers: Number of worker processes for yielding tiles. Defaults to 1.
             raise_exception: Whether to raise an exception if there are problems with
@@ -449,7 +452,7 @@ class SlideReader:
             parent_dir: Parent directory for output. All output is saved to
                 `parent_dir/{self.name}/`.
             coordinates: Iterator of xywh-coordinates.
-            level: Slide level for extracting xywh-regions. Defaults to 0.
+            level: Slide pyramid level for extracting xywh-regions. Defaults to 0.
             threshold: Tissue detection threshold. Required when either `save_masks` or
                 `save_metrics` is True. Defaults to None.
             overwrite: Overwrite everything in `parent_dir/{slide_name}/` if it exists.
@@ -460,7 +463,7 @@ class SlideReader:
                 set. Defaults to False.
             save_thumbnails: Save slide thumbnail with and without region annotations.
                 Defaults to True.
-            thumbnail_level: Level for thumbnail images. If None, uses the
+            thumbnail_level: Slide pyramid level for thumbnail images. If None, uses the
                 `level_from_max_dimension` method. Ignored when `save_thumbnails=False`.
                 Defaults to None.
             image_format: File format for `Pillow` image writer. Defaults to "jpeg".
@@ -473,7 +476,7 @@ class SlideReader:
             verbose: Enables `tqdm` progress bar. Defaults to True.
 
         Raises:
-            ValueError: Invalid level argument.
+            ValueError: Invalid `level` argument.
             ValueError: Threshold is not between 0 and 255.
 
         Returns:

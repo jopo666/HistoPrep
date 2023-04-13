@@ -5,10 +5,10 @@ __all__ = [
     "MachenkoStainNormalizer",
     "SlideReaderDataset",
     "TileImageDataset",
-    "TileMetadata",
+    "OutlierDetector",
     "VahadaneStainNormalizer",
 ]
 
 from ._normalize import MachenkoStainNormalizer, VahadaneStainNormalizer
-from ._process import TileMetadata
+from ._process import OutlierDetector
 from ._torch import SlideReaderDataset, TileImageDataset

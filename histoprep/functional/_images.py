@@ -20,8 +20,8 @@ def get_random_image_collage(
 
     Args:
         paths: Image paths.
-        num_rows: Number of rows in the collage. Ignored if there isn't enough images.
-            Defaults to 4.
+        num_rows: Number of rows in the collage. Ignored if there isn't enough images to
+            fill enough rows. Defaults to 4.
         num_cols: Number of columns in the collage. Defaults to 16.
         shape: Shape of each image in the collage. Defaults to (64, 64).
         num_workers: Number of image loading workers. Defaults to 1.

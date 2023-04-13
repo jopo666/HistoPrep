@@ -78,7 +78,7 @@ def get_region_from_array(
     downsample: Union[float, tuple[float, float]] = 1,
     fill: int = 0,
 ) -> np.ndarray:
-    """Read region from image array.
+    """Read region from an image array.
 
     Args:
         image: Input image
