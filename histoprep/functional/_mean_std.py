@@ -30,23 +30,21 @@ def get_mean_and_std_from_images(images: Iterable[np.ndarray]) -> tuple[MEAN, ST
 
 
 def get_mean_and_std_from_paths(
-    filepaths: Iterable[Union[str, Path]], num_workers: int = 1
+    paths: Iterable[Union[str, Path]], num_workers: int = 1
 ) -> tuple[MEAN, STD]:
     """Get channel mean and std values for an iterable of image paths.
 
     Args:
-        filepaths: Iterable of image paths.
+        paths: Iterable of image paths.
         num_workers: Number of image reading processes.
 
     Returns:
         Tuple of channel mean and std values.
     """
     if num_workers <= 1:
-        return get_mean_and_std_from_images(_read_image(x) for x in filepaths)
+        return get_mean_and_std_from_images(_read_image(x) for x in paths)
     with mpire.WorkerPool(n_jobs=num_workers) as pool:
-        images = pool.imap(
-            _read_image, ((x,) for x in filepaths), iterable_len=len(filepaths)
-        )
+        images = pool.imap(_read_image, ((x,) for x in paths), iterable_len=len(paths))
         return get_mean_and_std_from_images(images)
 
 

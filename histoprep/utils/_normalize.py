@@ -151,7 +151,7 @@ class MachenkoStainNormalizer(StainNormalizer):
         """Initialize `MachenkoStainNormalizer` instance.
 
         Args:
-            angular_percentile:  Hyperparameter. Defaults to 0.99.
+            angular_percentile: Hyperparameter. Defaults to 0.99.
         """
         super().__init__(
             stain_matrix_fn=get_macenko_stain_matrix,

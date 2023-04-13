@@ -118,7 +118,7 @@ def glob_pattern(*args) -> list[Path]:
     type=click.IntRange(min=0),
     default=0,
     show_default=True,
-    help="Slide level for tile extraction.",
+    help="Slide pyramid level for tile extraction.",
 )
 @click.option(  # width
     "-w",
@@ -259,7 +259,7 @@ def glob_pattern(*args) -> list[Path]:
     type=click.IntRange(min=0),
     default=None,
     show_default="max_dimension",
-    help="Slide level for tissue detection.",
+    help="Slide pyramid level for tissue detection.",
 )
 @click.option(  # max_dimension
     "--max-dimension",
@@ -267,7 +267,7 @@ def glob_pattern(*args) -> list[Path]:
     type=click.IntRange(min=0),
     default=8192,
     show_default=True,
-    help="Select first level with dimensions smaller than this value.",
+    help="Select first pyramid level with both dimensions smaller than this value.",
 )
 @click.option(  # sigma
     "--sigma",

@@ -16,6 +16,7 @@ ERROR_NO_METRICS = (
     "Metadata does not contain any metrics, make sure tiles are saved "
     "with `save_metrics=True`."
 )
+ERROR_NO_PATHS = "Metadata does not contain 'path' column."
 ERROR_NO_DIFFERENCE = (
     "Difference between min={} and max={} values for column '{}' is zero."
 )
@@ -27,9 +28,17 @@ XYWH_COLUMNS = ["x", "y", "w", "h"]
 
 
 class OutlierDetector:
-    """Class for exploring tile metadata and detecting outliers."""
+    """Class for exploring tile image metrics and detecting outliers."""
 
     def __init__(self, dataframe: pl.DataFrame) -> None:
+        """Initialize `TileMetadata` class instance.
+
+        Args:
+            dataframe: Polars dataframe with image metrics.
+
+        Raises:
+            ValueError: Dataframe does not contain any metric columns.
+        """
         self.__dataframe = dataframe
         self.__outliers = np.repeat([False], repeats=len(dataframe))
         self.__outlier_selections = []
@@ -38,14 +47,16 @@ class OutlierDetector:
         ]
         if len(self.__metric_columns) == 0:
             raise ValueError(ERROR_NO_METRICS)
+        if "path" not in dataframe.columns:
+            raise ValueError(ERROR_NO_PATHS)
 
     @classmethod
-    def from_parquet(cls, *args, **kwargs) -> "TileMetadata":
+    def from_parquet(cls, *args, **kwargs) -> "OutlierDetector":
         """Wrapper around `polars.read_parquet` function."""
         return cls(pl.read_parquet(*args, **kwargs))
 
     @classmethod
-    def from_csv(cls, *args, **kwargs) -> "TileMetadata":
+    def from_csv(cls, *args, **kwargs) -> "OutlierDetector":
         """Wrapper around `polars.read_csv` function."""
         return cls(pl.read_csv(*args, **kwargs))
 
@@ -64,6 +75,11 @@ class OutlierDetector:
     def coordinates(self) -> np.ndarray:
         """Array of tile coordinates."""
         return self.dataframe[XYWH_COLUMNS].to_numpy()
+
+    @property
+    def paths(self) -> np.ndarray:
+        """Array of tile paths."""
+        return self["path"]
 
     @property
     def outliers(self) -> np.ndarray:
