@@ -28,7 +28,8 @@ ERROR_TILE_SHAPE = "Tile shape must be defined to create a cache array."
 
 
 class SlideReaderDataset(Dataset):
-    """Torch dataset yielding tile images from reader (requires `PyTorch`)."""
+    """Torch dataset yielding tile images and `xywh`-coordinates from reader (requires
+    `PyTorch`)."""
 
     def __init__(
         self,
@@ -68,7 +69,8 @@ class SlideReaderDataset(Dataset):
 
 
 class TileImageDataset(Dataset):
-    """Torch dataset yielding tile images from paths (requires `PyTorch`)."""
+    """Torch dataset yielding tile images, image paths and optional labels (requires
+    `PyTorch`)."""
 
     def __init__(
         self,
