@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
@@ -14,6 +16,18 @@ from ._utils import (
     TMP_DIRECTORY,
     clean_temporary_directory,
 )
+
+
+def test_posix_paths() -> None:
+    clean_temporary_directory()
+    reader = SlideReader(SLIDE_PATH_JPEG)
+    metadata = reader.save_regions(TMP_DIRECTORY, reader.get_tile_coordinates(None, 96))
+    dataset = TileImageDataset(
+        paths=[Path(x) for x in metadata["path"].to_list()],
+        labels=metadata[list("xywh")].to_numpy(),
+        transform=lambda x: x[..., 0],
+    )
+    next(iter(DataLoader(dataset, batch_size=32)))
 
 
 def test_reader_dataset_loader() -> None:

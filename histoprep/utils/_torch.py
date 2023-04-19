@@ -119,6 +119,8 @@ class TileImageDataset(Dataset):
 
     def __getitem__(self, index: int) -> tuple[Union[np.ndarray, Any], str]:
         path = self.paths[index]
+        if isinstance(path, Path):
+            path = str(path)
         if self._use_cache:
             if index not in self._cached_indices:
                 self._cache_array[index] = np.array(Image.open(path))
