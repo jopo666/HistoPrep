@@ -13,19 +13,19 @@ import rich_click as click
 
 from histoprep import SlideReader
 
-LOGO = """
-██╗  ██╗██╗███████╗████████╗ ██████╗ ██████╗ ██████╗ ███████╗██████╗
-██║  ██║██║██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗
-███████║██║███████╗   ██║   ██║   ██║██████╔╝██████╔╝█████╗  ██████╔╝
-██╔══██║██║╚════██║   ██║   ██║   ██║██╔═══╝ ██╔══██╗██╔══╝  ██╔═══╝
-██║  ██║██║███████║   ██║   ╚██████╔╝██║     ██║  ██║███████╗██║
-╚═╝  ╚═╝╚═╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝
-                        by jopo666 (2023)
-"""
+# LOGO = """
+# ██╗  ██╗██╗███████╗████████╗ ██████╗ ██████╗ ██████╗ ███████╗██████╗
+# ██║  ██║██║██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗
+# ███████║██║███████╗   ██║   ██║   ██║██████╔╝██████╔╝█████╗  ██████╔╝
+# ██╔══██║██║╚════██║   ██║   ██║   ██║██╔═══╝ ██╔══██╗██╔══╝  ██╔═══╝
+# ██║  ██║██║███████║   ██║   ╚██████╔╝██║     ██║  ██║███████╗██║
+# ╚═╝  ╚═╝╚═╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝
+#                         by jopo666 (2023)
+# """
 # Rich-click options.
 click.rich_click.USE_RICH_MARKUP = True
 click.rich_click.RANGE_STRING = ""
-click.rich_click.HEADER_TEXT = LOGO
+# click.rich_click.HEADER_TEXT = LOGO
 click.rich_click.STYLE_HEADER_TEXT = "dim"
 click.rich_click.MAX_WIDTH = 120
 click.rich_click.SHOW_METAVARS_COLUMN = False
@@ -306,8 +306,7 @@ def cut_slides(
     use_csv: bool = False,
     num_workers: Optional[int] = None,
 ) -> None:
-    """CLI interface to extract tile images from slides."""
-    # Filter slide paths.
+    """Extract tile images from histological slides."""
     paths = filter_slide_paths(
         all_paths=[x if isinstance(x, Path) else Path(x) for x in paths],
         parent_dir=parent_dir,
