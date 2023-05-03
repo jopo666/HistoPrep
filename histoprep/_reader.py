@@ -80,6 +80,11 @@ class SlideReader:
         return self._backend.suffix
 
     @property
+    def backend_name(self) -> str:
+        """Name of the slide reader backend."""
+        return self._backend.BACKEND_NAME
+
+    @property
     def data_bounds(self) -> tuple[int, int, int, int]:
         """Data bounds defined by `xywh`-coordinates at `level=0`.
 
