@@ -13,6 +13,7 @@ from histoprep.utils import (
 from ._utils import (
     SLIDE_PATH_CZI,
     SLIDE_PATH_JPEG,
+    SLIDE_PATH_SVS,
     TMP_DIRECTORY,
     clean_temporary_directory,
 )
@@ -30,7 +31,39 @@ def test_posix_paths() -> None:
     next(iter(DataLoader(dataset, batch_size=32)))
 
 
-def test_reader_dataset_loader() -> None:
+def test_reader_dataset_loader_pil() -> None:
+    reader = SlideReader(SLIDE_PATH_JPEG)
+    __, tissue_mask = reader.get_tissue_mask()
+    coords = reader.get_tile_coordinates(tissue_mask, 512, max_background=0.01)
+    dataset = SlideReaderDataset(reader, coords, level=1, transform=lambda z: z)
+    assert isinstance(dataset, Dataset)
+    loader = DataLoader(dataset, batch_size=4, num_workers=10, drop_last=True)
+    for i, (batch_images, batch_coords) in enumerate(loader):
+        assert batch_images.shape == (4, 256, 256, 3)
+        assert isinstance(batch_images, torch.Tensor)
+        assert batch_coords.shape == (4, 4)
+        assert isinstance(batch_coords, torch.Tensor)
+        if i > 20:
+            break
+
+
+def test_reader_dataset_loader_openslide() -> None:
+    reader = SlideReader(SLIDE_PATH_SVS)
+    __, tissue_mask = reader.get_tissue_mask()
+    coords = reader.get_tile_coordinates(tissue_mask, 512, max_background=0.01)
+    dataset = SlideReaderDataset(reader, coords, level=1, transform=lambda z: z)
+    assert isinstance(dataset, Dataset)
+    loader = DataLoader(dataset, batch_size=4, num_workers=10, drop_last=True)
+    for i, (batch_images, batch_coords) in enumerate(loader):
+        assert batch_images.shape == (4, 256, 256, 3)
+        assert isinstance(batch_images, torch.Tensor)
+        assert batch_coords.shape == (4, 4)
+        assert isinstance(batch_coords, torch.Tensor)
+        if i > 20:
+            break
+
+
+def test_reader_dataset_loader_czi() -> None:
     reader = SlideReader(SLIDE_PATH_CZI)
     __, tissue_mask = reader.get_tissue_mask()
     coords = reader.get_tile_coordinates(tissue_mask, 512, max_background=0.01)
@@ -38,12 +71,14 @@ def test_reader_dataset_loader() -> None:
     # happen here as there is some voodoo shit going on with `Dataset` & `DataLoader`...
     dataset = SlideReaderDataset(reader, coords, level=1, transform=lambda z: z)
     assert isinstance(dataset, Dataset)
-    loader = DataLoader(dataset, batch_size=4, num_workers=2)
-    batch_images, batch_coords = next(iter(loader))
-    assert batch_images.shape == (4, 256, 256, 3)
-    assert isinstance(batch_images, torch.Tensor)
-    assert batch_coords.shape == (4, 4)
-    assert isinstance(batch_coords, torch.Tensor)
+    loader = DataLoader(dataset, batch_size=4, num_workers=10, drop_last=True)
+    for i, (batch_images, batch_coords) in enumerate(loader):
+        assert batch_images.shape == (4, 256, 256, 3)
+        assert isinstance(batch_images, torch.Tensor)
+        assert batch_coords.shape == (4, 4)
+        assert isinstance(batch_coords, torch.Tensor)
+        if i > 20:
+            break
 
 
 def test_tile_dataset_loader() -> None:

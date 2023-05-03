@@ -49,9 +49,7 @@ def test_overwrite(script_runner) -> None:  # noqa
     clean_temporary_directory()
     create_metadata(unfinished=False)
     ret = script_runner.run(
-        *f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY} -z true".split(
-            " "
-        )
+        *f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY} -z".split(" ")
     )
     assert ret.success
     assert [x.name for x in (TMP_DIRECTORY / "slide").iterdir()] == [
@@ -74,9 +72,7 @@ def test_unfinished(script_runner) -> None:  # noqa
     clean_temporary_directory()
     create_metadata(unfinished=True)
     ret = script_runner.run(
-        *f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY} -u true".split(
-            " "
-        )
+        *f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY} -u".split(" ")
     )
     assert ret.success
     assert [x.name for x in (TMP_DIRECTORY / "slide").iterdir()] == [
