@@ -27,7 +27,7 @@ click.rich_click.USE_RICH_MARKUP = True
 click.rich_click.RANGE_STRING = ""
 # click.rich_click.HEADER_TEXT = LOGO
 click.rich_click.STYLE_HEADER_TEXT = "dim"
-click.rich_click.MAX_WIDTH = 120
+click.rich_click.MAX_WIDTH = 100
 click.rich_click.SHOW_METAVARS_COLUMN = False
 click.rich_click.APPEND_METAVARS_HELP = True
 click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
@@ -39,17 +39,15 @@ TILE_OPTIONS = [
     "--height",
     "--overlap",
     "--max-background",
-    "--out-of-bounds",
+    "--in-bounds",
 ]
 SAVE_OPTIONS = [
-    "--save-metrics",
-    "--save-masks",
-    "--save-thumbnails",
+    "--metrics",
+    "--masks",
     "--overwrite",
     "--unfinished",
-    "--format",
+    "--image-format",
     "--quality",
-    "--use-csv",
     "--num-workers",
 ]
 TISSUE_OPTIONS = [
@@ -63,9 +61,34 @@ click.rich_click.OPTION_GROUPS = {
     "HistoPrep": [
         {"name": "Input/output", "options": IO_OPTIONS},
         {"name": "Tile extraction", "options": TILE_OPTIONS},
-        {"name": "Tile saving", "options": SAVE_OPTIONS},
         {"name": "Tissue detection", "options": TISSUE_OPTIONS},
+        {"name": "Tile saving", "options": SAVE_OPTIONS},
     ]
+}
+
+DEFAULT_OPTIONS = {
+    # Input/output
+    "backend": None,
+    # Tile extraction.
+    "level": 0,
+    "width": 640,
+    "height": None,
+    "overlap": 0.0,
+    "max_background": 0.75,
+    "in_bounds": False,
+    # Tissue detection.
+    "threshold": None,
+    "multiplier": 1.05,
+    "tissue_level": None,
+    "max_dimension": 8192,
+    "sigma": 1.0,
+    "save_metrics": False,
+    "save_masks": False,
+    "overwrite": False,
+    "overwrite_unfinished": False,
+    "image_format": "jpeg",
+    "quality": 80,
+    "num_workers": None,
 }
 
 
@@ -103,10 +126,9 @@ def glob_pattern(*args) -> list[Path]:
     help="Parent directory for all outputs.",
 )
 @click.option(  # backend
-    "-b",
     "--backend",
     type=click.Choice(choices=["PIL", "OPENSLIDE", "CZI"], case_sensitive=False),
-    default=None,
+    default=DEFAULT_OPTIONS["backend"],
     show_default="automatic",
     help="Backend for reading slides.",
 )
@@ -116,24 +138,25 @@ def glob_pattern(*args) -> list[Path]:
     "--level",
     metavar="INT",
     type=click.IntRange(min=0),
-    default=0,
+    default=DEFAULT_OPTIONS["level"],
     show_default=True,
-    help="Slide pyramid level for tile extraction.",
+    help="Pyramid level for tile extraction.",
 )
 @click.option(  # width
     "-w",
     "--width",
     metavar="INT",
     type=click.IntRange(min=0, min_open=False),
-    default=640,
+    default=DEFAULT_OPTIONS["width"],
     show_default=True,
     help="Tile width.",
 )
 @click.option(  # height
+    "-h",
     "--height",
     metavar="INT",
     type=click.IntRange(min=0, min_open=False),
-    default=None,
+    default=DEFAULT_OPTIONS["height"],
     show_default="width",
     help="Tile height.",
 )
@@ -142,97 +165,24 @@ def glob_pattern(*args) -> list[Path]:
     "--overlap",
     metavar="FLOAT",
     type=click.FloatRange(min=0, max=1, min_open=False, max_open=False),
-    default=0.0,
+    default=DEFAULT_OPTIONS["overlap"],
     show_default=True,
     help="Overlap between neighbouring tiles.",
 )
 @click.option(  # background
-    "-m",
+    "-b",
     "--max-background",
     metavar="FLOAT",
     type=click.FloatRange(min=0, max=1, min_open=True, max_open=True),
-    default=0.75,
+    default=DEFAULT_OPTIONS["max_background"],
     show_default=True,
-    help="Maximum background in tile.",
+    help="Maximum background for tiles.",
 )
 @click.option(  # out-of-bounds
-    "--out-of-bounds",
-    type=click.BOOL,
-    default=True,
-    show_default=True,
-    help="Allow tiles to go out-of-bounds. ",
-)
-# Saving.
-@click.option(  # save_metrics
-    "--save-metrics",
-    type=click.BOOL,
-    default=True,
-    show_default=True,
-    help="Save image metrics to metadata.",
-)
-@click.option(  # save_masks
-    "--save-masks",
-    type=click.BOOL,
-    default=False,
-    show_default=True,
-    help="Save tissue masks for each tile.",
-)
-@click.option(  # save_thumbnails
-    "--save-thumbnails",
-    type=click.BOOL,
-    default=True,
-    show_default=True,
-    help="Save thumbnail images.",
-)
-@click.option(  # overwrite
-    "-z",
-    "--overwrite",
-    type=click.BOOL,
-    default=False,
-    show_default=True,
-    help="Overwrite any existing slide outputs.",
-)
-@click.option(  # overwrite_unfinished
-    "-u",
-    "--unfinished",
-    "overwrite_unfinished",
-    type=click.BOOL,
-    default=False,
-    show_default=True,
-    help="Overwrite only if metadata is missing.",
-)
-@click.option(  # format
-    "--format",
-    "image_format",
-    type=click.STRING,
-    default="jpeg",
-    show_default=True,
-    help="File format for tiles.",
-)
-@click.option(  # quality
-    "--quality",
-    metavar="INT",
-    type=click.IntRange(min=0, max=100),
-    default=80,
-    show_default=True,
-    help="Quality for jpeg-compression.",
-)
-@click.option(  # overwrite_unfinished
-    "-c",
-    "--use-csv",
-    type=click.BOOL,
-    default=False,
-    show_default=True,
-    help="Write metadata to csv-files instead of parquet files.",
-)
-@click.option(  # num_workers
-    "-j",
-    "--num-workers",
-    metavar="INT",
-    type=click.IntRange(min=0, min_open=False),
-    default=None,
-    show_default="CPU-count",
-    help="Number of data saving workers.",
+    "--in-bounds",
+    show_default="False",
+    is_flag=True,
+    help="Do not allow tiles to go out-of-bounds. ",
 )
 # Tissue.
 @click.option(  # threshold
@@ -240,42 +190,96 @@ def glob_pattern(*args) -> list[Path]:
     "--threshold",
     metavar="INT",
     type=click.IntRange(min=0, max=255, min_open=False),
-    default=None,
-    show_default="Otsu's threshold",
-    help="Global threshold value for tissue detection.",
+    default=DEFAULT_OPTIONS["threshold"],
+    show_default="Otsu",
+    help="Global thresholding value.",
 )
 @click.option(  # multiplier
     "-x",
     "--multiplier",
     metavar="FLOAT",
     type=click.FloatRange(min=0, min_open=False),
-    default=1.05,
+    default=DEFAULT_OPTIONS["multiplier"],
     show_default=True,
-    help="Multiplier for Otsu's threshold. Ignored if threshold is set.",
+    help="Multiplier for Otsu's threshold.",
 )
 @click.option(  # tissue_level
     "--tissue-level",
     metavar="INT",
     type=click.IntRange(min=0),
-    default=None,
+    default=DEFAULT_OPTIONS["tissue_level"],
     show_default="max_dimension",
-    help="Slide pyramid level for tissue detection.",
+    help="Pyramid level for tissue detection.",
 )
 @click.option(  # max_dimension
     "--max-dimension",
     metavar="INT",
     type=click.IntRange(min=0),
-    default=8192,
+    default=DEFAULT_OPTIONS["max_dimension"],
     show_default=True,
-    help="Select first pyramid level with both dimensions smaller than this value.",
+    help="Maximum dimension for tissue detection.",
 )
 @click.option(  # sigma
     "--sigma",
     metavar="FLOAT",
     type=click.FloatRange(min=0),
-    default=1.0,
+    default=DEFAULT_OPTIONS["sigma"],
     show_default=True,
-    help="Sigma for gaussian blurring during tissue detection.",
+    help="Sigma for gaussian blurring.",
+)
+# Saving.
+@click.option(  # save_metrics
+    "--metrics",
+    "save_metrics",
+    show_default="False",
+    is_flag=True,
+    help="Save image metrics.",
+)
+@click.option(  # save_masks
+    "--masks",
+    "save_masks",
+    show_default="False",
+    is_flag=True,
+    help="Save tissue masks.",
+)
+@click.option(  # overwrite
+    "-z",
+    "--overwrite",
+    show_default="False",
+    is_flag=True,
+    help="Overwrite any existing slide outputs.",
+)
+@click.option(  # overwrite_unfinished
+    "-u",
+    "--unfinished",
+    "overwrite_unfinished",
+    show_default="False",
+    is_flag=True,
+    help="Overwrite only if metadata is missing.",
+)
+@click.option(  # format
+    "--image-format",
+    type=click.STRING,
+    default=DEFAULT_OPTIONS["image_format"],
+    show_default=True,
+    help="File format for tile images.",
+)
+@click.option(  # quality
+    "--quality",
+    metavar="INT",
+    type=click.IntRange(min=0, max=100),
+    default=DEFAULT_OPTIONS["quality"],
+    show_default=True,
+    help="Quality for jpeg-compression.",
+)
+@click.option(  # num_workers
+    "-j",
+    "--num-workers",
+    metavar="INT",
+    type=click.IntRange(min=0, min_open=False),
+    default=DEFAULT_OPTIONS["num_workers"],
+    show_default="CPU-count",
+    help="Number of data saving workers.",
 )
 def cut_slides(
     paths: list[Union[str, Path]],
@@ -294,11 +298,10 @@ def cut_slides(
     height: Optional[int] = None,
     overlap: float = 0.0,
     max_background: float = 0.75,
-    out_of_bounds: bool = True,
+    in_bounds: bool = False,
     # Tile saving.
-    save_metrics: bool = True,
-    save_masks: bool = True,
-    save_thumbnails: bool = True,
+    save_metrics: bool = False,
+    save_masks: bool = False,
     overwrite: bool = False,
     overwrite_unfinished: bool = False,
     image_format: str = "jpeg",
@@ -327,7 +330,7 @@ def cut_slides(
             "width": width,
             "height": height,
             "overlap": overlap,
-            "out_of_bounds": out_of_bounds,
+            "out_of_bounds": not in_bounds,
             "max_background": max_background,
         },
         "save_kwargs": {
@@ -335,7 +338,7 @@ def cut_slides(
             "level": level,
             "save_metrics": save_metrics,
             "save_masks": save_masks,
-            "save_thumbnails": save_thumbnails,
+            "save_thumbnails": True,
             "image_format": image_format,
             "quality": quality,
             "use_csv": use_csv,
