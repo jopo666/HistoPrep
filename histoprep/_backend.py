@@ -244,7 +244,7 @@ class OpenSlideBackend(SlideReaderBackend):
             self.__level_downsamples[lvl] = (slide_h / level_h, slide_w / level_w)
 
     @property
-    def reader(self) -> openslide.OpenSlide:
+    def reader(self) -> "openslide.OpenSlide":
         """OpenSlide instance."""
         return self.__reader
 
