@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "histoprep"
-version = "2.0.4"
+version = "2.0.5"
 description = "Read and process histological slide images with python!"
 authors = ["jopo666 <jopo@birdlover.com>"]
 readme = "README.md"

@@ -192,7 +192,7 @@ class OutlierDetector:
         num_workers: int = 1,
         ax: Optional[plt.Axes] = None,
         **kwargs,
-    ) -> Union[plt.Axes, np.ndarray[plt.Axes]]:
+    ) -> plt.Axes:
         """Plot column values in a histogram with example images.
 
         Args:
