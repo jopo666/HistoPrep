@@ -15,7 +15,7 @@ def create_metadata(unfinished: bool = False) -> None:  # noqa
 def test_run(script_runner) -> None:  # noqa
     clean_temporary_directory()
     ret = script_runner.run(
-        *f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY}".split(" ")
+        f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY}".split(" ")
     )
     assert ret.success
     assert [x.name for x in (TMP_DIRECTORY / "slide").iterdir()] == [
@@ -34,7 +34,7 @@ def test_skip_processed(script_runner) -> None:  # noqa
     clean_temporary_directory()
     create_metadata(unfinished=False)
     ret = script_runner.run(
-        *f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY}".split(" ")
+        f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY}".split(" ")
     )
     assert not ret.success
     assert ret.stdout.split("\n")[1:] == [
@@ -49,7 +49,7 @@ def test_overwrite(script_runner) -> None:  # noqa
     clean_temporary_directory()
     create_metadata(unfinished=False)
     ret = script_runner.run(
-        *f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY} -z".split(" ")
+        f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY} -z".split(" ")
     )
     assert ret.success
     assert [x.name for x in (TMP_DIRECTORY / "slide").iterdir()] == [
@@ -72,7 +72,7 @@ def test_unfinished(script_runner) -> None:  # noqa
     clean_temporary_directory()
     create_metadata(unfinished=True)
     ret = script_runner.run(
-        *f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY} -u".split(" ")
+        f"poetry run HistoPrep -i {SLIDE_PATH_JPEG} -o {TMP_DIRECTORY} -u".split(" ")
     )
     assert ret.success
     assert [x.name for x in (TMP_DIRECTORY / "slide").iterdir()] == [
